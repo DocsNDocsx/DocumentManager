@@ -125,50 +125,51 @@
   <div class="section-container">
     <div class="section-header">
       <div class="section-label">Pricing</div>
-      <h2 class="section-title">Simple, Transparent Pricing</h2>
-      <p class="section-subtitle">Choose the plan that fits your needs. No hidden fees.</p>
+      <h2 class="section-title">Simple, Usage-Based Pricing</h2>
+      <p class="section-subtitle">Pay only for active projects and collaborators. No tiers. No seats.</p>
     </div>
 
-    <div class="pricing-cards">
-      <div class="pricing-card">
-        <div class="pricing-name">Bronze</div>
-        <div class="pricing-price">$10<span>/mo</span></div>
-        <div class="pricing-period">Perfect for small projects</div>
-        <ul class="pricing-features">
-          <li>✓ Up to 100 collaborators</li>
-          <li>✓ Unlimited solo projects</li>
-          <li>✓ 1 support staff per project</li>
-          <li>✓ 50GB storage</li>
-        </ul>
-        <a routerLink="/sign-up" class="btn-pricing btn-pricing-default">Get Started</a>
+    <!-- Formula banner -->
+    <div class="usage-formula" role="region" aria-label="Pricing formula">
+      <div class="usage-part">
+        <div class="usage-val">$0.09</div>
+        <div class="usage-lbl">flat rate</div>
       </div>
+      <div class="usage-op" aria-hidden="true">×</div>
+      <div class="usage-part">
+        <div class="usage-val">projects</div>
+        <div class="usage-lbl">active this period</div>
+      </div>
+      <div class="usage-op" aria-hidden="true">×</div>
+      <div class="usage-part">
+        <div class="usage-val">collaborators</div>
+        <div class="usage-lbl">per project</div>
+      </div>
+      <div class="usage-op" aria-hidden="true">×</div>
+      <div class="usage-part">
+        <div class="usage-val">days</div>
+        <div class="usage-lbl">in billing period</div>
+      </div>
+    </div>
 
-      <div class="pricing-card featured">
-        <div class="pricing-badge">Most Popular</div>
-        <div class="pricing-name">Silver</div>
-        <div class="pricing-price">$30<span>/mo</span></div>
-        <div class="pricing-period">Great for growing teams</div>
-        <ul class="pricing-features">
-          <li>✓ Up to 500 collaborators</li>
-          <li>✓ Unlimited projects</li>
-          <li>✓ 3 support staff per project</li>
-          <li>✓ 200GB storage</li>
-        </ul>
-        <a routerLink="/sign-up" class="btn-pricing btn-pricing-featured">Get Started</a>
-      </div>
+    <!-- Everything included -->
+    <ul class="usage-includes">
+      <li>✓ Unlimited projects</li>
+      <li>✓ Unlimited collaborators</li>
+      <li>✓ Document collection workflows</li>
+      <li>✓ Role-based access</li>
+      <li>✓ Usage dashboard</li>
+      <li>✓ Priority support</li>
+    </ul>
 
-      <div class="pricing-card">
-        <div class="pricing-name">Gold</div>
-        <div class="pricing-price">$60<span>/mo</span></div>
-        <div class="pricing-period">For large organizations</div>
-        <ul class="pricing-features">
-          <li>✓ Unlimited collaborators</li>
-          <li>✓ Unlimited projects</li>
-          <li>✓ Unlimited support staff</li>
-          <li>✓ 1TB storage</li>
-        </ul>
-        <a routerLink="/sign-up" class="btn-pricing btn-pricing-default">Get Started</a>
-      </div>
+    <div class="usage-trust">
+      <span><i class="fas fa-shield-alt"></i> Cancel anytime</span>
+      <span><i class="fas fa-calendar-day"></i> Prorated daily billing</span>
+      <span><i class="fas fa-lock"></i> Secure payment</span>
+    </div>
+
+    <div class="usage-cta">
+      <a routerLink="/sign-up" class="btn-pricing btn-pricing-default">Get Started</a>
     </div>
   </div>
 </section>
