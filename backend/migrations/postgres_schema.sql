@@ -322,3 +322,18 @@ CREATE TABLE IF NOT EXISTS reset_tokens (
   created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (token_hash)
 );
+
+-- Holds signups that have not yet confirmed their email. The real users row is
+-- created only once the OTP is verified, so an unverified account never exists.
+CREATE TABLE IF NOT EXISTS pending_registrations (
+  email        VARCHAR(255) NOT NULL,
+  firstname    VARCHAR(255),
+  lastname     VARCHAR(255),
+  password     VARCHAR(255) NOT NULL,
+  designation  VARCHAR(255),
+  organization VARCHAR(255),
+  otp          INT          NOT NULL,
+  expires_at   TIMESTAMP    NOT NULL,
+  created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (email)
+);

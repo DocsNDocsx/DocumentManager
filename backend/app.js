@@ -26,7 +26,7 @@ app.use(cors({
     'https://www.docsndocs.com',
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-email', 'x-user-otp'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-email', 'x-user-otp', 'x-verify-context'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

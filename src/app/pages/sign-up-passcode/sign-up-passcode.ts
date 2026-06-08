@@ -78,7 +78,7 @@ export class SignUpPasscodeComponent implements OnInit {
     this.serverError.set(null);
     this.logger.debug('Email OTP verification submitted', { email: this.userEmail() });
 
-    this.authService.verifyOtp(this.userEmail(), this.otp.value ?? '').subscribe({
+    this.authService.verifyOtp(this.userEmail(), this.otp.value ?? '', 'signup').subscribe({
       next: (res) => {
         this.isSubmitting.set(false);
         if (res.valid) {

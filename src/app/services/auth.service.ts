@@ -52,11 +52,12 @@ export class AuthService {
     );
   }
 
-  verifyOtp(email: string, otp: string) {
+  verifyOtp(email: string, otp: string, context?: 'signup') {
     this.logger.debug('OTP verification attempt', { email });
     const headers = new HttpHeaders({
       'x-user-email': email,
       'x-user-otp': otp,
+      ...(context ? { 'x-verify-context': context } : {}),
     });
     return this.http.post<VerifyOtpResponse>(`${environment.apiUrl}/verify-otp`, {}, { headers }).pipe(
       tap({
