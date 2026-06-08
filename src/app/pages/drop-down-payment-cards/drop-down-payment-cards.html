@@ -1,0 +1,118 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>{{ pageTitle() }}</h1>
+      <p>{{ pageSubtitle() }}</p>
+    </div>
+
+    <div class="view-toggle-bar">
+      <button class="view-toggle-btn" [class.active]="currentView() === 'solo'" (click)="switchView('solo')">
+        <i class="fas fa-user"></i> Solo Projects
+      </button>
+      <button class="view-toggle-btn" [class.active]="currentView() === 'team'" (click)="switchView('team')">
+        <i class="fas fa-users"></i> Team Projects
+      </button>
+    </div>
+
+    @if (currentView() === 'team') {
+      <app-team-selector
+        label="Manage Cards for Team:"
+        [teams]="teamOptions"
+        (teamChange)="switchTeam($event)"
+      />
+    }
+
+    @if (errorMessage()) {
+      <div class="form-error" role="alert" aria-live="polite">{{ errorMessage() }}</div>
+    }
+
+    <div class="cards-grid">
+      @if (isLoading()) {
+        <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading cards…</div>
+      }
+      @for (card of currentCards(); track card.id) {
+        <div class="credit-card">
+          @if (card.isDefault) {
+            <div class="default-badge">Default</div>
+          }
+          <div class="card-type"><i class="fab {{ getCardIcon(card.type) }}"></i></div>
+          <div class="card-number">{{ card.number }}</div>
+          <div class="card-bottom">
+            <div class="card-holder">
+              <div class="card-holder-label">Card Holder</div>
+              <div class="card-holder-name">{{ card.name }}</div>
+            </div>
+            <div class="card-expiry">
+              <div class="card-expiry-label">Expires</div>
+              <div class="card-expiry-value">{{ card.expiry }}</div>
+            </div>
+          </div>
+          <div class="card-actions">
+            @if (!card.isDefault) {
+              <button class="btn-card-action" (click)="setCardAsDefault(card.id)">Set as Default</button>
+            } @else {
+              <button class="btn-card-action" disabled>Default Card</button>
+            }
+            <button class="btn-card-action danger" (click)="deleteCard(card.id)" [disabled]="!canDelete(card)">
+              <i class="fas fa-trash"></i> Remove
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="add-card-box" (click)="openModal()" role="button" tabindex="0" (keyup.enter)="openModal()" aria-label="Add new card">
+        <div class="add-card-icon"><i class="fas fa-plus"></i></div>
+        <div class="add-card-text">Add New Card</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+@if (showModal()) {
+  <div class="modal-overlay show" role="dialog" aria-modal="true" aria-labelledby="addCardModalTitle" (click)="onModalOverlayClick($event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" id="addCardModalTitle">Add New Card</h2>
+        <p class="modal-subtitle">Enter your card details below</p>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="newCardNumber">Card Number <span class="required" aria-hidden="true">*</span></label>
+          <input type="text" class="form-control" id="newCardNumber" placeholder="1234 5678 9012 3456" maxlength="19"
+            [value]="newCardNumber()" (input)="formatCardNumber($event)" autocomplete="cc-number" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newCardName">Cardholder Name <span class="required" aria-hidden="true">*</span></label>
+          <input type="text" class="form-control" id="newCardName" placeholder="JENNIFER DOE"
+            [value]="newCardName()" (input)="newCardName.set($any($event.target).value)" autocomplete="cc-name" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="newCardExpiry">Expiry Date <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" class="form-control" id="newCardExpiry" placeholder="MM/YY" maxlength="5"
+              [value]="newCardExpiry()" (input)="formatExpiry($event)" autocomplete="cc-exp" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newCardCVV">CVV <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" class="form-control" id="newCardCVV" placeholder="123" maxlength="4"
+              [value]="newCardCVV()" (input)="formatCVV($event)" autocomplete="cc-csc" />
+          </div>
+        </div>
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="setAsDefault" [checked]="setAsDefault()" (change)="setAsDefault.set($any($event.target).checked)" />
+          <label for="setAsDefault">Set as default payment method</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal btn-cancel" (click)="closeModal()">Cancel</button>
+        <button class="btn-modal btn-save" (click)="saveCard()" [disabled]="isSaving()">
+          {{ isSaving() ? 'Adding…' : 'Add Card' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

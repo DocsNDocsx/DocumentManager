@@ -1,0 +1,15 @@
+{
+  "name": "docsndocs-stripe-mock",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local mock backend implementing the Stripe SetupIntent + Subscription endpoints for testing the Angular payment page.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "stripe": "^17.5.0"
+  }
+}

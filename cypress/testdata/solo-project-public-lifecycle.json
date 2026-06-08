@@ -1,0 +1,69 @@
+{
+  "projects": {
+    "step1": {
+      "name": "Cypress E2E Open Application Program",
+      "description": "Created by Cypress to test the solo public project lifecycle.",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 10,
+      "type": "public"
+    }
+  },
+
+  "staff": {
+    "step1": {
+      "addStaff": true,
+      "firstName": "Diana",
+      "lastName": "Support",
+      "email": "diana.support@cypress-e2e.test",
+      "affiliation": "Graduate Admissions"
+    }
+  },
+
+  "documents": {
+    "step2": {
+      "count": 3,
+      "list": [
+        {
+          "name": "Application Form",
+          "fileTypes": ["PDF"],
+          "maxSize": "10",
+          "sizeUnit": "MB",
+          "templateName": ""
+        },
+        {
+          "name": "Personal Statement",
+          "fileTypes": ["PDF", "DOCX"],
+          "maxSize": "5",
+          "sizeUnit": "MB",
+          "templateName": ""
+        },
+        {
+          "name": "Transcript",
+          "fileTypes": ["PDF"],
+          "maxSize": "15",
+          "sizeUnit": "MB",
+          "templateName": ""
+        }
+      ]
+    }
+  },
+
+  "assertions": {
+    "step3": {
+      "projectName": "Cypress E2E Open Application Program",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 10,
+      "documentChip": "3 Documents",
+      "staffChip": "1 Support Staff",
+      "documents": [
+        { "name": "Application Form" },
+        { "name": "Personal Statement" },
+        { "name": "Transcript" }
+      ],
+      "staff": {
+        "name": "Diana Support",
+        "email": "diana.support@cypress-e2e.test"
+      }
+    }
+  }
+}

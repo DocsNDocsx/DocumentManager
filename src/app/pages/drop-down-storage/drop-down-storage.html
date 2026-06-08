@@ -1,0 +1,132 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>{{ data().title }}</h1>
+      <p>{{ data().subtitle }}</p>
+    </div>
+
+    <div class="view-toggle-bar">
+      <button class="view-toggle-btn" [class.active]="currentView() === 'solo'" (click)="switchView('solo')" type="button">
+        <i class="fas fa-user"></i> Solo Projects
+      </button>
+      <button class="view-toggle-btn" [class.active]="currentView() === 'team'" (click)="switchView('team')" type="button">
+        <i class="fas fa-users"></i> Team Projects
+      </button>
+    </div>
+
+    <div class="storage-overview">
+      <div class="storage-card">
+        <div class="storage-card-icon primary"><i class="fas fa-database"></i></div>
+        <div class="storage-card-label">Total Used</div>
+        <div class="storage-card-value">{{ data().totalUsed }}</div>
+        <div class="storage-card-sub">{{ data().totalUsedSub }}</div>
+      </div>
+      <div class="storage-card">
+        <div class="storage-card-icon orange"><i class="fas fa-folder-open"></i></div>
+        <div class="storage-card-label">Total Projects</div>
+        <div class="storage-card-value">{{ data().totalProjects }}</div>
+        <div class="storage-card-sub">{{ data().totalProjectsSub }}</div>
+      </div>
+      <div class="storage-card">
+        <div class="storage-card-icon blue"><i class="fas fa-file-alt"></i></div>
+        <div class="storage-card-label">Total Documents</div>
+        <div class="storage-card-value">{{ data().totalDocs }}</div>
+        <div class="storage-card-sub">{{ data().totalDocsSub }}</div>
+      </div>
+    </div>
+
+    @if (currentView() === 'team') {
+      <app-team-selector
+        label="View Storage for Team:"
+        [teams]="teamOptions"
+        [selectedTeam]="currentTeam()"
+        (teamChange)="switchTeam($event)"
+      />
+    }
+
+    <div class="storage-breakdown">
+      <div class="breakdown-header">
+        <h2 class="breakdown-title">Storage by Project Status</h2>
+      </div>
+
+      <div class="status-item">
+        <div class="status-icon active"><i class="fas fa-play-circle"></i></div>
+        <div class="status-info">
+          <div class="status-name">Active Projects</div>
+          <div class="status-count">{{ data().statuses.active.count }}</div>
+        </div>
+        <div class="status-size">
+          <div class="status-size-value">{{ data().statuses.active.size }}</div>
+          <div class="status-size-percent">{{ data().statuses.active.percent }}</div>
+        </div>
+        <div class="status-bar-container">
+          <div class="status-bar-bg"><div class="status-bar-fill active" [style.width]="data().statuses.active.percentNum + '%'"></div></div>
+        </div>
+      </div>
+
+      <div class="status-item">
+        <div class="status-icon draft"><i class="fas fa-file-alt"></i></div>
+        <div class="status-info">
+          <div class="status-name">Draft Projects</div>
+          <div class="status-count">{{ data().statuses.draft.count }}</div>
+        </div>
+        <div class="status-size">
+          <div class="status-size-value">{{ data().statuses.draft.size }}</div>
+          <div class="status-size-percent">{{ data().statuses.draft.percent }}</div>
+        </div>
+        <div class="status-bar-container">
+          <div class="status-bar-bg"><div class="status-bar-fill draft" [style.width]="data().statuses.draft.percentNum + '%'"></div></div>
+        </div>
+      </div>
+
+      <div class="status-item">
+        <div class="status-icon completed"><i class="fas fa-check-circle"></i></div>
+        <div class="status-info">
+          <div class="status-name">Completed Projects</div>
+          <div class="status-count">{{ data().statuses.completed.count }}</div>
+        </div>
+        <div class="status-size">
+          <div class="status-size-value">{{ data().statuses.completed.size }}</div>
+          <div class="status-size-percent">{{ data().statuses.completed.percent }}</div>
+        </div>
+        <div class="status-bar-container">
+          <div class="status-bar-bg"><div class="status-bar-fill completed" [style.width]="data().statuses.completed.percentNum + '%'"></div></div>
+        </div>
+      </div>
+
+      <div class="status-item">
+        <div class="status-icon not-completed"><i class="fas fa-exclamation-circle"></i></div>
+        <div class="status-info">
+          <div class="status-name">Not Completed Projects</div>
+          <div class="status-count">{{ data().statuses.notCompleted.count }}</div>
+        </div>
+        <div class="status-size">
+          <div class="status-size-value">{{ data().statuses.notCompleted.size }}</div>
+          <div class="status-size-percent">{{ data().statuses.notCompleted.percent }}</div>
+        </div>
+        <div class="status-bar-container">
+          <div class="status-bar-bg"><div class="status-bar-fill not-completed" [style.width]="data().statuses.notCompleted.percentNum + '%'"></div></div>
+        </div>
+      </div>
+
+      <div class="status-item">
+        <div class="status-icon deleted"><i class="fas fa-trash-alt"></i></div>
+        <div class="status-info">
+          <div class="status-name">Deleted Projects</div>
+          <div class="status-count">{{ data().statuses.deleted.count }}</div>
+        </div>
+        <div class="status-size">
+          <div class="status-size-value">{{ data().statuses.deleted.size }}</div>
+          <div class="status-size-percent">{{ data().statuses.deleted.percent }}</div>
+        </div>
+        <div class="status-bar-container">
+          <div class="status-bar-bg"><div class="status-bar-fill deleted" [style.width]="data().statuses.deleted.percentNum + '%'"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

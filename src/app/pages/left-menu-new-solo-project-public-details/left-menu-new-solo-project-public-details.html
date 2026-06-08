@@ -1,0 +1,211 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Public Project</h1>
+      <p>Step 1 of 3 — Enter the basic details for your project</p>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-hidden="true">1</div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">2</div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">3</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        Project Information
+      </h2>
+
+      <div class="form-group">
+        <label class="form-label" for="projectName">Project Name <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="text"
+          class="form-control"
+          id="projectName"
+          placeholder="e.g., 2026 Open Application Program"
+          [ngModel]="projectName()"
+          (ngModelChange)="projectName.set($event)"
+          required
+          aria-required="true"
+        />
+        <div class="form-help">Choose a clear, descriptive name for your project</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="projectDescription">Project Description</label>
+        <textarea
+          class="form-control"
+          id="projectDescription"
+          placeholder="Describe the purpose and goals of this project..."
+          [value]="projectDescription()"
+          (input)="projectDescription.set($any($event.target).value)"
+        ></textarea>
+        <div class="form-help">Visible to anyone who joins via the project code</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="projectDeadline">Deadline <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="date"
+          class="form-control"
+          id="projectDeadline"
+          [value]="projectDeadline()"
+          (change)="projectDeadline.set($any($event.target).value)"
+          required
+          aria-required="true"
+        />
+        <div class="form-help">Final date for all document submissions</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="expectedCollaborators">Expected Number of Collaborators <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="number"
+          class="form-control"
+          id="expectedCollaborators"
+          placeholder="e.g., 50"
+          min="1"
+          [ngModel]="expectedCollaborators()"
+          (ngModelChange)="expectedCollaborators.set($event)"
+          required
+          aria-required="true"
+        />
+        <div class="form-help">Approximate number of collaborators expected to join via the project code</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Project Files</label>
+        <div
+          class="file-upload-area"
+          [class.dragover]="isDragOver()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)"
+          role="button"
+          tabindex="0"
+          aria-label="File upload area, click or drag files here"
+          (click)="triggerBrowse(fileInput)"
+          (keydown.enter)="triggerBrowse(fileInput)"
+          (keydown.space)="triggerBrowse(fileInput)"
+        >
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <i class="fas fa-cloud-upload-alt" aria-hidden="true" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+            <p style="font-size: 1.05rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.4rem;">Drop files here or click to browse</p>
+            <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem;">Upload documents, images, or any files relevant to this project</p>
+            <input
+              #fileInput
+              type="file"
+              multiple
+              style="display: none"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar"
+              (change)="onFileChange($event)"
+              aria-label="File input"
+            />
+            <button type="button" class="btn-browse" (click)="$event.stopPropagation(); triggerBrowse(fileInput)">
+              <i class="fas fa-folder-open" aria-hidden="true"></i> Browse Files
+            </button>
+          </div>
+        </div>
+        <div class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Visible to all collaborators. Max 50 MB per file.</div>
+
+        @if (uploadedFiles().length > 0) {
+          <div style="margin-top: 1rem;" aria-live="polite">
+            <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-file-alt" aria-hidden="true"></i> Uploaded Files
+            </div>
+            @for (file of uploadedFiles(); track file.name; let i = $index) {
+              <div class="file-item">
+                <div class="file-item-info">
+                  <div class="file-icon"><i class="fas {{ file.iconClass }}" aria-hidden="true"></i></div>
+                  <div class="file-details">
+                    <div class="file-name">{{ file.name }}</div>
+                    <div class="file-size">{{ file.size }}</div>
+                  </div>
+                </div>
+                <button class="btn-remove-file" type="button" (click)="removeFile(i)" [attr.aria-label]="'Remove ' + file.name">
+                  <i class="fas fa-times" aria-hidden="true"></i> Remove
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <h3 class="form-section-title" style="font-size: 1.1rem; margin-top: 1.5rem">
+        <i class="fas fa-user-tie" aria-hidden="true"></i>
+        Support Staff <span style="font-size: 0.82rem; font-weight: 400; color: var(--text-light)">(optional)</span>
+      </h3>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="supportFirstName">First Name</label>
+          <input type="text" class="form-control" id="supportFirstName" placeholder="e.g., Michael"
+            [ngModel]="supportFirstName()" (ngModelChange)="supportFirstName.set($event)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="supportLastName">Last Name</label>
+          <input type="text" class="form-control" id="supportLastName" placeholder="e.g., Johnson"
+            [ngModel]="supportLastName()" (ngModelChange)="supportLastName.set($event)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="supportEmail">Email</label>
+          <input type="email" class="form-control" id="supportEmail" placeholder="e.g., michael@university.edu"
+            [ngModel]="supportEmail()" (ngModelChange)="supportEmail.set($event)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="supportAffiliation">Affiliation</label>
+          <input type="text" class="form-control" id="supportAffiliation" placeholder="e.g., State University"
+            [ngModel]="supportAffiliation()" (ngModelChange)="supportAffiliation.set($event)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-back" type="button" (click)="goBack()">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i> Back
+        </button>
+        <button
+          class="btn-action btn-draft"
+          type="button"
+          [disabled]="!isFormValid()"
+          [attr.aria-disabled]="!isFormValid()"
+          (click)="saveAsDraft()"
+        >
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button
+        class="btn-action btn-continue"
+        type="button"
+        [disabled]="!isFormValid()"
+        [attr.aria-disabled]="!isFormValid()"
+        (click)="continue()"
+      >
+        Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </main>
+</div>
+
+@if (toastVisible()) {
+  <div class="toast-msg" role="status" aria-live="polite">
+    <i class="fas fa-check-circle" aria-hidden="true"></i> {{ toastMsg() }}
+  </div>
+}

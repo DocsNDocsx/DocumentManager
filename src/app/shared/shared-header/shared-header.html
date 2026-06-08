@@ -1,0 +1,30 @@
+<header class="top-header">
+  <app-logo routerLink="/dashboard" [showImage]="false" ariaLabel="DocNDocs Home" />
+  <nav class="top-nav" aria-label="Main navigation">
+    <a routerLink="/top-menu-solo-projects" routerLinkActive="active" #soloRLA="routerLinkActive" [attr.aria-current]="soloRLA.isActive ? 'page' : null">Solo Projects</a>
+    <a routerLink="/top-menu-teams" routerLinkActive="active" #teamsRLA="routerLinkActive" [attr.aria-current]="teamsRLA.isActive ? 'page' : null">Teams</a>
+    <a routerLink="/top-menu-team-projects" routerLinkActive="active" #teamProjRLA="routerLinkActive" [attr.aria-current]="teamProjRLA.isActive ? 'page' : null">Team Projects</a>
+    <div class="user-dropdown" style="position: relative">
+      <button
+        class="user-greeting"
+        type="button"
+        (click)="toggleDropdown($event)"
+        aria-haspopup="true"
+        [attr.aria-expanded]="dropdownOpen()"
+        aria-label="User menu"
+      >
+        <span>{{ currentUserLastname() }}, {{ currentUserFirstname() }}!</span>
+        <i class="fas fa-chevron-down" aria-hidden="true" style="font-size: 0.8rem"></i>
+      </button>
+      <div class="dropdown-menu-custom" [class.show]="dropdownOpen()" role="menu">
+        <a routerLink="/drop-down-profile" role="menuitem"><i class="fas fa-user" aria-hidden="true"></i> Profile</a>
+        <a routerLink="/drop-down-storage" role="menuitem"><i class="fas fa-database" aria-hidden="true"></i> Storage</a>
+        <a routerLink="/drop-down-payment-history" role="menuitem"><i class="fas fa-history" aria-hidden="true"></i> Payment History</a>
+        <a routerLink="/drop-down-payment-cards" role="menuitem"><i class="fas fa-credit-card" aria-hidden="true"></i> Payment Cards</a>
+        <a routerLink="/drop-down-upgrade-payment-plan" role="menuitem"><i class="fas fa-star" aria-hidden="true"></i> Update Pricing Plans</a>
+        <a routerLink="/drop-down-account-settings" role="menuitem"><i class="fas fa-cog" aria-hidden="true"></i> Account Settings</a>
+        <button type="button" class="signout-link" role="menuitem" (click)="signOut()"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sign Out</button>
+      </div>
+    </div>
+  </nav>
+</header>

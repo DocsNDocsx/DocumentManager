@@ -1,0 +1,166 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>My Teams</h1>
+      <a routerLink="/left-menu-create-new-team" class="btn-create-team">
+        <i class="fas fa-plus-circle" aria-hidden="true"></i> Create New Team
+      </a>
+    </div>
+
+    @if (teamsService.isLoading()) {
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <p>Loading teams…</p>
+      </div>
+    } @else if (teamsService.error()) {
+      <div class="error-state">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <p>{{ teamsService.error() }}</p>
+      </div>
+    } @else {
+      @if (teamsService.teams().length === 0) {
+        <div class="no-teams" id="noTeamsMessage">
+          <i class="fas fa-users" aria-hidden="true"></i>
+          <h2>No Teams Yet</h2>
+          <p>Create your first team to start collaborating on projects.</p>
+          <a routerLink="/left-menu-create-new-team" class="btn-create-team">
+            <i class="fas fa-plus-circle" aria-hidden="true"></i> Create Your First Team
+          </a>
+        </div>
+      }
+
+      <div class="teams-container">
+        @for (team of teamsService.teams(); track team.id) {
+          <div class="team-card" [class.expanded]="expandedIds().has(team.id)">
+            <div
+              class="team-header"
+              (click)="toggleTeam(team.id)"
+              role="button"
+              [attr.aria-expanded]="expandedIds().has(team.id)"
+              tabindex="0"
+              (keydown.enter)="toggleTeam(team.id)"
+              (keydown.space)="toggleTeam(team.id)"
+            >
+              <div class="team-header-left">
+                <div class="team-name">{{ team.name }}</div>
+                <div class="team-meta">
+                  <div class="team-meta-item"><i class="fas fa-users" aria-hidden="true"></i><span>{{ getMemberCount(team.id) }} members</span></div>
+                  <div class="team-meta-item"><i class="fas fa-folder" aria-hidden="true"></i><span>{{ getProjects(team.id).length }} projects</span></div>
+                </div>
+              </div>
+              <div class="team-header-right">
+                @if (team.role === 'host') {
+                  <a [routerLink]="['/top-menu-teams-edit-teams']" [queryParams]="{id: team.id}" class="btn-edit-team" (click)="$event.stopPropagation()">
+                    <i class="fas fa-pencil-alt" aria-hidden="true"></i> Edit
+                  </a>
+                }
+                <i class="fas fa-chevron-down expand-icon" aria-hidden="true"></i>
+              </div>
+            </div>
+
+            <div class="team-body">
+              <div class="team-body-inner">
+                @if (isDetailLoading(team.id)) {
+                  <div class="detail-loading" style="padding: 1.5rem; text-align: center; color: var(--text-light);">
+                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                    <span style="margin-left: 0.5rem;">Loading team details…</span>
+                  </div>
+                } @else {
+                  @if (getDetail(team.id)?.description) {
+                    <div>
+                      <div class="detail-section-title"><i class="fas fa-align-left" aria-hidden="true"></i> Description</div>
+                      <p style="color: var(--text-light); font-size: 0.9rem; line-height: 1.6">{{ getDetail(team.id)?.description }}</p>
+                    </div>
+                  }
+
+                  <div>
+                    <div class="detail-section-title"><i class="fas fa-chart-bar" aria-hidden="true"></i> Project Overview</div>
+                    <div class="stats-row">
+                      <div class="stat-card"><div class="stat-number">{{ getActiveCount(team.id) }}</div><div class="stat-label">Active Projects</div></div>
+                      <div class="stat-card"><div class="stat-number">{{ getCompletedCount(team.id) }}</div><div class="stat-label">Completed</div></div>
+                      <div class="stat-card"><div class="stat-number">{{ getDraftCount(team.id) }}</div><div class="stat-label">Drafts</div></div>
+                      <div class="stat-card"><div class="stat-number">{{ getTotalCollabs(team.id) }}</div><div class="stat-label">Total Collaborators</div></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="detail-section-title"><i class="fas fa-folder-open" aria-hidden="true"></i> Projects</div>
+                    @if (getProjects(team.id).length === 0) {
+                      <div class="no-projects-notice">
+                        <i class="fas fa-folder-open" aria-hidden="true"></i>
+                        No projects for this team yet. <a href="#" style="color: var(--primary-color); font-weight: 600;">Create one</a>
+                      </div>
+                    } @else {
+                      <div class="projects-list">
+                        @for (project of getProjects(team.id); track project.id) {
+                          <div class="project-row">
+                            <div class="project-row-left">
+                              <div
+                                class="project-type-icon"
+                                [class.icon-private]="project.type === 'private'"
+                                [class.icon-public]="project.type === 'public'"
+                              >
+                                <i
+                                  class="fas"
+                                  [class.fa-lock]="project.type === 'private'"
+                                  [class.fa-globe]="project.type === 'public'"
+                                  aria-hidden="true"
+                                ></i>
+                              </div>
+                              <div>
+                                <div class="project-name">{{ project.name }}</div>
+                                <div class="project-meta">
+                                  <i class="fas fa-users" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>{{ project.collaboratorCount }} collaborators &nbsp;·&nbsp;
+                                  <i class="fas fa-file-alt" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>{{ project.documentCount }} document types &nbsp;·&nbsp;
+                                  <i class="fas fa-calendar" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>Due {{ project.deadline ?? 'No deadline' }}
+                                </div>
+                              </div>
+                            </div>
+                            <div class="project-row-right">
+                              <span class="status-badge" [class]="statusClass(project.status)">{{ project.status | titlecase }}</span>
+                              <a href="#" class="btn-project-view"><i class="fas fa-eye" aria-hidden="true"></i> View</a>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  @if (getDetail(team.id)?.owner; as owner) {
+                    <div>
+                      <div class="detail-section-title"><i class="fas fa-user-friends" aria-hidden="true"></i> Team Members ({{ getMemberCount(team.id) }})</div>
+                      <div class="members-grid">
+                        <div class="member-item">
+                          <div class="member-avatar owner-avatar" aria-hidden="true">{{ getInitials(owner.firstName, owner.lastName) }}</div>
+                          <div class="member-details">
+                            <div class="member-name">{{ owner.firstName }} {{ owner.lastName }}</div>
+                            <div class="member-email">{{ owner.email }}</div>
+                          </div>
+                          <span class="member-role-badge role-owner">Owner</span>
+                        </div>
+                        @for (member of getDetail(team.id)?.members ?? []; track member.id) {
+                          <div class="member-item">
+                            <div class="member-avatar" aria-hidden="true">{{ getInitials(member.firstName, member.lastName) }}</div>
+                            <div class="member-details">
+                              <div class="member-name">{{ member.firstName }} {{ member.lastName }}</div>
+                              <div class="member-email">{{ member.email }}</div>
+                            </div>
+                            <span class="member-role-badge role-member">Member</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </main>
+</div>

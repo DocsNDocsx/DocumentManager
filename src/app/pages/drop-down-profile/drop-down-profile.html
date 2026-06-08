@@ -1,0 +1,150 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1>My Profile</h1>
+      <p>Manage your personal information and account preferences.</p>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-card-header">
+        @if (avatarUrl() && !avatarLoadError()) {
+          <img [src]="avatarUrl()" alt="Profile photo" class="profile-avatar profile-avatar--img" (error)="avatarLoadError.set(true)" />
+        } @else {
+          <img ngSrc="/default-avatar.svg" width="64" height="64" [alt]="initials()" class="profile-avatar profile-avatar--img" priority />
+        }
+      </div>
+      <div class="profile-card-body">
+
+        <div class="profile-name">{{ firstName() }} {{ lastName() }}</div>
+        <div class="profile-role">Account Owner</div>
+
+        <div class="profile-meta">
+          <div class="profile-meta-item">
+            <i class="fas fa-envelope" aria-hidden="true"></i>
+            <span>{{ email() }}</span>
+          </div>
+          <div class="profile-meta-item">
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+            <span>Member since January 2025</span>
+          </div>
+          <div class="profile-meta-item">
+            <i class="fas fa-folder-open" aria-hidden="true"></i>
+            <span>12 Active Projects</span>
+          </div>
+        </div>
+
+        <p class="section-label">Profile Picture</p>
+        <div class="avatar-upload-row">
+          @if (avatarUrl() && !avatarLoadError()) {
+            <img [src]="avatarUrl()" alt="Profile photo" class="avatar-preview avatar-preview--img" (error)="avatarLoadError.set(true)" />
+          } @else {
+            <img ngSrc="/default-avatar.svg" width="64" height="64" [alt]="initials()" class="avatar-preview avatar-preview--img" />
+          }
+          <div>
+            <button class="avatar-upload-btn" (click)="triggerAvatarUpload()" type="button">
+              <i class="fas fa-upload" aria-hidden="true"></i> Upload New Photo
+            </button>
+            <input type="file" id="avatarInput" accept="image/*" style="display:none" (change)="onAvatarChange($event)" aria-label="Upload profile photo" />
+            <p class="form-hint" style="margin-top: 0.5rem">JPG, PNG or GIF · Max 2 MB</p>
+          </div>
+        </div>
+
+        <p class="section-label">Personal Information</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" [value]="firstName()" (input)="firstName.set($any($event.target).value)" />
+          </div>
+          <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" [value]="lastName()" (input)="lastName.set($any($event.target).value)" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" [value]="email()" (input)="email.set($any($event.target).value)" />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" [value]="phone()" (input)="phone.set($any($event.target).value)" placeholder="+1 (555) 000-0000" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="org">Organisation / Institution</label>
+            <input type="text" id="org" [value]="org()" (input)="org.set($any($event.target).value)" placeholder="e.g. Acme University" />
+          </div>
+          <div class="form-group">
+            <label for="timezone">Timezone</label>
+            <select id="timezone" [value]="timezone()" (change)="timezone.set($any($event.target).value)">
+              <option value="UTC-5">Eastern Time (UTC−5)</option>
+              <option value="UTC-6">Central Time (UTC−6)</option>
+              <option value="UTC-7">Mountain Time (UTC−7)</option>
+              <option value="UTC-8">Pacific Time (UTC−8)</option>
+              <option value="UTC+0">UTC</option>
+              <option value="UTC+1">Central European Time (UTC+1)</option>
+            </select>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <p class="section-label">Change Password</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="currentPw">Current Password</label>
+            <input type="password" id="currentPw" [value]="currentPw()" (input)="currentPw.set($any($event.target).value)" placeholder="Enter current password" />
+          </div>
+          <div class="form-group"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="newPw">New Password</label>
+            <input type="password" id="newPw" [value]="newPw()" (input)="newPw.set($any($event.target).value)" placeholder="Min. 8 characters" />
+            <span class="form-hint">Use uppercase, a number, and a special character.</span>
+          </div>
+          <div class="form-group">
+            <label for="confirmPw">Confirm New Password</label>
+            <input type="password" id="confirmPw" [value]="confirmPw()" (input)="confirmPw.set($any($event.target).value)" placeholder="Re-enter new password" />
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <p class="section-label">Email Notifications</p>
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="notifPref">Notification Frequency</label>
+            <select id="notifPref" [value]="notifPref()" (change)="notifPref.set($any($event.target).value)">
+              <option value="instant">Instant — every event</option>
+              <option value="daily">Daily digest</option>
+              <option value="weekly">Weekly summary</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-save" (click)="saveProfile()" type="button" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving…' : 'Save Changes' }}
+          </button>
+          <button class="btn-cancel" (click)="resetForm()" type="button">Cancel</button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div
+  class="toast-msg"
+  [class.show]="toastVisible()"
+  [style.background]="toastError() ? 'var(--accent-red)' : 'var(--primary-color)'"
+  role="status"
+  aria-live="polite"
+>{{ toastMsg() }}</div>

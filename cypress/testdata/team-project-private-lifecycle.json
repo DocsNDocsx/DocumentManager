@@ -1,0 +1,152 @@
+{
+  "team": {
+    "name": "Cypress E2E Private Team",
+    "description": "Dedicated team for private project lifecycle tests. Deleted after the suite completes.",
+    "icon": "fa-lock",
+    "members": [
+      {
+        "firstName": "Alice",
+        "lastName": "Tester",
+        "email": "alice.tester@cypress-e2e.test",
+        "affiliation": "QA Department"
+      },
+      {
+        "firstName": "Bob",
+        "lastName": "Reviewer",
+        "email": "bob.reviewer@cypress-e2e.test",
+        "affiliation": "Engineering"
+      }
+    ]
+  },
+
+  "projects": {
+    "step1": {
+      "name": "Cypress E2E Private Team Project",
+      "description": "Created by Cypress to test the private team project details step.",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 2,
+      "type": "private"
+    },
+    "fullFlow": {
+      "name": "Cypress E2E Private Full Flow",
+      "description": "Full lifecycle test for a private team project by Cypress.",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 2,
+      "type": "private"
+    },
+    "activation": {
+      "name": "Cypress Private Activation Test",
+      "description": "Verify private team project activates correctly.",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 2,
+      "type": "private",
+      "completedStep": 1
+    },
+    "deleteProject": {
+      "name": "Cypress Private Delete Test",
+      "description": "Created to verify deletion of a private team project.",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 2,
+      "type": "private",
+      "completedStep": 1
+    }
+  },
+
+  "collaborators": {
+    "count": 2,
+    "list": [
+      {
+        "firstName": "Alice",
+        "lastName": "Tester",
+        "email": "alice.tester@cypress-e2e.test",
+        "affiliation": "QA Department",
+        "role": "contributor"
+      },
+      {
+        "firstName": "Bob",
+        "lastName": "Reviewer",
+        "email": "bob.reviewer@cypress-e2e.test",
+        "affiliation": "Engineering",
+        "role": "supervisor"
+      }
+    ]
+  },
+
+  "documents": {
+    "count": 5,
+    "list": [
+      {
+        "name": "Research Proposal",
+        "fileTypes": ["PDF", "DOCX"],
+        "maxSize": "10",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "CV / Resume",
+        "fileTypes": ["PDF", "DOCX"],
+        "maxSize": "5",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Letter of Recommendation",
+        "fileTypes": ["PDF"],
+        "maxSize": "5",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Research Statement",
+        "fileTypes": ["PDF", "DOCX"],
+        "maxSize": "10",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Supporting Data",
+        "fileTypes": ["XLSX", "CSV", "PDF"],
+        "maxSize": "20",
+        "sizeUnit": "MB",
+        "templateName": ""
+      }
+    ]
+  },
+
+  "assertions": {
+    "step1": {
+      "expectedStatus": 201,
+      "project": {
+        "name": "Cypress E2E Private Team Project",
+        "type": "private",
+        "status": "draft",
+        "expectedCollaborators": 2
+      }
+    },
+    "collaborators": {
+      "count": 2,
+      "names": ["Alice Tester", "Bob Reviewer"]
+    },
+    "documents": {
+      "count": 5,
+      "names": [
+        "Research Proposal",
+        "CV / Resume",
+        "Letter of Recommendation",
+        "Research Statement",
+        "Supporting Data"
+      ]
+    },
+    "fullFlow": {
+      "decisionPageProjectName": "Cypress E2E Private Full Flow",
+      "decisionPageCollaboratorChip": "2 Collaborators",
+      "decisionPageDocumentChip": "5 Documents"
+    },
+    "activation": {
+      "expectedStatus": "active"
+    },
+    "deleteProject": {
+      "expectedDeleteStatus": 200
+    }
+  }
+}

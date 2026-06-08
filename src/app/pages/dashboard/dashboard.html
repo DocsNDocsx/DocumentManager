@@ -1,0 +1,173 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="dashboard-welcome">
+      <h1>Dashboard</h1>
+      <p>Welcome back, {{ userFirstname() }}. Here's what's happening with your projects today.</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-overview">
+      <div class="stat-card stat-card-primary">
+        <div class="stat-icon stat-icon-blue">
+          <i class="fas fa-folder-open" aria-hidden="true"></i>
+        </div>
+        <h6>Active Projects</h6>
+        <h2 class="stat-value-primary">{{ dashboard.stats()?.activeProjects ?? '--' }}</h2>
+        <small class="text-muted">
+          @if (dashboard.stats(); as s) {
+            {{ s.soloProjects }} Solo • {{ s.teamProjects }} Team
+          }
+        </small>
+      </div>
+      <div class="stat-card stat-card-orange">
+        <div class="stat-icon stat-icon-amber">
+          <i class="fas fa-file-upload" aria-hidden="true"></i>
+        </div>
+        <h6>Documents Collected</h6>
+        <h2 class="stat-value-orange">{{ dashboard.stats()?.documentsCollected ?? '--' }}</h2>
+        <small class="text-muted">
+          @if (dashboard.stats(); as s) {
+            +{{ s.documentsThisWeek }} this week
+          }
+        </small>
+      </div>
+      <div class="stat-card stat-card-purple">
+        <div class="stat-icon stat-icon-purple">
+          <i class="fas fa-users" aria-hidden="true"></i>
+        </div>
+        <h6>Active Collaborators</h6>
+        <h2 class="stat-value-purple">{{ dashboard.stats()?.activeCollaborators ?? '--' }}</h2>
+        <small class="text-muted">Across all projects</small>
+      </div>
+      <div class="stat-card stat-card-blue">
+        <div class="stat-icon stat-icon-navy">
+          <i class="fas fa-database" aria-hidden="true"></i>
+        </div>
+        <h6>Storage Used</h6>
+        <h2 class="stat-value-blue">
+          @if (dashboard.stats(); as s) { {{ s.storageUsedPercent }}% } @else { -- }
+        </h2>
+        <div class="progress-custom">
+          <div class="progress-bar-custom" [style.width]="progressWidth()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Projects -->
+    <div class="section-header">
+      <h3>Recent Projects</h3>
+    </div>
+
+    @if (dashboard.isLoading()) {
+      <div class="loading-state" role="status" aria-label="Loading projects">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading projects...
+      </div>
+    } @else if (dashboard.error()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ dashboard.error() }}
+      </div>
+    } @else if (dashboard.recentProjects().length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-folder-open" aria-hidden="true"></i>
+        <p>No projects yet. Create your first project to get started.</p>
+      </div>
+    } @else {
+      <div class="projects-table-wrap">
+        <table class="projects-table" role="grid" aria-label="Recent projects">
+          <thead>
+            <tr>
+              <th scope="col" class="th-project">Project</th>
+              <th scope="col" class="th-type">Type</th>
+              <th scope="col" class="th-docs">Docs</th>
+              <th scope="col" class="th-collab">Submissions</th>
+              <th scope="col" class="th-deadline">Deadline</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (project of dashboard.recentProjects(); track project.id) {
+              <tr class="project-row" [routerLink]="projectRoute(project)" style="cursor:pointer">
+                <td class="col-name">
+                  <div class="project-name-text" [title]="project.name">{{ project.name }}</div>
+                  @if (project.projectCode) {
+                    <div class="project-code-inline">
+                      <i class="fas fa-hashtag" aria-hidden="true"></i>{{ project.projectCode }}
+                      <button class="copy-btn-sm" type="button"
+                        (click)="copyProjectId($event, project.projectCode!)"
+                        aria-label="Copy project code">
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  }
+                  @if (project.teamName) {
+                    <div class="project-team-name">
+                      <i class="fas fa-users" aria-hidden="true"></i> {{ project.teamName }}
+                    </div>
+                  }
+                </td>
+                <td>
+                  <span [class]="badgeClass(project.type, project.visibility)">
+                    {{ badgeLabel(project.type, project.visibility) }}
+                  </span>
+                </td>
+                <td class="col-center">{{ project.documentCount }}</td>
+                <td class="col-center">
+                  @if (project.submittedCount !== null && project.totalExpected !== null) {
+                    {{ project.submittedCount }}/{{ project.totalExpected }}
+                  } @else if (project.collaboratorCount !== null) {
+                    {{ project.collaboratorCount }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td class="col-date">
+                  @if (project.isOngoing || !project.deadline) {
+                    <span class="ongoing-badge">Ongoing</span>
+                  } @else {
+                    {{ formatDeadline(project.deadline, project.isOngoing) }}
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Recent Activity -->
+    <div class="section-header">
+      <h3>Recent Activity</h3>
+      <a routerLink="/dashboard-recent-activity" class="view-all">View All <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+    </div>
+
+    @if (dashboard.isLoading()) {
+      <div class="loading-state" role="status" aria-label="Loading activity">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading activity...
+      </div>
+    } @else if (dashboard.activities().length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-bell-slash" aria-hidden="true"></i>
+        <p>No recent activity.</p>
+      </div>
+    } @else {
+      <div class="activity-card">
+        @for (item of dashboard.activities(); track item.id) {
+          <div class="activity-item">
+            <div [class]="activityIconClass(item.type)" aria-hidden="true">
+              <i [class]="activityFaIcon(item.type)"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">{{ item.title }}</div>
+              <div class="activity-time">
+                @if (item.actor) { {{ item.actor }} • }{{ formatTime(item.timestamp) }}
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </main>
+</div>

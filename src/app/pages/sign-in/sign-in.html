@@ -1,0 +1,111 @@
+
+    <div class="signup-wrapper">
+      <div class="panel-image">
+        <img ngSrc="ImageSignIn.jpg" alt="Sign In" class="bg-img" fill priority />
+        <div class="panel-image-content">
+          <app-logo href="sign-up" ariaLabel="DocNDocs home" />
+
+          <div class="panel-tagline">
+            <h2>Welcome back.<br />Let's get started.</h2>
+            <p>
+              Sign in to manage your documents and continue where you left off.
+            </p>
+            <app-trust-pills />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-form">
+        <div class="mobile-logo">
+          <app-logo href="sign-up" ariaLabel="DocNDocs home" nColor="var(--primary-color)" />
+        </div>
+
+        <div class="form-box">
+          <h1>Sign In</h1>
+          <p>Enter your credentials to access your account.</p>
+
+          <form id="signInForm" [formGroup]="form" (ngSubmit)="onSubmit()">
+            <input
+              type="text"
+              class="hidden-trap"
+              tabindex="-1"
+              autocomplete="off"
+              aria-hidden="true"
+            />
+
+            <div class="form-group">
+              <label class="form-label" for="emailField">Email Address</label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-envelope input-icon"></i>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="emailField"
+                  formControlName="email"
+                  placeholder="jane@example.com"
+                  maxlength="100"
+                  autocomplete="email"
+                />
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.2rem">
+              <label class="form-label" for="passwordField">Password</label>
+              <div class="input-icon-wrap has-toggle">
+                <i class="fas fa-lock input-icon"></i>
+                <input
+                  [type]="showPassword() ? 'text' : 'password'"
+                  class="form-control"
+                  id="passwordField"
+                  formControlName="password"
+                  placeholder="Enter your password"
+                  maxlength="128"
+                  autocomplete="current-password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  id="togglePassword"
+                  [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                  [attr.aria-pressed]="showPassword()"
+                  (click)="togglePassword()"
+                >
+                  <i [class]="showPassword() ? 'fas fa-eye-slash' : 'fas fa-eye'" id="toggleIcon"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.2rem">
+              <div class="check-wrap">
+                <input
+                  type="checkbox"
+                  id="remember_machine"
+                  name="remember_machine"
+                />
+                <label for="remember_machine"
+                  >Remember Current Device for 30 days</label
+                >
+              </div>
+            </div>
+
+            @if (errorMessage()) {
+              <div class="form-error" role="alert" aria-live="polite">
+                {{ errorMessage() }}
+              </div>
+            }
+
+            <div class="form-group" style="margin-top: 1.8rem">
+              <button type="submit" class="btn-signup" [disabled]="isLoading()">
+                {{ isLoading() ? 'Signing in…' : 'Sign In' }}
+              </button>
+            </div>
+          </form>
+
+          <p class="bottom-links">
+            <a href="sign-up">New here? Sign Up</a>
+            <span class="divider" aria-hidden="true">|</span>
+            <a href="forgot-password">Forgot Password?</a>
+          </p>
+        </div>
+      </div>
+    </div>

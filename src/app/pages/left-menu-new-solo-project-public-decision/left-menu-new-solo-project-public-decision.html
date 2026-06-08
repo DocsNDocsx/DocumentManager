@@ -1,0 +1,142 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Public Project</h1>
+      <p>Step 3 of 3 — Review your project and activate it</p>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-hidden="true">3</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        Project Summary
+      </h2>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-card-label">Project Name</div>
+          <div class="summary-card-value">{{ projectName() }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Deadline</div>
+          <div class="summary-card-value">{{ projectDeadline() }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Expected Collaborators</div>
+          <div class="summary-card-value">{{ expectedCollaborators() }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Project Type</div>
+          <div class="summary-card-value" style="color: var(--primary-color)"><i class="fas fa-globe" aria-hidden="true"></i> Public</div>
+        </div>
+        <div class="summary-card" style="grid-column: 1 / -1">
+          <div class="summary-card-label">Description</div>
+          <div class="summary-card-value">{{ projectDescription() }}</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-chip"><i class="fas fa-file-alt" aria-hidden="true"></i> {{ documents().length }} Document{{ documents().length !== 1 ? 's' : '' }}</span>
+        @if (supportStaff()) {
+          <span class="stat-chip"><i class="fas fa-user-tie" aria-hidden="true"></i> 1 Support Staff</span>
+        }
+      </div>
+
+      <h3 class="form-section-title" style="font-size: 1.1rem; margin-top: 1rem">
+        <i class="fas fa-file-alt" aria-hidden="true"></i>
+        Required Documents
+      </h3>
+      <ul class="doc-list" aria-label="Required documents">
+        @for (doc of documents(); track doc.name) {
+          <li class="doc-item">
+            <i class="fas fa-file-alt" aria-hidden="true"></i>
+            <span class="doc-item-name">{{ doc.name }}</span>
+            <span class="doc-item-meta">{{ doc.fileTypes.join(', ') }} &bull; Max {{ doc.maxSize }} {{ doc.sizeUnit }}</span>
+          </li>
+        }
+      </ul>
+
+      <div style="margin-top: 1.5rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 1rem 1.25rem; font-size: 0.9rem; color: #92400e; display: flex; gap: 0.75rem;">
+        <i class="fas fa-info-circle" aria-hidden="true" style="margin-top: 0.15rem; flex-shrink: 0;"></i>
+        <span>Activating this project will generate a shareable <strong>project code</strong>. Anyone with the code can join and submit documents.</span>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button" (click)="cancelProject()">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+        <button class="btn-action btn-draft" type="button" (click)="saveAsDraft()">
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button class="btn-action btn-activate" type="button" (click)="openConfirmModal()">
+        <i class="fas fa-rocket" aria-hidden="true"></i> Activate Project
+      </button>
+    </div>
+  </main>
+</div>
+
+@if (toastVisible()) {
+  <div class="toast-msg" role="status" aria-live="polite">
+    <i class="fas fa-check-circle" aria-hidden="true"></i> {{ toastMsg() }}
+  </div>
+}
+
+@if (confirmModalOpen()) {
+  <app-confirm-modal
+    title="Activate Public Project?"
+    confirmLabel="Yes, Activate"
+    confirmIcon="fas fa-rocket"
+    modalId="confirmModalTitle"
+    (confirm)="confirmActivation()"
+    (cancel)="closeConfirmModal()">
+    <p>This will create your public project and generate a shareable <strong>project code</strong>. Collaborators can use this code to join and submit documents until the deadline.</p>
+    <p style="margin-top: 0.75rem">Are you sure you want to activate this project now?</p>
+  </app-confirm-modal>
+}
+
+@if (codeModalOpen()) {
+  <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="codeModalTitle" (click)="closeCodeModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h2 class="modal-title" id="codeModalTitle">
+        <i class="fas fa-check-circle" aria-hidden="true" style="color: var(--success-green); margin-right: 0.5rem;"></i>
+        Project Activated!
+      </h2>
+      <div class="modal-body">
+        <p>Your project is now live. Share the code below with collaborators so they can join and submit their documents.</p>
+        <div class="project-code-display" aria-label="Project code">
+          <div class="project-code-value">{{ projectCode() || '...' }}</div>
+          <div class="project-code-label">Share this code with your collaborators</div>
+        </div>
+        <p style="font-size: 0.88rem">Save this code — you can also find it in your project dashboard.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-confirm" type="button" (click)="closeCodeModal()">
+          <i class="fas fa-home" aria-hidden="true"></i> Go to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+}

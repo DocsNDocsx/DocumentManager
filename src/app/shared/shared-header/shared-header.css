@@ -1,0 +1,124 @@
+:host {
+  display: block;
+  --primary-color: #1b5e4f;
+  --secondary-color: #2d8b6f;
+  --accent-orange: #f59e0b;
+  --accent-red: #ef4444;
+  --text-dark: #1f2937;
+  --text-light: #6b7280;
+  --border-color: #e5e7eb;
+}
+
+.top-header {
+  background: linear-gradient(135deg, #164a3e 0%, #1b5e4f 100%);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+
+.top-nav {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.top-nav a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+  padding: 0.5rem 0;
+  position: relative;
+}
+.top-nav a::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent-orange);
+  transition: width 0.3s ease;
+}
+.top-nav a:hover::after,
+.top-nav a.active::after { width: 100%; }
+
+.user-greeting {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  border: none;
+  font-family: inherit;
+}
+.user-greeting:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.dropdown-menu-custom {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  min-width: 240px;
+  display: none;
+  z-index: 1001;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+.dropdown-menu-custom.show { display: block; }
+
+.dropdown-menu-custom a {
+  display: block;
+  padding: 0.9rem 1.25rem;
+  color: var(--text-dark);
+  text-decoration: none;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+.dropdown-menu-custom a:hover {
+  background-color: #f9fafb;
+  color: var(--primary-color);
+  border-left-color: var(--accent-orange);
+}
+.dropdown-menu-custom .signout-link {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0.4rem 0 0;
+  padding: 1rem 1.25rem 0.9rem;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-left: 3px solid transparent;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  color: var(--accent-red);
+  transition: all 0.2s;
+}
+.dropdown-menu-custom .signout-link:hover {
+  background-color: #fef2f2;
+  color: var(--accent-red);
+  border-left-color: var(--accent-red);
+}

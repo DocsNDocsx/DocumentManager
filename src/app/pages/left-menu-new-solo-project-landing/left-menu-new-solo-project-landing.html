@@ -1,0 +1,44 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create New Solo Project</h1>
+      <p>Choose the type of project you want to create</p>
+    </div>
+
+    <div class="project-types">
+      <!-- Public Project -->
+      <a routerLink="/new-solo-project/public/details" class="project-type-card">
+        <div class="card-icon">
+          <i class="fas fa-globe" aria-hidden="true"></i>
+        </div>
+        <h2 class="card-title">Public Project</h2>
+        <p class="card-description">Share a project code for open collaboration</p>
+        <ul class="card-features">
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Get a unique project code to share</span></li>
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Collaborators find and join using code</span></li>
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Up to 100 collaborators (Bronze plan)</span></li>
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Support staff invited via email</span></li>
+        </ul>
+      </a>
+
+      <!-- Private Project -->
+      <a routerLink="/new-solo-project/private/details" class="project-type-card">
+        <div class="card-icon">
+          <i class="fas fa-lock" aria-hidden="true"></i>
+        </div>
+        <h2 class="card-title">Private Project</h2>
+        <p class="card-description">Invite-only collaboration with email verification</p>
+        <ul class="card-features">
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Send email invitations to collaborators</span></li>
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Collaborators must accept invitation</span></li>
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Up to 100 collaborators (Bronze plan)</span></li>
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Support staff invited via email</span></li>
+        </ul>
+      </a>
+    </div>
+  </main>
+</div>

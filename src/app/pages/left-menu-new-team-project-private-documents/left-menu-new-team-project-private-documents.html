@@ -1,0 +1,189 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Private Team Project</h1>
+      <p>Step 3 of 5 — Define the document requirements</p>
+      <div class="team-banner" aria-label="Selected team">
+        <i class="fas fa-users" aria-hidden="true"></i>
+        <span>Team:</span>
+        <strong>DocNDocs Research Team</strong>
+      </div>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Collaborators</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-hidden="true">3</div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">4</div>
+        <div class="step-label">Assignments</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">5</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-file-alt" aria-hidden="true"></i>
+        Document Requirements
+      </h2>
+
+      <div class="count-row">
+        <div class="form-group">
+          <label class="form-label" for="documentCount">Number of Documents <span class="required" aria-hidden="true">*</span></label>
+          <input
+            type="number"
+            class="form-control"
+            id="documentCount"
+            min="1"
+            max="50"
+            [ngModel]="documentCount()"
+            (ngModelChange)="documentCount.set(+$event)"
+            aria-required="true"
+          />
+        </div>
+        <button class="btn-generate" type="button" (click)="generateForms()">
+          <i class="fas fa-magic" aria-hidden="true"></i> Generate Forms
+        </button>
+      </div>
+      <div class="form-help" style="margin-top: 0.3rem">Enter the number of unique documents collaborators must submit (max 50), then click Generate Forms.</div>
+
+      @if (formsGenerated()) {
+        <div style="margin-top: 2rem" aria-live="polite">
+          @for (doc of documents(); track trackByIndex($index); let i = $index) {
+            <div class="doc-card">
+              <div class="doc-card-header">
+                <span class="doc-card-number">Document {{ i + 1 }}</span>
+                @if (documents().length > 1) {
+                  <button class="btn-remove-doc" type="button" (click)="removeDocument(i)" [attr.aria-label]="'Remove document ' + (i + 1)">
+                    <i class="fas fa-trash" aria-hidden="true"></i> Remove
+                  </button>
+                }
+              </div>
+              <div class="doc-grid">
+                <div class="form-group">
+                  <label class="form-label" [for]="'docName' + i">Document Name <span class="required" aria-hidden="true">*</span></label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [id]="'docName' + i"
+                    placeholder="e.g., Resume"
+                    [value]="doc.name"
+                    (input)="updateName(i, $any($event.target).value)"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Max File Size <span class="required" aria-hidden="true">*</span></label>
+                  <div class="size-row">
+                    <input
+                      type="number"
+                      class="form-control"
+                      [id]="'docSize' + i"
+                      placeholder="e.g., 10"
+                      min="1"
+                      [value]="doc.maxSize"
+                      (input)="updateMaxSize(i, $any($event.target).value)"
+                      required
+                      aria-required="true"
+                    />
+                    <select class="size-unit-select" [id]="'docUnit' + i" [value]="doc.sizeUnit" (change)="updateSizeUnit(i, $any($event.target).value)" [attr.aria-label]="'Size unit for document ' + (i + 1)">
+                      <option value="KB">KB</option>
+                      <option value="MB">MB</option>
+                      <option value="GB">GB</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="file-types-group">
+                <label class="form-label">Allowed File Types <span class="required" aria-hidden="true">*</span></label>
+                <div class="file-types-list" role="group" [attr.aria-label]="'File types for document ' + (i + 1)">
+                  @for (type of fileTypes; track type) {
+                    <label class="file-type-chip">
+                      <input
+                        type="checkbox"
+                        [checked]="isFileTypeChecked(i, type)"
+                        (change)="toggleFileType(i, type, $any($event.target).checked)"
+                        [attr.aria-label]="type + ' format'"
+                      />
+                      {{ type }}
+                    </label>
+                  }
+                </div>
+              </div>
+              <div class="template-upload" style="margin-top: 1rem">
+                <label class="form-label">Template File <span style="font-weight: 400; color: var(--text-light)">(optional)</span></label>
+                @if (!doc.templateName) {
+                  <label class="btn-upload-template">
+                    <i class="fas fa-upload" aria-hidden="true"></i> Upload Template
+                    <input
+                      type="file"
+                      style="display: none"
+                      accept=".pdf,.doc,.docx"
+                      (change)="handleTemplateUpload(i, $event)"
+                      [attr.aria-label]="'Upload template for document ' + (i + 1)"
+                    />
+                  </label>
+                } @else {
+                  <div class="template-file-row">
+                    <i class="fas fa-file" aria-hidden="true"></i>
+                    <span>{{ doc.templateName }}</span>
+                    <button class="btn-remove-template" type="button" (click)="removeTemplate(i)" [attr.aria-label]="'Remove template for document ' + (i + 1)">
+                      <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button" (click)="cancel()">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+        <button
+          class="btn-action btn-draft"
+          type="button"
+          [disabled]="!isFormValid()"
+          [attr.aria-disabled]="!isFormValid()"
+          (click)="saveAsDraft()"
+        >
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button
+        class="btn-action btn-continue"
+        type="button"
+        [disabled]="!isFormValid()"
+        [attr.aria-disabled]="!isFormValid()"
+        (click)="continue()"
+      >
+        Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </main>
+</div>

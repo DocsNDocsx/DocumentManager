@@ -1,0 +1,18 @@
+import { defineConfig } from 'cypress';
+
+export default defineConfig({
+  e2e: {
+    baseUrl: 'http://localhost:4200',
+    supportFile: 'cypress/support/e2e.ts',
+    specPattern: 'cypress/e2e/**/*.cy.ts',
+    fixturesFolder: 'cypress/testdata',
+    viewportWidth: 1280,
+    viewportHeight: 800,
+    defaultCommandTimeout: 10000,
+    video: false,
+    screenshotOnRunFailure: true,
+  },
+  env: {
+    apiUrl: 'http://localhost:3000/api',
+  },
+});

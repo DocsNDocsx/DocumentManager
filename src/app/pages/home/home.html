@@ -1,0 +1,230 @@
+<!-- Navigation -->
+<nav class="navbar">
+  <div class="nav-container">
+    <a routerLink="/" class="logo">
+      <span class="logo-doc">Doc</span><span class="logo-n">N</span><span class="logo-docs">Docs</span>
+    </a>
+    <div class="nav-buttons">
+      <a routerLink="/sign-in" class="btn-nav btn-signin">
+        <i class="fas fa-sign-in-alt"></i>
+        Sign In
+      </a>
+      <a routerLink="/sign-up" class="btn-nav btn-signup">
+        Get Started Free
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-container">
+    <h1 class="hero-title">
+      Streamline Your
+      <span class="hero-highlight">Document Collection</span>
+    </h1>
+    <p class="hero-subtitle">
+      Effortlessly collect, review, and manage documents from collaborators.
+      Perfect for admissions, hiring, grants, and research projects.
+    </p>
+    <div class="hero-buttons">
+      <a routerLink="/sign-up" class="btn-hero btn-hero-primary">
+        <i class="fas fa-rocket"></i>
+        Start Free Trial
+      </a>
+      <button (click)="scrollTo('how-it-works')" class="btn-hero btn-hero-secondary">
+        <i class="fas fa-play-circle"></i>
+        See How It Works
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="features" id="features">
+  <div class="section-container">
+    <div class="section-header">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Everything You Need to Manage Documents</h2>
+      <p class="section-subtitle">
+        Powerful tools designed to make document collection simple, efficient, and stress-free.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-1"><i class="fas fa-users"></i></div>
+        <h3 class="feature-title">Solo & Team Projects</h3>
+        <p class="feature-description">Create individual projects or collaborate with your team. Perfect for departments, labs, and organizations.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-2"><i class="fas fa-shield-alt"></i></div>
+        <h3 class="feature-title">Private & Public Projects</h3>
+        <p class="feature-description">Control access with private invitations or share public project codes for open enrollment.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-3"><i class="fas fa-tasks"></i></div>
+        <h3 class="feature-title">Smart Document Management</h3>
+        <p class="feature-description">Define document types, file formats, and size limits. Track submissions in real-time with status updates.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-4"><i class="fas fa-check-circle"></i></div>
+        <h3 class="feature-title">Review & Approval System</h3>
+        <p class="feature-description">Approve, reject, or request revisions with comments. Download approved documents with proper organization.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-5"><i class="fas fa-user-shield"></i></div>
+        <h3 class="feature-title">Support Staff Access</h3>
+        <p class="feature-description">Add support staff to help review submissions. Perfect for large projects with multiple reviewers.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-6"><i class="fas fa-download"></i></div>
+        <h3 class="feature-title">Bulk Downloads</h3>
+        <p class="feature-description">Download all approved documents in one organized ZIP file. Files automatically named with proper conventions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works" id="how-it-works">
+  <div class="section-container">
+    <div class="section-header">
+      <div class="section-label">Process</div>
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Get started in minutes with our simple 4-step process.</p>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3 class="step-title">Create Project</h3>
+        <p class="step-description">Set up your project, define document requirements, and add collaborators or generate a project code.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3 class="step-title">Invite Collaborators</h3>
+        <p class="step-description">Send invitations to specific people or share your project code for open enrollment.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3 class="step-title">Collect Documents</h3>
+        <p class="step-description">Collaborators submit their documents. Track progress in real-time with automatic status updates.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <h3 class="step-title">Review & Download</h3>
+        <p class="step-description">Review submissions, approve or request revisions, and download all approved documents in one click.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing-preview" id="pricing">
+  <div class="section-container">
+    <div class="section-header">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple, Transparent Pricing</h2>
+      <p class="section-subtitle">Choose the plan that fits your needs. No hidden fees.</p>
+    </div>
+
+    <div class="pricing-cards">
+      <div class="pricing-card">
+        <div class="pricing-name">Bronze</div>
+        <div class="pricing-price">$10<span>/mo</span></div>
+        <div class="pricing-period">Perfect for small projects</div>
+        <ul class="pricing-features">
+          <li>✓ Up to 100 collaborators</li>
+          <li>✓ Unlimited solo projects</li>
+          <li>✓ 1 support staff per project</li>
+          <li>✓ 50GB storage</li>
+        </ul>
+        <a routerLink="/sign-up" class="btn-pricing btn-pricing-default">Get Started</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="pricing-name">Silver</div>
+        <div class="pricing-price">$30<span>/mo</span></div>
+        <div class="pricing-period">Great for growing teams</div>
+        <ul class="pricing-features">
+          <li>✓ Up to 500 collaborators</li>
+          <li>✓ Unlimited projects</li>
+          <li>✓ 3 support staff per project</li>
+          <li>✓ 200GB storage</li>
+        </ul>
+        <a routerLink="/sign-up" class="btn-pricing btn-pricing-featured">Get Started</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="pricing-name">Gold</div>
+        <div class="pricing-price">$60<span>/mo</span></div>
+        <div class="pricing-period">For large organizations</div>
+        <ul class="pricing-features">
+          <li>✓ Unlimited collaborators</li>
+          <li>✓ Unlimited projects</li>
+          <li>✓ Unlimited support staff</li>
+          <li>✓ 1TB storage</li>
+        </ul>
+        <a routerLink="/sign-up" class="btn-pricing btn-pricing-default">Get Started</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="section-container">
+    <h2 class="cta-title">Ready to Streamline Your Document Collection?</h2>
+    <p class="cta-subtitle">Join thousands of teams who trust DocNDocs to manage their documents</p>
+    <a routerLink="/sign-up" class="btn-cta">
+      <i class="fas fa-rocket"></i>
+      Start Your Free Trial
+    </a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-container">
+    <div>
+      <div class="footer-brand">
+        <span class="logo-doc">Doc</span><span class="logo-n">N</span><span class="logo-docs">Docs</span>
+      </div>
+      <p class="footer-description">The easiest way to collect, review, and manage documents from collaborators.</p>
+    </div>
+    <div>
+      <h4 class="footer-title">Product</h4>
+      <ul class="footer-links">
+        <li><a href="#features">Features</a></li>
+        <li>
+          <a href="#how-it-works">How It Works</a>
+        </li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="footer-title">Company</h4>
+      <ul class="footer-links">
+        <li><a href="#">About Us</a></li>
+        <li><a href="#">Contact</a></li>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="footer-title">Support</h4>
+      <ul class="footer-links">
+        <li><a href="#">Help Center</a></li>
+        <li><a href="#">Documentation</a></li>
+        <li><a href="#">Contact Support</a></li>
+        <li><a href="#">System Status</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 DocNDocs. All rights reserved.</p>
+  </div>
+</footer>

@@ -1,0 +1,103 @@
+{
+  "projects": {
+    "step1": {
+      "name": "Cypress E2E Private Project Step1",
+      "description": "Created by Cypress to test the Details step only.",
+      "deadline": "2027-12-31",
+      "type": "private"
+    }
+  },
+
+  "collaborators": {
+    "step2": {
+      "count": 2,
+      "list": [
+        {
+          "firstName": "Alice",
+          "lastName": "Tester",
+          "email": "alice.tester@cypress-e2e.test",
+          "affiliation": "QA Department"
+        },
+        {
+          "firstName": "Bob",
+          "lastName": "Reviewer",
+          "email": "bob.reviewer@cypress-e2e.test",
+          "affiliation": "Engineering"
+        }
+      ]
+    }
+  },
+
+  "documents": {
+    "step3": {
+      "count": 3,
+      "list": [
+        {
+          "name": "Resume",
+          "fileTypes": ["PDF"],
+          "maxSize": "10",
+          "sizeUnit": "MB",
+          "templateName": ""
+        },
+        {
+          "name": "Cover Letter",
+          "fileTypes": ["PDF", "DOCX"],
+          "maxSize": "5",
+          "sizeUnit": "MB",
+          "templateName": ""
+        },
+        {
+          "name": "Transcript",
+          "fileTypes": ["PDF"],
+          "maxSize": "15",
+          "sizeUnit": "MB",
+          "templateName": ""
+        }
+      ]
+    }
+  },
+
+  "assignments": {
+    "step4": {
+      "0": [0, 1, 2],
+      "1": [0, 1, 2]
+    }
+  },
+
+  "staff": {
+    "step5": {
+      "addStaff": true,
+      "firstName": "Diana",
+      "lastName": "Support",
+      "email": "diana.support@cypress-e2e.test",
+      "affiliation": "Graduate Admissions"
+    }
+  },
+
+  "assertions": {
+    "step6": {
+      "projectName": "Cypress E2E Private Project Step1",
+      "deadline": "2027-12-31",
+      "collaboratorChip": "2 Collaborators",
+      "documentChip": "3 Documents",
+      "emailChip": "3 Emails Will Be Sent",
+      "staffChip": "1 Support Staff",
+      "collaborators": [
+        {
+          "name": "Alice Tester",
+          "email": "alice.tester@cypress-e2e.test",
+          "assignedDocs": "Resume, Cover Letter, Transcript"
+        },
+        {
+          "name": "Bob Reviewer",
+          "email": "bob.reviewer@cypress-e2e.test",
+          "assignedDocs": "Resume, Cover Letter, Transcript"
+        }
+      ],
+      "staff": {
+        "name": "Diana Support",
+        "email": "diana.support@cypress-e2e.test"
+      }
+    }
+  }
+}

@@ -1,0 +1,214 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+
+    <!-- Page header -->
+    <div class="content-header">
+      <h1>Pricing</h1>
+      <p>Simple, usage-based pricing — pay only for active projects and collaborators.</p>
+    </div>
+
+    <!-- Formula banner -->
+    <div class="formula-banner" role="region" aria-label="Pricing formula">
+      <div class="formula-part">
+        <div class="formula-val">${{ rate }}</div>
+        <div class="formula-lbl">flat rate</div>
+      </div>
+      <div class="formula-op" aria-hidden="true">×</div>
+      <div class="formula-part">
+        <div class="formula-val">projects</div>
+        <div class="formula-lbl">active this period</div>
+      </div>
+      <div class="formula-op" aria-hidden="true">×</div>
+      <div class="formula-part">
+        <div class="formula-val">collaborators</div>
+        <div class="formula-lbl">per project</div>
+      </div>
+      <div class="formula-op" aria-hidden="true">×</div>
+      <div class="formula-part">
+        <div class="formula-val">days</div>
+        <div class="formula-lbl">in billing period</div>
+      </div>
+      <div class="formula-badge" aria-label="No tiers or seat licenses">
+        <i class="fas fa-tag" aria-hidden="true"></i> No tiers. No seats.
+      </div>
+    </div>
+
+    <!-- Project type tabs -->
+    <div class="tab-row" role="group" aria-label="Project type">
+      <button
+        class="tab-btn"
+        [class.active]="isSolo()"
+        type="button"
+        (click)="setType('solo')"
+        [attr.aria-pressed]="isSolo()"
+      >
+        <i class="fas fa-user" aria-hidden="true"></i> Solo Projects
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="!isSolo()"
+        type="button"
+        (click)="setType('team')"
+        [attr.aria-pressed]="!isSolo()"
+      >
+        <i class="fas fa-users" aria-hidden="true"></i> Team Projects
+      </button>
+    </div>
+
+    <!-- Cost calculator -->
+    <div class="calc-card">
+      <h2 class="calc-title">
+        <i class="fas fa-calculator" aria-hidden="true"></i> Estimate your cost
+      </h2>
+
+      <!-- Projects slider -->
+      <div class="slider-row">
+        <div class="slider-top">
+          <label class="slider-name" for="proj-slider">Active projects</label>
+          <span class="slider-val" aria-live="polite">{{ projects() }}</span>
+        </div>
+        <input
+          id="proj-slider"
+          type="range"
+          min="1"
+          max="50"
+          step="1"
+          [value]="projects()"
+          (input)="setProjects($event)"
+          aria-label="Number of active projects"
+        >
+      </div>
+
+      <!-- Collaborators slider -->
+      <div class="slider-row">
+        <div class="slider-top">
+          <label class="slider-name" for="collab-slider">Collaborators per project</label>
+          <span class="slider-val" aria-live="polite">{{ collaborators() }}</span>
+        </div>
+        <input
+          id="collab-slider"
+          type="range"
+          min="1"
+          max="100"
+          step="1"
+          [value]="collaborators()"
+          (input)="setCollaborators($event)"
+          aria-label="Collaborators per project"
+        >
+      </div>
+
+      <!-- Days slider -->
+      <div class="slider-row">
+        <div class="slider-top">
+          <label class="slider-name" for="days-slider">Active days per month</label>
+          <span class="slider-val" aria-live="polite">{{ days() }}</span>
+        </div>
+        <input
+          id="days-slider"
+          type="range"
+          min="1"
+          max="31"
+          step="1"
+          [value]="days()"
+          (input)="setDays($event)"
+          aria-label="Active days per month"
+        >
+      </div>
+
+      <!-- Metric cards -->
+      <div class="metrics-grid" aria-live="polite" aria-atomic="true">
+        <div class="metric">
+          <div class="metric-label">
+            <i class="fas fa-receipt" aria-hidden="true"></i> Monthly est.
+          </div>
+          <div class="metric-value accent">{{ fmt(monthlyEstimate()) }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">
+            <i class="fas fa-calendar-day" aria-hidden="true"></i> Daily rate
+          </div>
+          <div class="metric-value">{{ fmt(dailyRate()) }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">
+            <i class="fas fa-folder" aria-hidden="true"></i> Per project/day
+          </div>
+          <div class="metric-value">{{ fmt(perProjectDay()) }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">
+            <i class="fas fa-chart-line" aria-hidden="true"></i> Annual est.
+          </div>
+          <div class="metric-value">{{ fmt(annualEstimate()) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <h2 class="section-title">Everything included — always</h2>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon"><i class="fas fa-infinity" aria-hidden="true"></i></div>
+        <div>
+          <div class="feat-title">Unlimited collaborators</div>
+          <div class="feat-desc">Add or remove people anytime. Pay only for active days.</div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></div>
+        <div>
+          <div class="feat-title">Unlimited projects</div>
+          <div class="feat-desc">Create as many as you need. Inactive projects cost nothing.</div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><i class="fas fa-file-upload" aria-hidden="true"></i></div>
+        <div>
+          <div class="feat-title">Document collection</div>
+          <div class="feat-desc">Full upload, review, and approval workflows included.</div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><i class="fas fa-user-shield" aria-hidden="true"></i></div>
+        <div>
+          <div class="feat-title">Role-based access</div>
+          <div class="feat-desc">Owners, editors, and viewers with granular permissions.</div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><i class="fas fa-chart-bar" aria-hidden="true"></i></div>
+        <div>
+          <div class="feat-title">Usage dashboard</div>
+          <div class="feat-desc">See daily spend per project before your bill arrives.</div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><i class="fas fa-headset" aria-hidden="true"></i></div>
+        <div>
+          <div class="feat-title">Priority support</div>
+          <div class="feat-desc">Email and chat support — no tier required.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trust strip -->
+    <div class="trust-strip">
+      <div class="trust-pill"><i class="fas fa-shield-alt" aria-hidden="true"></i> Cancel Anytime</div>
+      <div class="trust-pill"><i class="fas fa-calendar-day" aria-hidden="true"></i> Prorated Daily Billing</div>
+      <div class="trust-pill"><i class="fas fa-lock" aria-hidden="true"></i> Secure Payment</div>
+      <div class="trust-pill"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i> Itemized Invoices</div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-row">
+      <button class="btn-subscribe primary" type="button" (click)="subscribe()">
+        Get Started <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+
+  </main>
+</div>

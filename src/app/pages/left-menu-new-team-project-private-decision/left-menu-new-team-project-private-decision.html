@@ -1,0 +1,116 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Private Team Project</h1>
+      <p>Step 5 of 5 — Review your project and activate it</p>
+      <div class="team-banner" aria-label="Selected team">
+        <i class="fas fa-users" aria-hidden="true"></i>
+        <span>Team:</span>
+        <strong>{{ teamName() }}</strong>
+      </div>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Collaborators</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Assignments</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-hidden="true">5</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        Project Summary
+      </h2>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-card-label">Project Name</div>
+          <div class="summary-card-value">{{ projectName() }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Deadline</div>
+          <div class="summary-card-value">{{ projectDeadline() }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Team</div>
+          <div class="summary-card-value">{{ teamName() }}</div>
+        </div>
+        <div class="summary-card" style="grid-column: 1 / -1">
+          <div class="summary-card-label">Description</div>
+          <div class="summary-card-value">{{ projectDescription() }}</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-chip"><i class="fas fa-users" aria-hidden="true"></i> {{ collabCount() }} Collaborator{{ collabCount() !== 1 ? 's' : '' }}</span>
+        <span class="stat-chip"><i class="fas fa-file-alt" aria-hidden="true"></i> {{ documents().length }} Document{{ documents().length !== 1 ? 's' : '' }}</span>
+        <span class="stat-chip"><i class="fas fa-envelope" aria-hidden="true"></i> {{ collabCount() }} Email{{ collabCount() !== 1 ? 's' : '' }} Will Be Sent</span>
+      </div>
+
+      <h3 class="form-section-title" style="font-size: 1.1rem; margin-top: 1rem">
+        <i class="fas fa-users" aria-hidden="true"></i>
+        Collaborators &amp; Their Documents
+      </h3>
+      <ul class="collab-list" aria-label="Collaborator list">
+        @for (collab of collaborators(); track collab.email; let i = $index) {
+          <li class="collab-item">
+            <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
+            <div class="collab-email">{{ collab.email }}</div>
+            <div class="collab-docs"><i class="fas fa-file-alt" aria-hidden="true"></i> {{ documents().length }} document{{ documents().length !== 1 ? 's' : '' }} required</div>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button" (click)="cancelProject()">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+        <button class="btn-action btn-draft" type="button" (click)="saveAsDraft()">
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button class="btn-action btn-activate" type="button" (click)="openModal()">
+        <i class="fas fa-rocket" aria-hidden="true"></i> Activate Project
+      </button>
+    </div>
+  </main>
+</div>
+
+@if (modalOpen()) {
+  <app-confirm-modal
+    title="Activate Project?"
+    confirmLabel="Yes, Activate"
+    confirmIcon="fas fa-rocket"
+    modalId="modalTitle"
+    (confirm)="confirmActivation()"
+    (cancel)="closeModal()">
+    <p>This will send invitation emails to all <strong>{{ collabCount() }} recipient{{ collabCount() !== 1 ? 's' : '' }}</strong> and make the project active for <strong>{{ teamName() }}</strong>. Are you sure you want to proceed?</p>
+  </app-confirm-modal>
+}

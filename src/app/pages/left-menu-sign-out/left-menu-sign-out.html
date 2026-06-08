@@ -1,0 +1,48 @@
+<div class="signup-wrapper">
+  <!-- LEFT – IMAGE PANEL -->
+  <div class="panel-image" aria-hidden="true">
+    <div class="panel-image-content">
+      <app-logo href="#" ariaLabel="DocNDocs home" [showImage]="false" />
+      <div class="panel-tagline">
+        <h2>See you next time.<br />Stay productive.</h2>
+        <p>Your session has ended safely. Sign back in whenever you're ready to continue.</p>
+        <app-trust-pills />
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT – SIGN OUT PANEL -->
+  <div class="panel-form">
+    <div class="mobile-logo">
+      <app-logo href="#" ariaLabel="DocNDocs home" [showImage]="false" nColor="var(--primary-color)" />
+    </div>
+
+    <div class="form-box">
+      <div class="success-icon-wrap" aria-hidden="true">
+        <i class="fas fa-sign-out-alt"></i>
+      </div>
+
+      <h1>Signed Out</h1>
+      <p class="subtitle">You have been safely signed out of your account.</p>
+
+      <div class="security-card" role="status">
+        <div class="security-card-icon" aria-hidden="true">
+          <i class="fas fa-clock"></i>
+        </div>
+        <p>Your session has been <strong>securely closed</strong>. All data remains protected while you're away.</p>
+      </div>
+
+      <a routerLink="/sign-in" class="btn-signup">
+        Go to Sign In <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+
+      <a href="#" class="btn-outline">
+        Visit Homepage <i class="fas fa-globe" aria-hidden="true"></i>
+      </a>
+
+      <p class="support-link">
+        Need help? Contact our <a href="#">support team</a>.
+      </p>
+    </div>
+  </div>
+</div>

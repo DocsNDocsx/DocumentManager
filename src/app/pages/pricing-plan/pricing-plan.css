@@ -1,0 +1,399 @@
+:host {
+  display: block;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  color: var(--text-dark);
+  overflow-x: hidden;
+  --primary-color: #1b5e4f;
+  --secondary-color: #2d8b6f;
+  --text-dark: #1f2937;
+  --text-light: #6b7280;
+  --border-color: #e5e7eb;
+  --bg-light: #f9fafb;
+  --green-soft: rgba(27, 94, 79, 0.08);
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.main-container {
+  display: flex;
+  min-height: calc(100vh - 85px);
+}
+
+.main-content {
+  flex: 1;
+  padding: 1.75rem;
+  transition: all 0.3s ease;
+}
+
+/* ── Header ── */
+
+.content-header {
+  margin-bottom: 1.5rem;
+  animation: fadeInUp 0.5s ease;
+}
+
+.content-header h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin-bottom: 0.3rem;
+}
+
+.content-header p {
+  color: var(--text-light);
+  font-size: 1.05rem;
+}
+
+/* ── Formula banner ── */
+
+.formula-banner {
+  background: #fff;
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  padding: 1.25rem 1.75rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  animation: fadeInUp 0.5s ease 0.05s both;
+}
+
+.formula-part {
+  text-align: center;
+}
+
+.formula-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.formula-lbl {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+.formula-op {
+  font-size: 1.4rem;
+  color: var(--border-color);
+  font-weight: 700;
+}
+
+.formula-badge {
+  margin-left: auto;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border-radius: 20px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Type tabs ── */
+
+.tab-row {
+  display: flex;
+  margin-bottom: 1.75rem;
+  animation: fadeInUp 0.5s ease 0.1s both;
+}
+
+.tab-btn {
+  padding: 0.6rem 1.5rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 2px solid var(--border-color);
+  background: #fff;
+  color: var(--text-light);
+  transition: all 0.2s;
+}
+
+.tab-btn:first-child {
+  border-radius: 10px 0 0 10px;
+}
+
+.tab-btn:last-child {
+  border-radius: 0 10px 10px 0;
+  border-left: none;
+}
+
+.tab-btn.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+/* ── Calculator card ── */
+
+.calc-card {
+  background: #fff;
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-bottom: 1.75rem;
+  animation: fadeInUp 0.5s ease 0.15s both;
+}
+
+.calc-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin-bottom: 1.25rem;
+}
+
+.calc-title i {
+  color: var(--secondary-color);
+  margin-right: 0.4rem;
+}
+
+.slider-row {
+  margin-bottom: 1.2rem;
+}
+
+.slider-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.slider-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.slider-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  min-width: 36px;
+  text-align: right;
+}
+
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.slider-note {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.3rem;
+}
+
+.slider-note i {
+  margin-right: 0.25rem;
+}
+
+/* ── Metrics ── */
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.metric {
+  background: var(--bg-light);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+.metric-label i {
+  margin-right: 0.25rem;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.metric-value.accent {
+  color: var(--primary-color);
+}
+
+/* ── Features ── */
+
+.section-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin-bottom: 1rem;
+  animation: fadeInUp 0.5s ease 0.2s both;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  animation: fadeInUp 0.5s ease 0.2s both;
+}
+
+.feat-card {
+  background: #fff;
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  transition: all 0.3s ease;
+}
+
+.feat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.feat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  background: var(--green-soft);
+  color: var(--primary-color);
+}
+
+.feat-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.2rem;
+}
+
+.feat-desc {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  line-height: 1.45;
+}
+
+/* ── Trust strip ── */
+
+.trust-strip {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.75rem;
+  animation: fadeInUp 0.5s ease 0.25s both;
+}
+
+.trust-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.trust-pill i {
+  color: var(--secondary-color);
+}
+
+/* ── CTA ── */
+
+.cta-row {
+  animation: fadeInUp 0.5s ease 0.3s both;
+}
+
+.btn-subscribe.primary {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 2.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-subscribe.primary:hover {
+  background: #155044;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(27, 94, 79, 0.35);
+}
+
+.btn-subscribe.primary i {
+  margin-left: 0.4rem;
+}
+
+/* ── Animation ── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 1.25rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .formula-banner {
+    justify-content: center;
+  }
+
+  .formula-badge {
+    margin-left: 0;
+  }
+}

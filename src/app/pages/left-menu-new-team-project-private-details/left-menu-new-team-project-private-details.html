@@ -1,0 +1,194 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Private Team Project</h1>
+      <p>Step 1 of 5 — Enter the basic details for your project</p>
+      @if (selectedTeamName()) {
+        <div class="team-banner" aria-label="Selected team">
+          <i class="fas fa-users" aria-hidden="true"></i>
+          <span>Team:</span>
+          <strong>{{ selectedTeamName() }}</strong>
+        </div>
+      }
+    </div>
+
+    <nav class="step-progress" aria-label="Wizard progress">
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-label="Step 1 active">1</div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 2 locked">2</div>
+        <div class="step-label">Collaborators</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 3 locked">3</div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 4 locked">4</div>
+        <div class="step-label">Assignments</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 5 locked">5</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        Project Information
+      </h2>
+
+      <div class="form-group">
+        <label class="form-label" for="teamSelect">Team <span class="required" aria-hidden="true">*</span></label>
+        <select id="teamSelect" class="form-control" (change)="onTeamChange($event)" required aria-required="true">
+          <option value="" [selected]="selectedTeamId() === ''">— Select a team —</option>
+          @for (team of teams(); track team.id) {
+            <option [value]="team.id" [selected]="team.id === selectedTeamId()">{{ team.name }}</option>
+          }
+        </select>
+        <div class="form-help" id="teamHelp">Select which team this project belongs to</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="projectName">Project Name <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="text"
+          id="projectName"
+          class="form-control"
+          [value]="projectName()"
+          (input)="onNameInput($event)"
+          placeholder="e.g., 2026 Graduate Admissions"
+          required
+          aria-required="true"
+          aria-describedby="nameHelp"
+        />
+        <div class="form-help" id="nameHelp">Choose a clear, descriptive name for your project</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="projectDescription">Project Description</label>
+        <textarea
+          id="projectDescription"
+          class="form-control"
+          [value]="projectDescription()"
+          (input)="onDescInput($event)"
+          placeholder="Describe the purpose and goals of this project..."
+          aria-describedby="descHelp"
+        ></textarea>
+        <div class="form-help" id="descHelp">This will be visible to all collaborators</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="projectDeadline">Deadline <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="date"
+          id="projectDeadline"
+          class="form-control"
+          [value]="projectDeadline()"
+          (change)="onDeadlineChange($event)"
+          required
+          aria-required="true"
+          aria-describedby="deadlineHelp"
+        />
+        <div class="form-help" id="deadlineHelp">Final date for all document submissions</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Project Files</label>
+        <div
+          class="file-upload-area"
+          [class.dragover]="dragOver()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)"
+          (click)="fileInput.click()"
+          role="button"
+          tabindex="0"
+          aria-label="Upload project files"
+          (keydown.enter)="fileInput.click()"
+          (keydown.space)="fileInput.click()"
+        >
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--primary-color); margin-bottom: 0.75rem;" aria-hidden="true"></i>
+            <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.3rem;">Drop files here or click to browse</p>
+            <p style="font-size: 0.82rem; color: var(--text-light); margin-bottom: 0.75rem;">Upload documents, images, or any files relevant to this project</p>
+            <input
+              type="file"
+              #fileInput
+              multiple
+              style="display: none"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar"
+              (change)="onFileChange($event)"
+              aria-label="Choose files to upload"
+            />
+            <button type="button" class="btn-browse" (click)="$event.stopPropagation(); fileInput.click()">
+              <i class="fas fa-folder-open" aria-hidden="true"></i> Browse Files
+            </button>
+          </div>
+        </div>
+        <div class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Visible to all collaborators. Max 50 MB per file.</div>
+
+        @if (uploadedFiles().length > 0) {
+          <div style="margin-top: 0.75rem;" aria-live="polite">
+            <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fas fa-file-alt" aria-hidden="true"></i> Uploaded Files
+            </div>
+            @for (file of uploadedFiles(); track file.name; let i = $index) {
+              <div class="file-item">
+                <div class="file-item-info">
+                  <div class="file-icon"><i class="fas fa-file" aria-hidden="true"></i></div>
+                  <div class="file-details">
+                    <div class="file-name">{{ file.name }}</div>
+                    <div class="file-size">{{ file.size }}</div>
+                  </div>
+                </div>
+                <button class="btn-remove-file" type="button" (click)="removeFile(i)" [attr.aria-label]="'Remove ' + file.name">
+                  <i class="fas fa-times" aria-hidden="true"></i> Remove
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (teamWizardService.saveError()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        {{ teamWizardService.saveError() }}
+      </div>
+    }
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button" (click)="onCancel()">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+        <button class="btn-action btn-draft" type="button" [disabled]="!isFormValid()">
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button class="btn-action btn-continue" type="button"
+        (click)="onContinue()"
+        [disabled]="!isFormValid() || teamWizardService.isSaving()"
+        [attr.aria-disabled]="!isFormValid() || teamWizardService.isSaving()">
+        @if (teamWizardService.isSaving()) {
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Saving...
+        } @else {
+          Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+  </main>
+</div>

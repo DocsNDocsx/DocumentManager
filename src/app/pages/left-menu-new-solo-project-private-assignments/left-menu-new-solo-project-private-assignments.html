@@ -1,0 +1,148 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Private Project</h1>
+      <p>Step 4 of 6 — Assign documents to each collaborator</p>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Collaborators</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-hidden="true">4</div>
+        <div class="step-label">Assignments</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">5</div>
+        <div class="step-label">Staff</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">6</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-tasks" aria-hidden="true"></i>
+        Document Assignments
+      </h2>
+
+      <div class="toolbar" role="toolbar" aria-label="Assignment tools">
+        <button class="btn-toolbar" type="button" (click)="selectAll()">
+          <i class="fas fa-check-double" aria-hidden="true"></i> Select All
+        </button>
+        <button class="btn-toolbar danger" type="button" (click)="clearAll()">
+          <i class="fas fa-times-circle" aria-hidden="true"></i> Clear All
+        </button>
+      </div>
+
+      @if (warnings().length > 0) {
+        <div class="warning-list" role="alert" aria-live="polite">
+          @for (warning of warnings(); track warning) {
+            <div class="warning-item">
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+              {{ warning }}
+            </div>
+          }
+        </div>
+      }
+
+      <div class="assignment-table-wrapper">
+        <table class="assignment-table" aria-label="Document assignment matrix">
+          <thead>
+            <tr>
+              <th class="collab-col" scope="col">Collaborator</th>
+              @for (doc of documents(); track trackByIndex($index); let di = $index) {
+                <th class="doc-col" scope="col">
+                  <span class="col-header-label">{{ doc.name }}</span>
+                  <input
+                    type="checkbox"
+                    class="col-select-all"
+                    [checked]="isColumnAllSelected(di)"
+                    (change)="toggleColumn(di)"
+                    [attr.aria-label]="'Select all for ' + doc.name"
+                  />
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (collab of collaborators(); track trackByIndex($index); let ci = $index) {
+              <tr>
+                <td class="collab-name">
+                  <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
+                  <div class="collab-email">{{ collab.email }}</div>
+                </td>
+                @for (doc of documents(); track trackByIndex($index); let di = $index) {
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="assign-checkbox"
+                      [checked]="isChecked(ci, di)"
+                      (change)="toggleAssignment(ci, di, $any($event.target).checked)"
+                      [attr.aria-label]="'Assign ' + doc.name + ' to ' + collab.firstName + ' ' + collab.lastName"
+                    />
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-help" style="margin-top: 1rem">Check the top row to select/deselect all collaborators for a document. Every collaborator must have at least one document assigned.</div>
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+        <button
+          class="btn-action btn-draft"
+          type="button"
+          [disabled]="!allAssigned()"
+          [attr.aria-disabled]="!allAssigned()"
+          (click)="saveAsDraft()"
+        >
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button
+        class="btn-action btn-continue"
+        type="button"
+        [disabled]="!allAssigned()"
+        [attr.aria-disabled]="!allAssigned()"
+        (click)="continue()"
+      >
+        Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </main>
+</div>
+
+@if (toastVisible()) {
+  <div class="toast-msg" role="status" aria-live="polite">
+    <i class="fas fa-check-circle" aria-hidden="true"></i> {{ toastMsg() }}
+  </div>
+}

@@ -1,0 +1,103 @@
+    <div class="signup-wrapper">
+      <div class="panel-image">
+        <img ngSrc="ImageSignUp.jpg" alt="Secure Verification" class="bg-img" fill priority />
+        <div class="panel-image-content">
+          <app-logo routerLink="/sign-up" ariaLabel="DocNDocs home" />
+
+          <div class="panel-tagline">
+            <h2>One step away<br />from getting started.</h2>
+            <p>
+              Enter the code we sent to your email to verify your identity and
+              secure your account.
+            </p>
+            <app-trust-pills />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-form">
+        <div class="mobile-logo">
+          <app-logo routerLink="/sign-up" ariaLabel="DocNDocs home" nColor="var(--primary-color)" />
+        </div>
+
+        <div class="form-box">
+          <div class="otp-icon-wrap">
+            <i class="fas fa-envelope"></i>
+          </div>
+
+          <h1>Verify Email</h1>
+          <p>
+            We sent a 6-digit code to<br />
+            <span class="user-email">{{ userEmail() }}</span>
+          </p>
+
+          <form [formGroup]="form" autocomplete="off" (ngSubmit)="onVerify()">
+            <div class="form-group">
+              <label class="form-label" for="passcodeField">Passcode</label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-key input-icon"></i>
+                <input
+                  [type]="showPasscode() ? 'text' : 'password'"
+                  id="passcodeField"
+                  formControlName="otp"
+                  [class]="'form-control' + (otp.touched && otp.invalid ? ' is-invalid' : '')"
+                  placeholder="Enter 6-digit code"
+                  maxlength="6"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                />
+                <button
+                  type="button"
+                  class="passcode-toggle"
+                  [attr.aria-label]="showPasscode() ? 'Hide passcode' : 'Show passcode'"
+                  [attr.aria-pressed]="showPasscode()"
+                  (click)="togglePasscode()"
+                >
+                  <i [class]="showPasscode() ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
+              @if (otp.touched && otp.invalid) {
+                <span class="field-error" role="alert">Enter a valid 6-digit code.</span>
+              }
+            </div>
+
+            @if (serverError()) {
+              <div class="server-error" role="alert">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                {{ serverError() }}
+              </div>
+            }
+
+            <div class="form-group" style="margin-top: 1.8rem">
+              <button
+                type="submit"
+                class="btn-signup"
+                [disabled]="isSubmitting()"
+              >
+                @if (isSubmitting()) {
+                  <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Verifying…
+                } @else {
+                  Verify
+                }
+              </button>
+            </div>
+
+            <div class="resend-area">
+              @if (!canResend()) {
+                <p>Resend code in <span>{{ secondsLeft() }}</span>s</p>
+              } @else {
+                <button type="button" class="resend-link" (click)="resendCode()">
+                  Resend Code
+                </button>
+              }
+            </div>
+          </form>
+
+          <p class="back-link">
+            <a routerLink="/sign-up">
+              <i class="fas fa-arrow-left"></i> Back to Sign Up
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>

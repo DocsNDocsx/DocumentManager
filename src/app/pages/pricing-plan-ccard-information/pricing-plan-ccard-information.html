@@ -1,0 +1,185 @@
+<div class="payment-container">
+  <div class="payment-header">
+    <app-logo routerLink="/dashboard" [showImage]="false" nColor="var(--text-dark)" />
+    <a routerLink="/pricing-plan" class="back-link">
+      <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Pricing
+    </a>
+  </div>
+
+  <div class="payment-grid">
+    <!-- Left: forms -->
+    <div>
+      <!-- Billing information -->
+      <div class="form-section">
+        <h2 class="section-title">
+          <i class="fas fa-user-circle" aria-hidden="true"></i>
+          Billing Information
+        </h2>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="firstName">First Name <span class="required">*</span></label>
+            <input type="text" class="form-control" id="firstName" placeholder="Jennifer"
+              [value]="firstName()" (input)="firstName.set($any($event.target).value)" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lastName">Last Name <span class="required">*</span></label>
+            <input type="text" class="form-control" id="lastName" placeholder="Doe"
+              [value]="lastName()" (input)="lastName.set($any($event.target).value)" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address <span class="required">*</span></label>
+          <input type="email" class="form-control" id="email" placeholder="jennifer@example.com"
+            [value]="email()" (input)="email.set($any($event.target).value)" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="address1">Street Address <span class="required">*</span></label>
+          <input type="text" class="form-control" id="address1" placeholder="123 Main Street"
+            [value]="address1()" (input)="address1.set($any($event.target).value)" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="address2">Apartment, suite, etc. (optional)</label>
+          <input type="text" class="form-control" id="address2" placeholder="Apt 4B"
+            [value]="address2()" (input)="address2.set($any($event.target).value)" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="city">City <span class="required">*</span></label>
+            <input type="text" class="form-control" id="city" placeholder="New York"
+              [value]="city()" (input)="city.set($any($event.target).value)" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="state">State / Province <span class="required">*</span></label>
+            <input type="text" class="form-control" id="state" placeholder="NY"
+              [value]="state()" (input)="state.set($any($event.target).value)" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="zip">ZIP / Postal Code <span class="required">*</span></label>
+            <input type="text" class="form-control" id="zip" placeholder="10001"
+              [value]="zip()" (input)="zip.set($any($event.target).value)" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="country">Country <span class="required">*</span></label>
+            <select class="form-control" id="country"
+              [value]="country()" (change)="country.set($any($event.target).value)" required>
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+              <option value="UK">United Kingdom</option>
+              <option value="AU">Australia</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              <option value="JP">Japan</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment details -->
+      <div class="form-section" style="margin-top: 1.5rem">
+        <h2 class="section-title">
+          <i class="fas fa-credit-card" aria-hidden="true"></i>
+          Payment Details
+        </h2>
+
+        <div class="form-group">
+          <span class="form-label" id="cardDetailsLabel">Card Details <span class="required">*</span></span>
+          <div #paymentElement class="stripe-element-host" role="group" aria-labelledby="cardDetailsLabel">
+            @if (!stripeReady()) {
+              <span class="stripe-loading">
+                <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading secure payment field…
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="security-badge">
+          <i class="fas fa-lock" aria-hidden="true"></i>
+          Secure SSL Encrypted Payment
+        </div>
+      </div>
+
+      @if (validationError()) {
+        <div class="validation-error" role="alert">{{ validationError() }}</div>
+      }
+
+      <button type="button" class="btn-submit" (click)="submitPayment()" [disabled]="processing()">
+        @if (processing()) {
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+          Processing…
+        } @else {
+          <i class="fas fa-lock" aria-hidden="true"></i>
+          Complete Payment
+        }
+      </button>
+
+      <p class="terms-text">
+        By completing this payment, you agree to our
+        <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+        You only pay for active projects and collaborators each day.
+      </p>
+    </div>
+
+    <!-- Right: order summary -->
+    <div class="order-summary-box">
+      <h3 class="summary-title">Order Summary</h3>
+
+      <div class="usage-badge">
+        <i class="fas fa-chart-line" aria-hidden="true"></i>
+        Usage-based billing
+      </div>
+
+      <div class="summary-item">
+        <span class="summary-item-label">Type</span>
+        <span class="summary-item-value">{{ projectType() === 'solo' ? 'Solo' : 'Team' }} Projects</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item-label">Active projects</span>
+        <span class="summary-item-value">{{ projects() }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item-label">Collaborators / project</span>
+        <span class="summary-item-value">{{ collaborators() }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item-label">Active days / month</span>
+        <span class="summary-item-value">{{ days() }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item-label">Rate</span>
+        <span class="summary-item-value">$0.09 / project / collaborator / day</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item-label">Subtotal</span>
+        <span class="summary-item-value">${{ subtotal().toFixed(2) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item-label">Tax (estimated 8%)</span>
+        <span class="summary-item-value">${{ tax().toFixed(2) }}</span>
+      </div>
+
+      <div class="summary-total">
+        <span class="summary-total-label">Est. Monthly Total</span>
+        <span class="summary-total-value">${{ total().toFixed(2) }}</span>
+      </div>
+
+      <p class="billing-cycle-note">
+        Billed monthly based on actual daily usage. Cancel anytime.
+      </p>
+
+      <div class="trust-row">
+        <div class="trust-item"><i class="fas fa-shield-alt" aria-hidden="true"></i> Secure Payment</div>
+        <div class="trust-item"><i class="fas fa-calendar-day" aria-hidden="true"></i> Prorated Daily</div>
+        <div class="trust-item"><i class="fas fa-lock" aria-hidden="true"></i> SSL Encrypted</div>
+      </div>
+    </div>
+  </div>
+</div>

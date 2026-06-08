@@ -1,0 +1,54 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="signout-container">
+      <div class="signout-header">
+        <h1>Sign Out</h1>
+        <p>Are you sure you want to sign out of your account?</p>
+      </div>
+
+      <div class="session-info" role="region" aria-label="Current session information">
+        <div class="session-info-title">
+          <i class="fas fa-info-circle" aria-hidden="true"></i>
+          Current Session Information
+        </div>
+        <div class="session-item">
+          <span class="session-label"><i class="fas fa-user" aria-hidden="true"></i> Logged in as</span>
+          <span class="session-value">Jennifer</span>
+        </div>
+        <div class="session-item">
+          <span class="session-label"><i class="fas fa-clock" aria-hidden="true"></i> Login time</span>
+          <span class="session-value">{{ loginTime() }}</span>
+        </div>
+        <div class="session-item">
+          <span class="session-label"><i class="fas fa-laptop" aria-hidden="true"></i> Device</span>
+          <span class="session-value">{{ deviceInfo() }}</span>
+        </div>
+        <div class="session-item">
+          <span class="session-label"><i class="fas fa-history" aria-hidden="true"></i> Session duration</span>
+          <span class="session-value">{{ sessionDuration() }}</span>
+        </div>
+      </div>
+
+      <div class="warning-box" role="alert">
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        <div class="warning-box-content">
+          <p>You will be signed out from this device. Any unsaved changes may be lost.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-signout" type="button" (click)="confirmSignOut()">
+          <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+          Yes, Sign Me Out
+        </button>
+        <a routerLink="/" class="btn-cancel">
+          Cancel, Stay Logged In
+        </a>
+      </div>
+    </div>
+  </main>
+</div>

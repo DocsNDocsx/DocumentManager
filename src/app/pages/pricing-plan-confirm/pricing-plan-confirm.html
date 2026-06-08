@@ -1,0 +1,55 @@
+<div class="confirmation-container">
+  <div class="success-icon" aria-label="Payment successful">
+    <i class="fas fa-check" aria-hidden="true"></i>
+  </div>
+
+  <h1>Payment Successful!</h1>
+  <p class="subtitle">Thank you for subscribing to DocNDocs</p>
+
+  <div class="details-box">
+    <div class="detail-row">
+      <span class="detail-label">Project type</span>
+      <span class="detail-value">{{ projectType() }} Projects</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Active projects</span>
+      <span class="detail-value">{{ projects() }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Collaborators / project</span>
+      <span class="detail-value">{{ collaborators() }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Active days / month</span>
+      <span class="detail-value">{{ days() }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Est. amount charged</span>
+      <span class="detail-value">${{ amountCharged() }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Confirmation number</span>
+      <span class="detail-value">{{ confirmationNumber() }}</span>
+    </div>
+  </div>
+
+  <div class="receipt-info">
+    <p>
+      <i class="fas fa-envelope" aria-hidden="true"></i>
+      A receipt has been sent to <strong>{{ customerName() }}'s email</strong>.
+    </p>
+    <p style="margin-top: 0.6rem">
+      <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+      Your subscription is now active. {{ nextBillingText() }}
+    </p>
+  </div>
+
+  <div class="action-buttons">
+    <a routerLink="/dashboard" class="btn btn-primary">
+      <i class="fas fa-home" aria-hidden="true"></i> Go to Dashboard
+    </a>
+    <a routerLink="/pricing-plan" class="btn btn-secondary">
+      View Pricing
+    </a>
+  </div>
+</div>

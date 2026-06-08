@@ -1,0 +1,53 @@
+    <div class="signup-wrapper">
+      <div class="panel-image">
+        <img ngSrc="ImageSignUp.jpg" alt="Account Created" class="bg-img" fill priority />
+        <div class="panel-image-content">
+          <app-logo routerLink="/sign-up" ariaLabel="DocNDocs home" />
+
+          <div class="panel-tagline">
+            <h2>You're all set.<br />Welcome aboard.</h2>
+            <p>
+              Your account is secure and ready. Sign In to begin collecting
+              documents with confidence.
+            </p>
+            <app-trust-pills />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-form">
+        <div class="mobile-logo">
+          <app-logo routerLink="/sign-up" ariaLabel="DocNDocs home" nColor="var(--primary-color)" />
+        </div>
+
+        <div class="form-box">
+          <div class="success-icon-wrap" aria-hidden="true">
+            <i class="fas fa-check"></i>
+          </div>
+
+          <h1>Account Created!</h1>
+          <p class="subtitle">
+            Your DocNDocs account has been successfully set up and verified.
+          </p>
+
+          <div class="security-card">
+            <div class="security-card-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <p>
+              For your security, please <strong>Sign In</strong> to start a new
+              authenticated session before accessing your account.
+            </p>
+          </div>
+
+          <a routerLink="/sign-in" class="btn-signup">
+            Sign In Now <i class="fas fa-arrow-right"></i>
+          </a>
+
+          <p class="support-link">
+            Need help? Contact our
+            <a href="mailto:support@docndocs.com">support team</a>.
+          </p>
+        </div>
+      </div>
+    </div>

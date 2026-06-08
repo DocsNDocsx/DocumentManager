@@ -1,0 +1,216 @@
+<header class="top-header">
+  <div class="header-container">
+    <a routerLink="/dashboard" class="logo">
+      <span class="logo-doc">Doc</span><span class="logo-n">N</span><span class="logo-docs">Docs</span>
+    </a>
+    <div class="user-info">
+      <div class="user-avatar" aria-hidden="true">{{ collaboratorInitials() }}</div>
+      <span class="user-name">{{ collaboratorName() }}</span>
+    </div>
+  </div>
+</header>
+
+@if (isLoading()) {
+  <div class="main-container" style="display:flex;align-items:center;justify-content:center;min-height:60vh">
+    <div style="text-align:center">
+      <i class="fas fa-spinner fa-spin" aria-hidden="true" style="font-size:2rem;color:var(--primary-color)"></i>
+      <p style="margin-top:1rem;color:#64748b">Loading your documents…</p>
+    </div>
+  </div>
+}
+
+@if (loadError()) {
+  <div class="main-container" style="display:flex;align-items:center;justify-content:center;min-height:60vh">
+    <div style="text-align:center">
+      <i class="fas fa-exclamation-circle" aria-hidden="true" style="font-size:2rem;color:#ef4444"></i>
+      <p style="margin-top:1rem;color:#ef4444">{{ loadError() }}</p>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && !loadError()) {
+  <div class="main-container">
+    <!-- Project Banner -->
+    <div class="project-banner">
+      <h1 class="project-title">{{ project()?.name }}</h1>
+      <p style="opacity:0.9;margin-bottom:1rem">Please submit all required documents by the deadline. You'll receive feedback if any revisions are needed.</p>
+      <div class="project-meta">
+        <div class="meta-item"><i class="fas fa-calendar" aria-hidden="true"></i><span>Deadline: {{ formattedDeadline() }}</span></div>
+        <div class="meta-item"><i class="fas fa-user-tie" aria-hidden="true"></i><span>{{ project()?.ownerName ?? 'Project Host' }}</span></div>
+        <div class="meta-item"><i class="fas fa-lock" aria-hidden="true"></i><span>{{ project()?.type === 'public' ? 'Public Project' : 'Private Project' }}</span></div>
+      </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="progress-section">
+      <div class="progress-header">
+        <h2 class="progress-title">Your Submission Progress</h2>
+        <div class="progress-stats">
+          <div class="stat-item">
+            <div class="stat-number">{{ submittedCount() }}</div>
+            <div class="stat-label">Submitted</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">{{ totalCount() }}</div>
+            <div class="stat-label">Total Required</div>
+          </div>
+        </div>
+      </div>
+      <div class="progress-bar-container"
+           role="progressbar"
+           [attr.aria-valuenow]="progressPercent()"
+           aria-valuemin="0"
+           aria-valuemax="100"
+           [attr.aria-label]="'Submission progress: ' + progressPercent() + '%'">
+        <div class="progress-bar-fill" [style.width.%]="progressPercent()"></div>
+      </div>
+    </div>
+
+    <!-- Documents Grid -->
+    <div class="documents-grid">
+      @for (doc of documents(); track doc.docIndex) {
+        <div class="document-card" [class.submitted]="doc.status === 'submitted'" [class.revision]="doc.status === 'revision'">
+          <div class="document-header">
+            <div>
+              <h3 class="document-title">{{ doc.title }}</h3>
+            </div>
+            @if (doc.status === 'required') {
+              <span class="status-badge status-required">Required</span>
+            } @else if (doc.status === 'submitted') {
+              <span class="status-badge status-submitted">&#10003; Submitted</span>
+            } @else {
+              <span class="status-badge status-revision">Needs Revision</span>
+            }
+          </div>
+
+          @if (doc.status === 'revision' && doc.feedback) {
+            <div class="feedback-box">
+              <div class="feedback-title">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Reviewer Feedback
+              </div>
+              <div class="feedback-text">{{ doc.feedback }}</div>
+            </div>
+          }
+
+          <div class="document-info">
+            <div class="info-row"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Maximum file size: {{ doc.maxSize }}</span></div>
+            <div class="info-row"><i class="fas fa-check-circle" aria-hidden="true"></i><span>Accepted formats:</span></div>
+            <div class="file-types">
+              @for (fmt of doc.acceptedFormats; track fmt) {
+                <span class="file-type-tag">{{ fmt }}</span>
+              }
+            </div>
+          </div>
+
+          @if (doc.status === 'submitted' && doc.submittedFileName) {
+            <div class="uploaded-file">
+              <div class="file-info">
+                <div class="file-icon"><i class="fas {{ getFileIcon(doc.submittedFileName) }}" aria-hidden="true"></i></div>
+                <div class="file-details">
+                  <div class="file-name">{{ doc.submittedFileName }}</div>
+                  <div class="file-size">Submitted on {{ doc.submittedAt }}</div>
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (doc.status === 'revision' && doc.submittedFileName) {
+            <div class="uploaded-file">
+              <div class="file-info">
+                <div class="file-icon"><i class="fas {{ getFileIcon(doc.submittedFileName) }}" aria-hidden="true"></i></div>
+                <div class="file-details">
+                  <div class="file-name">{{ doc.submittedFileName }}</div>
+                  <div class="file-size">Previous submission</div>
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (doc.status !== 'submitted') {
+            <input type="file"
+                   [id]="'file-' + doc.docIndex"
+                   style="display:none"
+                   [accept]="getAcceptAttr(doc.acceptedFormats)"
+                   (change)="onFileSelected($event, doc.docIndex)" />
+
+            @if (!doc.selectedFile) {
+              <div class="upload-area"
+                   (click)="triggerFileInput(doc.docIndex)"
+                   (keyup.enter)="triggerFileInput(doc.docIndex)"
+                   role="button"
+                   tabindex="0"
+                   [attr.aria-label]="'Upload file for ' + doc.title">
+                <div class="upload-icon"><i class="fas fa-cloud-upload-alt" aria-hidden="true"></i></div>
+                <div class="upload-text">{{ doc.status === 'revision' ? 'Upload revised document' : 'Click to browse or drag file here' }}</div>
+                <div class="upload-hint">{{ doc.acceptedFormats.join(', ') }} (Max {{ doc.maxSize }})</div>
+              </div>
+            } @else {
+              <div class="uploaded-file">
+                <div class="file-info">
+                  <div class="file-icon"><i class="fas {{ getFileIcon(doc.selectedFile.name) }}" aria-hidden="true"></i></div>
+                  <div class="file-details">
+                    <div class="file-name">{{ getSelectedFileName(doc.docIndex) }}</div>
+                    <div class="file-size">{{ getSelectedFileSize(doc.docIndex) }}</div>
+                  </div>
+                </div>
+                <button class="btn-remove"
+                        (click)="removeFile(doc.docIndex)"
+                        [attr.aria-label]="'Remove ' + doc.selectedFile.name">
+                  <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
+
+            <div class="document-actions">
+              @if (doc.status === 'revision') {
+                <button class="btn-action btn-resubmit"
+                        (click)="uploadDocument(doc.docIndex)"
+                        [disabled]="!doc.selectedFile || doc.uploading">
+                  @if (doc.uploading) {
+                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Uploading...
+                  } @else {
+                    <i class="fas fa-redo" aria-hidden="true"></i> Resubmit Document
+                  }
+                </button>
+              } @else {
+                <button class="btn-action btn-upload"
+                        (click)="uploadDocument(doc.docIndex)"
+                        [disabled]="!doc.selectedFile || doc.uploading">
+                  @if (doc.uploading) {
+                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Uploading...
+                  } @else {
+                    <i class="fas fa-upload" aria-hidden="true"></i> Submit Document
+                  }
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="document-actions">
+              <button class="btn-action btn-view">
+                <i class="fas fa-eye" aria-hidden="true"></i> View Submitted
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Help Banner -->
+    <div class="help-banner">
+      <div class="help-title"><i class="fas fa-question-circle" aria-hidden="true"></i> Need Help?</div>
+      <p class="help-text">If you have questions about the required documents or need assistance with your submission, please contact the project administrator.</p>
+    </div>
+  </div>
+}
+
+<!-- Success Modal -->
+@if (showSuccessModal()) {
+  <div class="modal-overlay show" role="dialog" aria-modal="true" aria-labelledby="successModalTitle">
+    <div class="modal-box">
+      <div class="success-icon" aria-hidden="true"><i class="fas fa-check"></i></div>
+      <h2 class="modal-title" id="successModalTitle">Document Submitted!</h2>
+      <p class="modal-message">Your document has been successfully submitted and is now under review. You'll be notified if any revisions are needed.</p>
+      <button class="btn-modal-close" (click)="closeSuccessModal()">Got it</button>
+    </div>
+  </div>
+}

@@ -1,0 +1,75 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Join External Project</h1>
+      <p>Enter a project code to join an existing project</p>
+    </div>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-file-import" aria-hidden="true"></i>
+        Join External Project
+      </h2>
+
+      @if (submitted()) {
+        <div class="success-message" role="alert" aria-live="polite">
+          <i class="fas fa-check-circle" aria-hidden="true"></i>
+          <div>
+            <strong>Successfully joined!</strong>
+            <p>You have joined <strong>{{ joinedProjectName() }}</strong> by {{ joinedTeamName() }}. You can now access it from your dashboard.</p>
+          </div>
+        </div>
+      } @else {
+        <div class="form-group">
+          <label class="form-label" for="projectCode">Project Code <span class="required" aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            id="projectCode"
+            placeholder="e.g. ABCD-1234"
+            [ngModel]="projectCode()"
+            (ngModelChange)="projectCode.set($event); errorMessage.set(null)"
+            required
+            aria-required="true"
+            aria-describedby="codeHelp"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="form-help" id="codeHelp">Enter the code shared by the project owner</div>
+          @if (errorMessage()) {
+            <div class="error-message" role="alert" aria-live="polite">
+              <i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ errorMessage() }}
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button" (click)="cancel()">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+      </div>
+      @if (!submitted()) {
+        <button
+          class="btn-action btn-join"
+          type="button"
+          [disabled]="!isFormValid() || isLoading()"
+          [attr.aria-disabled]="!isFormValid() || isLoading()"
+          (click)="joinProject()"
+        >
+          @if (isLoading()) {
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Joining...
+          } @else {
+            <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Join Project
+          }
+        </button>
+      }
+    </div>
+  </main>
+</div>

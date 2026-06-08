@@ -1,0 +1,333 @@
+{
+  "team": {
+    "name": "Cypress E2E Test Team",
+    "description": "Dedicated team created by Cypress for public project lifecycle tests. Deleted after the suite completes.",
+    "icon": "fa-flask",
+    "members": [
+      {
+        "firstName": "Alice",
+        "lastName": "Tester",
+        "email": "alice.tester@cypress-e2e.test",
+        "affiliation": "QA Department"
+      },
+      {
+        "firstName": "Bob",
+        "lastName": "Reviewer",
+        "email": "bob.reviewer@cypress-e2e.test",
+        "affiliation": "Engineering"
+      }
+    ]
+  },
+
+  "teamToDelete": {
+    "name": "Cypress E2E Team Delete Test",
+    "description": "Created and deleted within the DELETE /teams/:id test. Not the main suite team.",
+    "icon": "fa-trash",
+    "members": []
+  },
+
+  "projects": {
+    "step1": {
+      "name": "Cypress E2E Public Project",
+      "description": "Created by Cypress automated test",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "supportStaff": {
+        "firstName": "Sarah",
+        "lastName": "Coordinator",
+        "email": "sarah.coordinator@cypress-e2e.test",
+        "affiliation": "Cypress University"
+      }
+    },
+    "fullFlow": {
+      "name": "Cypress E2E Full Flow Project",
+      "description": "Full lifecycle test by Cypress",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "supportStaff": {
+        "firstName": "Sarah",
+        "lastName": "Coordinator",
+        "email": "sarah.coordinator@cypress-e2e.test",
+        "affiliation": "Cypress University"
+      }
+    },
+    "dashboardCheck": {
+      "name": "Cypress Dashboard Check Project",
+      "description": "Verify it shows on the dashboard",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "completedStep": 1,
+      "supportStaff": {
+        "firstName": "Sarah",
+        "lastName": "Coordinator",
+        "email": "sarah.coordinator@cypress-e2e.test",
+        "affiliation": "Cypress University"
+      }
+    },
+    "apiContract": {
+      "name": "API Contract Test Project",
+      "description": "Verify the DB row",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 10,
+      "type": "public",
+      "completedStep": 1,
+      "supportStaff": {
+        "firstName": "James",
+        "lastName": "Assistant",
+        "email": "james.assistant@cypress-e2e.test",
+        "affiliation": "QA Department"
+      }
+    },
+    "documentSave": {
+      "name": "Document Save Test",
+      "description": "",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "completedStep": 1,
+      "supportStaff": null
+    },
+    "activation": {
+      "name": "Activation Test Project",
+      "description": "",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "completedStep": 1,
+      "supportStaff": null
+    },
+    "deleteProject": {
+      "name": "Cypress Delete Project Test",
+      "description": "Created to verify DELETE /teams/projects/:id works correctly.",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 3,
+      "type": "public",
+      "completedStep": 1,
+      "supportStaff": null
+    },
+    "updateProject": {
+      "name": "Cypress Update Project Original",
+      "description": "Original description before any edits are applied.",
+      "deadline": "2027-06-30",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "completedStep": 1,
+      "supportStaff": {
+        "firstName": "James",
+        "lastName": "Assistant",
+        "email": "james.assistant@cypress-e2e.test",
+        "affiliation": "QA Department"
+      }
+    },
+    "updatedProject": {
+      "name": "Cypress Update Project Revised",
+      "description": "Updated description after the PATCH call.",
+      "deadline": "2028-03-31",
+      "expectedCollaborators": 20,
+      "supportStaff": {
+        "firstName": "James",
+        "lastName": "Assistant",
+        "email": "james.assistant@cypress-e2e.test",
+        "affiliation": "QA Department"
+      }
+    }
+  },
+
+  "collaborators": {
+    "count": 3,
+    "list": [
+      {
+        "firstName": "Carol",
+        "lastName": "Submitter",
+        "email": "carol.submitter@cypress-e2e.test",
+        "affiliation": "Research Lab",
+        "role": "contributor"
+      },
+      {
+        "firstName": "Dave",
+        "lastName": "Partial",
+        "email": "dave.partial@cypress-e2e.test",
+        "affiliation": "Engineering",
+        "role": "contributor"
+      },
+      {
+        "firstName": "Eve",
+        "lastName": "Pending",
+        "email": "eve.pending@cypress-e2e.test",
+        "affiliation": "Design",
+        "role": "contributor"
+      }
+    ]
+  },
+
+  "submissionProgress": {
+    "project": {
+      "name": "Cypress Public Submission Progress",
+      "description": "Tests submission progress bar on public project card.",
+      "deadline": "2027-12-31",
+      "expectedCollaborators": 5,
+      "type": "public",
+      "completedStep": 1
+    },
+    "documents": [
+      {
+        "name": "Application Form",
+        "fileTypes": ["PDF"],
+        "maxSize": "5",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Supporting Evidence",
+        "fileTypes": ["PDF", "DOCX"],
+        "maxSize": "10",
+        "sizeUnit": "MB",
+        "templateName": ""
+      }
+    ],
+    "submissions": [
+      {
+        "collaboratorIndex": 0,
+        "documentIndex": 0,
+        "status": "approved",
+        "fileName": "carol-application.pdf"
+      },
+      {
+        "collaboratorIndex": 0,
+        "documentIndex": 1,
+        "status": "submitted",
+        "fileName": "carol-evidence.pdf"
+      },
+      {
+        "collaboratorIndex": 1,
+        "documentIndex": 0,
+        "status": "submitted",
+        "fileName": "dave-application.pdf"
+      }
+    ]
+  },
+
+  "documents": {
+    "standard3": [
+      {
+        "name": "Resume",
+        "fileTypes": ["PDF"],
+        "maxSize": "10",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Cover Letter",
+        "fileTypes": ["PDF"],
+        "maxSize": "5",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Transcript",
+        "fileTypes": ["PDF"],
+        "maxSize": "15",
+        "sizeUnit": "MB",
+        "templateName": ""
+      }
+    ],
+    "standard3WithDocx": [
+      {
+        "name": "Resume",
+        "fileTypes": ["PDF", "DOCX"],
+        "maxSize": "10",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Cover Letter",
+        "fileTypes": ["PDF"],
+        "maxSize": "5",
+        "sizeUnit": "MB",
+        "templateName": ""
+      },
+      {
+        "name": "Transcript",
+        "fileTypes": ["PDF"],
+        "maxSize": "15",
+        "sizeUnit": "MB",
+        "templateName": ""
+      }
+    ]
+  },
+
+  "assertions": {
+    "fullFlow": {
+      "decisionPageProjectName": "Cypress E2E Full Flow Project",
+      "decisionPageDocumentChip": "3 Documents"
+    },
+    "apiContract": {
+      "expectedStatus": 201,
+      "project": {
+        "name": "API Contract Test Project",
+        "type": "public",
+        "status": "draft",
+        "expectedCollaborators": 10,
+        "supportStaff": {
+          "firstName": "James",
+          "lastName": "Assistant",
+          "email": "james.assistant@cypress-e2e.test",
+          "affiliation": "QA Department"
+        }
+      }
+    },
+    "documentSave": {
+      "expectedCompletedStep": 2
+    },
+    "activation": {
+      "expectedStatus": "active"
+    },
+    "deleteProject": {
+      "expectedDeleteStatus": 200
+    },
+    "deleteTeam": {
+      "expectedDeleteStatus": 200
+    },
+    "updateProject": {
+      "expectedStatus": 200,
+      "project": {
+        "name": "Cypress Update Project Revised",
+        "description": "Updated description after the PATCH call.",
+        "deadline": "2028-03-31",
+        "expectedCollaborators": 20,
+        "status": "draft"
+      }
+    },
+    "submissionProgress": {
+      "noCollaboratorsYet": {
+        "expectedProgressPercent": 0,
+        "expectedProgressLabel": "Submission Progress",
+        "expectedBarVisible": true
+      },
+      "partialSubmissions": {
+        "submittedCount": 2,
+        "approvedCount": 1,
+        "totalSlots": 6,
+        "expectedProgressPercent": 50,
+        "expectedBarVisible": true
+      },
+      "allSubmitted": {
+        "submittedCount": 6,
+        "approvedCount": 0,
+        "totalSlots": 6,
+        "expectedProgressPercent": 100,
+        "expectedBarVisible": true
+      },
+      "allApproved": {
+        "submittedCount": 0,
+        "approvedCount": 6,
+        "totalSlots": 6,
+        "expectedProgressPercent": 100,
+        "expectedBarVisible": true
+      }
+    }
+  }
+}

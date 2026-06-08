@@ -1,0 +1,363 @@
+    <app-shared-header></app-shared-header>
+
+    <div class="main-container">
+      <app-shared-sidebar></app-shared-sidebar>
+
+      <main class="main-content">
+        <div class="content-header">
+          <h1>Edit Team</h1>
+          <p>Update team information and manage members</p>
+        </div>
+
+        @if (teamsService.teamDetailsLoading()[_teamId()]) {
+          <div class="loading-state" role="status" aria-live="polite">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading team details&hellip;</span>
+          </div>
+        }
+
+        @if (pricingState(); as state) {
+          <div class="pricing-calc show">
+            <div class="pricing-calc-header">
+              <i class="fas fa-calculator"></i>
+              <h3>Pricing Plan Impact</h3>
+            </div>
+            <div class="pricing-calc-body">
+              <div class="pricing-plans-row">
+                <div class="plan-box current">
+                  <div class="plan-box-label">Current Plan</div>
+                  <div class="plan-name">{{ state.origPlan.name }}</div>
+                  <div class="plan-members">
+                    {{ state.origPlan.min }}–{{ state.origPlan.max }} members
+                  </div>
+                  <div class="plan-price">
+                    ${{ state.origPlan.price }}<span>/month</span>
+                  </div>
+                </div>
+                <div class="plan-box" [class]="state.newPlanBoxClass">
+                  <div class="plan-box-label">New Plan Needed</div>
+                  <div class="plan-name">{{ state.newPlan.name }}</div>
+                  <div class="plan-members">
+                    {{ state.newPlan.min }}–{{ state.newPlan.max }} members
+                  </div>
+                  <div class="plan-price">
+                    ${{ state.newPlan.price }}<span>/month</span>
+                  </div>
+                </div>
+              </div>
+              <div class="pricing-delta" [class]="state.deltaClass">
+                <div class="pricing-delta-text">
+                  <strong>
+                    @if (state.same) {
+                      No plan change needed
+                    } @else if (state.upgrade) {
+                      Upgrade required: {{ state.origPlan.name }} &rarr;
+                      {{ state.newPlan.name }}
+                    } @else {
+                      Downgrade available: {{ state.origPlan.name }} &rarr;
+                      {{ state.newPlan.name }}
+                    }
+                  </strong>
+                  <span>
+                    {{ state.memberSign }}{{ state.memberDiff }} member{{
+                      state.memberDiff !== 1 && state.memberDiff !== -1
+                        ? "s"
+                        : ""
+                    }}
+                    @if (state.same) {
+                      — still within {{ state.origPlan.name }} plan
+                    } @else if (state.upgrade) {
+                      — exceeds {{ state.origPlan.name }} limit of
+                      {{ state.origPlan.max }}
+                    } @else {
+                      — now fits in {{ state.newPlan.name }} plan
+                    }
+                  </span>
+                </div>
+                <div
+                  class="pricing-delta-amount"
+                  [class.delta-same]="state.same"
+                  [class.delta-upgrade]="!state.same && state.upgrade"
+                  [class.delta-downgrade]="!state.same && !state.upgrade"
+                >
+                  @if (state.same) {
+                    $0 change
+                  } @else {
+                    {{ state.deltaSign }}${{ state.absDiff }}/mo
+                  }
+                </div>
+              </div>
+              <div class="pricing-note">
+                <i
+                  class="fas fa-info-circle"
+                  style="color: var(--accent-blue)"
+                ></i>
+                Member count changes require a pricing plan update before you
+                can save. Name and description changes are always free.
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (currentTeam(); as team) {
+          <div class="form-section">
+            <h2 class="section-title">
+              <i class="fas fa-info-circle"></i> Team Information
+            </h2>
+            <div class="form-group">
+              <label class="form-label"
+                >Team Name <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                [value]="teamName()"
+                (input)="teamName.set($any($event.target).value)"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Team Description</label>
+              <textarea
+                class="form-control"
+                [value]="teamDescription()"
+                (input)="teamDescription.set($any($event.target).value)"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="section-title">
+              <i class="fas fa-user-friends"></i> Team Members
+            </h2>
+
+            <div class="member-card owner-card">
+              <div class="member-header">
+                <div class="member-title">
+                  <i class="fas fa-crown"></i>
+                  You (Team Owner)
+                  <span class="owner-badge">Owner</span>
+                </div>
+              </div>
+              <div class="member-fields">
+                <div class="form-group">
+                  <label class="form-label">First Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [value]="team.owner.firstName"
+                    readonly
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [value]="team.owner.lastName"
+                    readonly
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    [value]="team.owner.email"
+                    readonly
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Affiliation</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [value]="team.owner.affiliation"
+                    readonly
+                  />
+                </div>
+              </div>
+            </div>
+
+            @for (member of members(); track $index; let i = $index) {
+              <div class="member-card" [class.new-card]="member.isNew">
+                <div class="member-header">
+                  <div class="member-title">
+                    <i class="fas fa-user"></i>
+                    Team Member {{ i + 1 }}
+                    <span class="member-role-label">Member</span>
+                    @if (member.isNew) {
+                      <span class="new-label">New</span>
+                    }
+                  </div>
+                  <button
+                    class="btn-remove-member"
+                    type="button"
+                    (click)="removeMember(i)"
+                    title="Remove member"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="member-fields">
+                  <div class="form-group">
+                    <label class="form-label"
+                      >First Name <span class="required">*</span></label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      [value]="member.firstName"
+                      (input)="updateMember(i, 'firstName', $event)"
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Last Name <span class="required">*</span></label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      [value]="member.lastName"
+                      (input)="updateMember(i, 'lastName', $event)"
+                      placeholder="Last name"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Email <span class="required">*</span></label
+                    >
+                    <input
+                      type="email"
+                      class="form-control"
+                      [value]="member.email"
+                      (input)="updateMember(i, 'email', $event)"
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Affiliation</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [value]="member.affiliation"
+                      (input)="updateMember(i, 'affiliation', $event)"
+                      placeholder="University / Company"
+                    />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <button class="btn-add-member" type="button" (click)="addMember()">
+              <i class="fas fa-plus-circle"></i> Add Another Member
+            </button>
+          </div>
+
+          @if (saveError()) {
+            <div class="error-banner" role="alert">
+              <i class="fas fa-exclamation-circle"></i>
+              {{ saveError() }}
+            </div>
+          }
+
+          <div class="action-buttons">
+            <div class="btn-group-left">
+              <button
+                class="btn-action btn-back"
+                type="button"
+                (click)="goBack()"
+              >
+                <i class="fas fa-arrow-left"></i> Cancel
+              </button>
+            </div>
+            <button
+              class="btn-action btn-save"
+              type="button"
+              [attr.disabled]="saveDisabled() || isSaving() ? '' : null"
+              [class.loading]="isSaving()"
+              (click)="attemptSave()"
+            >
+              @if (isSaving()) {
+                <i class="fas fa-spinner fa-spin"></i> Saving&hellip;
+              } @else {
+                Save Changes <i class="fas fa-check"></i>
+              }
+            </button>
+          </div>
+        }
+      </main>
+    </div>
+
+    @if (showModal()) {
+      <div
+        class="modal-overlay show"
+        (click)="onModalBackdropClick($event)"
+      >
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2 class="modal-title">Confirm Plan Change</h2>
+            <p class="modal-subtitle">
+              A pricing plan update is required to save these changes
+            </p>
+          </div>
+          <div class="modal-body">
+            <p>
+              Your team member count has changed. To proceed, you need to
+              confirm the new pricing plan. The change will take effect
+              immediately.
+            </p>
+            @if (pricingState(); as state) {
+              <div class="modal-pricing-summary">
+                <div class="modal-row">
+                  <span>Original members</span>
+                  <span>{{ state.origCount }}</span>
+                </div>
+                <div class="modal-row">
+                  <span>New members</span>
+                  <span>{{ state.newCount }}</span>
+                </div>
+                <div class="modal-row">
+                  <span>Current plan</span>
+                  <span
+                    >{{ state.origPlan.name }} — ${{ state.origPlan.price }}/mo</span
+                  >
+                </div>
+                <div class="modal-row">
+                  <span>New plan</span>
+                  <span
+                    >{{ state.newPlan.name }} — ${{ state.newPlan.price }}/mo</span
+                  >
+                </div>
+                <div class="modal-row total">
+                  <span>Monthly cost change</span>
+                  <span>{{ state.deltaSign }}${{ state.absDiff }}/mo</span>
+                </div>
+              </div>
+            }
+          </div>
+          <div class="modal-footer">
+            <button
+              class="btn-modal btn-modal-cancel"
+              type="button"
+              (click)="closeModal()"
+            >
+              Cancel
+            </button>
+            <button
+              class="btn-modal btn-modal-confirm"
+              type="button"
+              [attr.disabled]="isSaving() ? '' : null"
+              (click)="confirmAndSave()"
+            >
+              @if (isSaving()) {
+                <i class="fas fa-spinner fa-spin"></i> Saving&hellip;
+              } @else {
+                <i class="fas fa-check"></i> Confirm &amp; Save
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    }

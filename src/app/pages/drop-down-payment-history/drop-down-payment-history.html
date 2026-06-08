@@ -1,0 +1,124 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>{{ data().title }}</h1>
+      <p>{{ data().subtitle }}</p>
+    </div>
+
+    <div class="view-toggle-bar">
+      <button class="view-toggle-btn" [class.active]="currentView() === 'solo'" (click)="switchView('solo')" type="button">
+        <i class="fas fa-user"></i> Solo Projects
+      </button>
+      <button class="view-toggle-btn" [class.active]="currentView() === 'team'" (click)="switchView('team')" type="button">
+        <i class="fas fa-users"></i> Team Projects
+      </button>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-card-icon primary"><i class="fas fa-dollar-sign"></i></div>
+        <div class="summary-card-label">Total Spent</div>
+        <div class="summary-card-value">{{ data().summary.totalSpent }}</div>
+        <div class="summary-card-sub">{{ data().summary.totalSpentSub }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-icon orange"><i class="fas fa-receipt"></i></div>
+        <div class="summary-card-label">Total Payments</div>
+        <div class="summary-card-value">{{ data().summary.totalPayments }}</div>
+        <div class="summary-card-sub">{{ data().summary.totalPaymentsSub }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-icon blue"><i class="fas fa-star"></i></div>
+        <div class="summary-card-label">Current Plan</div>
+        <div class="summary-card-value" style="font-size: 1.4rem">{{ data().summary.currentPlan }}</div>
+        <div class="summary-card-sub">{{ data().summary.currentPlanSub }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-icon purple"><i class="fas fa-calendar-check"></i></div>
+        <div class="summary-card-label">Next Payment</div>
+        <div class="summary-card-value" style="font-size: 1.3rem">{{ data().summary.nextPayment }}</div>
+        <div class="summary-card-sub">{{ data().summary.nextPaymentSub }}</div>
+      </div>
+    </div>
+
+    @if (isTeamView()) {
+      <app-team-selector
+        label="View Payments for Team:"
+        [teams]="teamOptions"
+        [selectedTeam]="currentTeam()"
+        (teamChange)="switchTeam($event)"
+      />
+    }
+
+    @if (errorMessage()) {
+      <div class="form-error" role="alert" aria-live="polite">{{ errorMessage() }}</div>
+    }
+
+    <div class="payment-history-section">
+      <div class="section-header">
+        <h2 class="section-title">Recent Payments</h2>
+        <button class="export-btn" (click)="exportCSV()" type="button" [disabled]="isLoading()">
+          <i class="fas fa-download"></i> Export CSV
+        </button>
+      </div>
+
+      @if (isLoading()) {
+        <div class="empty-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading payment history…</p>
+        </div>
+      } @else if (data().payments.length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-receipt"></i>
+          <p>No payment history found</p>
+        </div>
+      } @else {
+        <table class="payment-table">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Invoice</th>
+              <th scope="col">Plan</th>
+              @if (isTeamView()) {
+                <th scope="col">Details</th>
+              }
+              <th scope="col">Amount</th>
+              <th scope="col">Status</th>
+              <th scope="col">Payment Method</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of data().payments; track p.invoice) {
+              <tr>
+                <td>{{ p.date }}</td>
+                <td><strong>{{ p.invoice }}</strong></td>
+                <td>{{ p.plan }}</td>
+                @if (isTeamView()) {
+                  <td style="color:var(--text-light);font-size:0.85rem">{{ p.teams ?? '—' }}</td>
+                }
+                <td><strong>{{ p.amount }}</strong></td>
+                <td>
+                  <span class="status-badge" [class.success]="statusClass(p.status) === 'success'" [class.pending]="statusClass(p.status) === 'pending'" [class.failed]="statusClass(p.status) === 'failed'">
+                    <i class="fas fa-{{ statusIcon(p.status) }}"></i> {{ statusLabel(p.status) }}
+                  </span>
+                </td>
+                <td>{{ p.method }}</td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-action" type="button"><i class="fas fa-download"></i> PDF</button>
+                    <button class="btn-action" type="button"><i class="fas fa-eye"></i> View</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </main>
+</div>

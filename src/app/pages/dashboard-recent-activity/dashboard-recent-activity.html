@@ -1,0 +1,109 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+
+    <div class="page-header">
+      <a routerLink="/dashboard" class="back-btn">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Dashboard
+      </a>
+      <h1>Recent Activity</h1>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="filter-project">Project</label>
+        <select id="filter-project" #projectEl>
+          <option value="">All Projects</option>
+          @for (name of projectNames(); track name) {
+            <option [value]="name">{{ name }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-type">Activity type</label>
+        <select id="filter-type" #typeEl>
+          <option value="">All Types</option>
+          <option value="upload">Document Upload</option>
+          <option value="invite">Invitation</option>
+          <option value="team">Team / Members</option>
+          <option value="decision">Decision</option>
+          <option value="delete">Deletion</option>
+          <option value="settings">Settings</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-date-from">From date</label>
+        <input type="date" id="filter-date-from" #dateFromEl />
+      </div>
+      <div class="filter-group">
+        <label for="filter-date-to">To date</label>
+        <input type="date" id="filter-date-to" #dateToEl />
+      </div>
+      <div class="filter-actions">
+        <button class="btn-filter-apply" (click)="onApplyFilters(projectEl, typeEl, dateFromEl, dateToEl)">
+          <i class="fas fa-filter" aria-hidden="true"></i> Apply
+        </button>
+        <button class="btn-filter-reset" (click)="onResetFilters(projectEl, typeEl, dateFromEl, dateToEl)">Reset</button>
+      </div>
+    </div>
+
+    <p class="results-summary">Showing <strong>{{ visibleCount() }}</strong> activities</p>
+
+    @if (dashboard.isLoadingAll()) {
+      <div class="loading-state" role="status">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading activity...
+      </div>
+    } @else if (dashboard.allActivityError()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ dashboard.allActivityError() }}
+      </div>
+    } @else if (isEmpty()) {
+      <div class="empty-state">
+        <i class="fas fa-inbox" aria-hidden="true"></i>
+        <p>No activities match your filters.<br>Try adjusting the project, type, or date range.</p>
+      </div>
+    } @else {
+      <div class="activity-table-wrap">
+        <table class="activity-table" role="grid" aria-label="Activity log">
+          <thead>
+            <tr>
+              <th scope="col" class="th-activity">Activity</th>
+              <th scope="col" class="th-type">Type</th>
+              <th scope="col" class="th-actor">Actor</th>
+              <th scope="col" class="th-project">Project</th>
+              <th scope="col" class="th-time">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filteredActivities(); track $index) {
+              <tr class="activity-row">
+                <td class="col-activity">
+                  <div class="activity-icon-wrap">
+                    <span [class]="'activity-icon-sm ' + item.type" aria-hidden="true">
+                      <i [class]="getIconFaClass(item.type)"></i>
+                    </span>
+                    <span class="activity-title-text">{{ item.title }}</span>
+                  </div>
+                </td>
+                <td><span [class]="badgeClass(item.type)">{{ badgeLabel(item.type) }}</span></td>
+                <td class="col-actor">{{ item.actor ?? '—' }}</td>
+                <td class="col-project">
+                  @if (item.projectName) {
+                    <span class="project-chip">{{ item.projectName }}</span>
+                  } @else {
+                    <span class="col-muted">—</span>
+                  }
+                </td>
+                <td class="col-time">{{ formatTime(item.timestamp) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+  </main>
+</div>

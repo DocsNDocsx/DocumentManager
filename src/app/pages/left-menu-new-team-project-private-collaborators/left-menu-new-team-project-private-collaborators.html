@@ -1,0 +1,188 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Add Collaborators</h1>
+      <p>Step 2 of 5 — Enter the details of people who will submit documents</p>
+    </div>
+
+    <nav class="step-progress" aria-label="Wizard progress">
+      <div class="step completed">
+        <div class="step-circle" aria-label="Step 1 completed"><i class="fas fa-check" aria-hidden="true"></i></div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider completed" role="separator"></div>
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-label="Step 2 active">2</div>
+        <div class="step-label">Collaborators</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 3 locked">3</div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 4 locked">4</div>
+        <div class="step-label">Assignments</div>
+      </div>
+      <div class="step-divider" role="separator"></div>
+      <div class="step locked">
+        <div class="step-circle" aria-label="Step 5 locked">5</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="card-section">
+      <h2 class="card-title">
+        <i class="fas fa-users" aria-hidden="true"></i> How many collaborators?
+      </h2>
+      <p class="card-description">
+        Enter the number of people who will be submitting documents, then click Generate Forms to fill in their details.
+      </p>
+      <div class="count-input-group">
+        <div class="count-input-wrapper">
+          <label class="count-label" for="collaboratorCount">Number of Collaborators</label>
+          <input
+            type="number"
+            id="collaboratorCount"
+            class="count-input"
+            [value]="collaboratorCount()"
+            (input)="onCountInput($event)"
+            min="1"
+            max="100"
+            aria-describedby="planNote"
+          />
+        </div>
+        <button class="btn-generate" type="button" (click)="generateForms()">
+          <i class="fas fa-plus-circle" aria-hidden="true"></i> Generate Forms
+        </button>
+      </div>
+      <div class="plan-note" id="planNote" role="note">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <span>Your current plan allows up to <strong>100 collaborators</strong> per project.</span>
+      </div>
+    </div>
+
+    @if (formsGenerated() && collaborators().length > 0) {
+      <div class="card-section collaborators-section" aria-live="polite">
+        <h2 class="section-title">
+          <i class="fas fa-user-edit" aria-hidden="true"></i> Collaborator Details
+        </h2>
+        @for (collab of collaborators(); track $index; let i = $index) {
+          <div class="collab-card">
+            <div class="collab-header">
+              <span class="collab-number">Collaborator {{ i + 1 }}</span>
+              @if (collaborators().length > 1) {
+                <button
+                  class="btn-remove"
+                  type="button"
+                  (click)="removeCollab(i)"
+                  [attr.aria-label]="'Remove collaborator ' + (i + 1)">
+                  <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+              }
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" [for]="'firstName-' + i">First Name <span class="required" aria-hidden="true">*</span></label>
+                <input
+                  type="text"
+                  [id]="'firstName-' + i"
+                  class="form-control"
+                  [value]="collab.firstName"
+                  (input)="updateField(i, 'firstName', $any($event.target).value)"
+                  placeholder="John"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'lastName-' + i">Last Name <span class="required" aria-hidden="true">*</span></label>
+                <input
+                  type="text"
+                  [id]="'lastName-' + i"
+                  class="form-control"
+                  [value]="collab.lastName"
+                  (input)="updateField(i, 'lastName', $any($event.target).value)"
+                  placeholder="Doe"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'email-' + i">Email Address <span class="required" aria-hidden="true">*</span></label>
+                <input
+                  type="email"
+                  [id]="'email-' + i"
+                  class="form-control"
+                  [value]="collab.email"
+                  (input)="updateField(i, 'email', $any($event.target).value)"
+                  placeholder="john@example.com"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'affiliation-' + i">Affiliation</label>
+                <input
+                  type="text"
+                  [id]="'affiliation-' + i"
+                  class="form-control"
+                  [value]="collab.affiliation"
+                  (input)="updateField(i, 'affiliation', $any($event.target).value)"
+                  placeholder="University / Company"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'role-' + i">Role</label>
+                <select
+                  [id]="'role-' + i"
+                  class="form-control"
+                  [value]="collab.role"
+                  (change)="updateField(i, 'role', $any($event.target).value)"
+                  aria-label="Collaborator role">
+                  <option value="contributor">Contributor</option>
+                  <option value="supervisor">Supervisor</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (teamWizardService.saveError()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        {{ teamWizardService.saveError() }}
+      </div>
+    }
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-back" type="button" (click)="onBack()">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i> Back
+        </button>
+        <button class="btn-action btn-draft" type="button" (click)="saveAsDraft()">
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button
+        class="btn-action btn-continue"
+        type="button"
+        (click)="onContinue()"
+        [disabled]="!isFormValid() || teamWizardService.isSaving()"
+        [attr.aria-disabled]="!isFormValid() || teamWizardService.isSaving()">
+        @if (teamWizardService.isSaving()) {
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Saving...
+        } @else {
+          Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+  </main>
+</div>

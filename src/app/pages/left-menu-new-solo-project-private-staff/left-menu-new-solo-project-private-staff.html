@@ -1,0 +1,144 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create Private Project</h1>
+      <p>Step 5 of 6 — Optionally assign a support staff member</p>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Collaborators</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step completed">
+        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
+        <div class="step-label">Assignments</div>
+      </div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step active" aria-current="step">
+        <div class="step-circle" aria-hidden="true">5</div>
+        <div class="step-label">Staff</div>
+      </div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step">
+        <div class="step-circle" aria-hidden="true">6</div>
+        <div class="step-label">Decision</div>
+      </div>
+    </nav>
+
+    <div class="form-container">
+      <h2 class="form-section-title">
+        <i class="fas fa-user-tie" aria-hidden="true"></i>
+        Support Staff
+        <span class="optional-badge">Optional</span>
+      </h2>
+
+      <div class="toggle-row">
+        <label class="toggle-switch" for="addStaffToggle">
+          <input
+            type="checkbox"
+            id="addStaffToggle"
+            [checked]="addStaff()"
+            (change)="toggleStaff()"
+            aria-label="Enable support staff"
+          />
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Add a support staff member to this project</span>
+      </div>
+      <div class="form-help" style="margin-top: 0.3rem">
+        Support staff can view submissions and assist collaborators but cannot submit documents.
+      </div>
+
+      @if (addStaff()) {
+        <div class="staff-form" aria-live="polite">
+          <div class="form-group">
+            <label class="form-label" for="staffFirstName">First Name <span class="required" aria-hidden="true">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              id="staffFirstName"
+              placeholder="e.g., Michael"
+              [ngModel]="staffFirstName()"
+              (ngModelChange)="staffFirstName.set($event)"
+              required
+              aria-required="true"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="staffLastName">Last Name <span class="required" aria-hidden="true">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              id="staffLastName"
+              placeholder="e.g., Johnson"
+              [ngModel]="staffLastName()"
+              (ngModelChange)="staffLastName.set($event)"
+              required
+              aria-required="true"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="staffEmail">Email <span class="required" aria-hidden="true">*</span></label>
+            <input
+              type="email"
+              class="form-control"
+              id="staffEmail"
+              placeholder="e.g., michael@university.edu"
+              [ngModel]="staffEmail()"
+              (ngModelChange)="staffEmail.set($event)"
+              required
+              aria-required="true"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="staffAffiliation">Affiliation</label>
+            <input
+              type="text"
+              class="form-control"
+              id="staffAffiliation"
+              placeholder="e.g., State University"
+              [ngModel]="staffAffiliation()"
+              (ngModelChange)="staffAffiliation.set($event)"
+            />
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-cancel" type="button">
+          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        </button>
+        <button class="btn-action btn-draft" type="button" (click)="saveAsDraft()">
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button class="btn-action btn-continue" type="button" (click)="continue()">
+        Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </main>
+</div>
+
+@if (toastVisible()) {
+  <div class="toast-msg" role="status" aria-live="polite">
+    <i class="fas fa-check-circle" aria-hidden="true"></i> {{ toastMsg() }}
+  </div>
+}

@@ -1,0 +1,129 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header-flex">
+      <div class="content-header">
+        <h1>Teams</h1>
+        <p>Manage all your teams and view the teams you're a member of</p>
+      </div>
+      <a routerLink="/left-menu-create-new-team" class="btn-create-new">
+        <i class="fas fa-plus-circle" aria-hidden="true"></i> Create New Team
+      </a>
+    </div>
+
+    <div class="tabs-container" role="tablist">
+      <button
+        class="filter-tab"
+        [class.active]="activeTab() === 'host'"
+        (click)="switchTab('host')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'host'">
+        <i class="fas fa-crown" aria-hidden="true"></i> Teams I Host
+      </button>
+      <button
+        class="filter-tab"
+        [class.active]="activeTab() === 'member'"
+        (click)="switchTab('member')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'member'">
+        <i class="fas fa-users" aria-hidden="true"></i> Teams I'm a Member Of
+      </button>
+    </div>
+
+    <div class="search-filter-bar">
+      <div class="search-box">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input
+          type="text"
+          [value]="searchTerm()"
+          (input)="onSearch($event)"
+          placeholder="Search teams..."
+          aria-label="Search teams" />
+      </div>
+    </div>
+
+    @if (teamsService.isLoading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <p>Loading teams...</p>
+      </div>
+    } @else if (teamsService.error()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <h3>Failed to load teams</h3>
+        <p>{{ teamsService.error() }}</p>
+        <button class="btn-create-new" (click)="teamsService.load()">
+          <i class="fas fa-redo" aria-hidden="true"></i> Retry
+        </button>
+      </div>
+    } @else {
+      <div class="teams-table-wrap" role="tabpanel">
+        @if (filteredTeams().length === 0) {
+          <div class="empty-state">
+            <i class="fas fa-users" aria-hidden="true"></i>
+            <h3>No {{ activeTab() === 'host' ? 'Hosted' : 'Member' }} Teams</h3>
+            <p>You don't have any teams in this category yet.</p>
+            @if (activeTab() === 'host') {
+              <a routerLink="/left-menu-create-new-team" class="btn-create-new">
+                <i class="fas fa-plus-circle" aria-hidden="true"></i> Create Your First Team
+              </a>
+            }
+          </div>
+        }
+        @if (filteredTeams().length > 0) {
+          <table class="teams-table" role="grid" aria-label="Teams list">
+            <thead>
+              <tr>
+                <th scope="col" class="th-team">Team</th>
+                <th scope="col" class="th-role">Role</th>
+                <th scope="col" class="th-members">Members</th>
+                <th scope="col" class="th-projects">Projects</th>
+                <th scope="col" class="th-activity">Last Activity</th>
+                <th scope="col" class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (team of filteredTeams(); track team.id) {
+                <tr class="team-row">
+                  <td class="col-team">
+                    <div class="team-name-cell">
+                      <div class="team-icon-sm" aria-hidden="true">
+                        <i class="fas {{ team.icon }}"></i>
+                      </div>
+                      <span class="team-name-text" [title]="team.name">{{ team.name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="role-badge" [class.host]="team.role === 'host'" [class.member]="team.role === 'member'">
+                      {{ team.role === 'host' ? 'Host' : 'Member' }}
+                    </span>
+                  </td>
+                  <td class="col-number">{{ team.memberCount }}</td>
+                  <td class="col-number">{{ team.projectCount }}</td>
+                  <td class="col-activity">{{ team.lastActivity ?? '—' }}</td>
+                  <td class="col-actions">
+                    <div class="actions-group">
+                      <a [routerLink]="['/top-menu-teams-view-teams']" [queryParams]="{id: team.id}"
+                         class="btn-icon btn-view" title="View" aria-label="View team">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                      </a>
+                      @if (team.role === 'host') {
+                        <a [routerLink]="['/top-menu-teams-edit-teams']" [queryParams]="{id: team.id}"
+                           class="btn-icon btn-edit" title="Edit" aria-label="Edit team">
+                          <i class="fas fa-pencil-alt" aria-hidden="true"></i>
+                        </a>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  </main>
+</div>

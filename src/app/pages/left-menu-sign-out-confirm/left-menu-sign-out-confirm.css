@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  color: #1f2937;
+  overflow-x: hidden;
+  min-height: 100vh;
+  --primary-color: #1b5e4f;
+  --secondary-color: #2d8b6f;
+  --accent-orange: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-burgundy: #be123c;
+  --sidebar-bg: #2d3e3a;
+  --sidebar-hover: #3d4e4a;
+  --text-dark: #1f2937;
+  --text-light: #6b7280;
+  --border-color: #e5e7eb;
+  --bg-light: #f9fafb;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.main-container { display: flex; min-height: calc(100vh - 85px); }
+
+.main-content { flex: 1; padding: 2.5rem; transition: all 0.3s ease; min-height: calc(100vh - 72px); }
+
+.signout-container { background: #fff; border-radius: 24px; border: 2px solid var(--border-color); padding: 3rem; max-width: 900px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); animation: fadeInUp 0.6s ease; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+.signout-header { margin-bottom: 2rem; }
+.signout-header h1 { font-family: "Playfair Display", serif; font-size: 1.6rem; font-weight: 900; color: var(--text-dark); margin-bottom: 0.5rem; }
+.signout-header p { color: var(--text-light); font-size: 1rem; line-height: 1.6; }
+
+.session-info { background: var(--bg-light); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid var(--border-color); }
+.session-info-title { font-weight: 700; color: var(--text-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.session-info-title i { color: var(--primary-color); }
+.session-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+.session-item:last-child { border-bottom: none; padding-bottom: 0; }
+.session-item:first-child { padding-top: 0; }
+.session-label { color: var(--text-light); font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+.session-label i { width: 16px; color: var(--primary-color); }
+.session-value { color: var(--text-dark); font-weight: 600; font-size: 0.9rem; }
+
+.warning-box { background: #fff1f2; border: 2px solid #fecdd3; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 2rem; display: flex; gap: 0.75rem; align-items: flex-start; }
+.warning-box i { color: #be123c; font-size: 1.2rem; margin-top: 0.1rem; }
+.warning-box-content p { color: #881337; font-size: 0.9rem; line-height: 1.5; margin: 0; }
+
+.actions { display: flex; flex-direction: column; gap: 1rem; }
+.btn-signout { background: linear-gradient(135deg, #be123c 0%, #9f1239 100%); color: #fff; padding: 1rem 2rem; border: none; border-radius: 12px; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(190,18,60,0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: inherit; }
+.btn-signout:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(190,18,60,0.4); }
+.btn-cancel { background: transparent; color: var(--text-light); padding: 1rem 2rem; border: 2px solid var(--border-color); border-radius: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s; text-align: center; text-decoration: none; display: block; }
+.btn-cancel:hover { border-color: var(--primary-color); color: var(--primary-color); background: rgba(27,94,79,0.05); }
+
+@media (max-width: 768px) {
+  .main-content { padding: 1.5rem; }
+  .signout-container { padding: 2rem 1.5rem; }
+  .signout-header h1 { font-size: 1.75rem; }
+}

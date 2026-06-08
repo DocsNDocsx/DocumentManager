@@ -1,0 +1,177 @@
+    <div class="signup-wrapper">
+      <div class="panel-image">
+        <img ngSrc="ImageSignUp.jpg" alt="Secure Sign Up" class="bg-img" fill priority />
+        <div class="panel-image-content">
+          <app-logo href="sign-up" ariaLabel="DocNDocs home" />
+
+          <div class="panel-tagline">
+            <h2>Collect documents<br />with confidence.</h2>
+            <p>
+              A secure, all-in-one platform for solo and collaborative document
+              collection.
+            </p>
+            <app-trust-pills />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-form">
+        <div class="mobile-logo">
+          <app-logo href="sign-up" ariaLabel="DocNDocs home" nColor="var(--primary-color)" />
+        </div>
+
+        <div class="form-box">
+          <h1>Create Account</h1>
+          <p>Secure your documents with an encrypted account.</p>
+
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <input
+              type="text"
+              name="b_name"
+              class="hidden-trap"
+              tabindex="-1"
+              autocomplete="off"
+            />
+
+            <div class="form-group">
+              <div class="name-row">
+                <div class="name-col">
+                  <label class="form-label" for="firstName">First Name</label>
+                  <div class="input-icon-wrap">
+                    <i class="fas fa-user input-icon"></i>
+                    <input
+                      type="text"
+                      id="firstName"
+                      formControlName="firstName"
+                      [class]="'form-control' + (f.firstName.touched && f.firstName.invalid ? ' is-invalid' : '')"
+                      placeholder="Jane"
+                      maxlength="30"
+                      autocomplete="given-name"
+                    />
+                  </div>
+                  @if (f.firstName.touched && f.firstName.invalid) {
+                    <span class="field-error" role="alert">Enter a valid first name (letters only).</span>
+                  }
+                </div>
+                <div class="name-col">
+                  <label class="form-label" for="lastName">Last Name</label>
+                  <div class="input-icon-wrap">
+                    <i class="fas fa-user input-icon"></i>
+                    <input
+                      type="text"
+                      id="lastName"
+                      formControlName="lastName"
+                      [class]="'form-control' + (f.lastName.touched && f.lastName.invalid ? ' is-invalid' : '')"
+                      placeholder="Doe"
+                      maxlength="30"
+                      autocomplete="family-name"
+                    />
+                  </div>
+                  @if (f.lastName.touched && f.lastName.invalid) {
+                    <span class="field-error" role="alert">Enter a valid last name (letters only).</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.2rem">
+              <label class="form-label" for="emailAddress">Email Address</label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-envelope input-icon"></i>
+                <input
+                  type="email"
+                  id="emailAddress"
+                  formControlName="email"
+                  [class]="'form-control' + (f.email.touched && f.email.invalid ? ' is-invalid' : '')"
+                  placeholder="jane@example.com"
+                  maxlength="100"
+                  autocomplete="email"
+                />
+              </div>
+              @if (f.email.touched && f.email.invalid) {
+                <span class="field-error" role="alert">Enter a valid email address.</span>
+              }
+            </div>
+
+            <div class="form-group" style="margin-top: 1.2rem">
+              <label class="form-label" for="passwordInput">Password</label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-lock input-icon"></i>
+                <input
+                  [type]="showPassword() ? 'text' : 'password'"
+                  id="passwordInput"
+                  formControlName="password"
+                  [class]="'form-control' + (f.password.touched && f.password.invalid ? ' is-invalid' : '')"
+                  placeholder="Create a strong password"
+                  autocomplete="new-password"
+                  style="padding-right: 2.8rem"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                  (click)="togglePassword()"
+                >
+                  <i [class]="showPassword() ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
+
+              @if (f.password.touched && f.password.invalid) {
+                <span class="field-error" role="alert">Password does not meet all requirements.</span>
+              }
+
+              <div class="password-requirements">
+                <div [class]="reqLength() ? 'requirement valid' : 'requirement'">
+                  <i [class]="reqLength() ? 'fas fa-check-circle' : 'fas fa-circle'"></i> At least 8 characters
+                </div>
+                <div [class]="reqUpper() ? 'requirement valid' : 'requirement'">
+                  <i [class]="reqUpper() ? 'fas fa-check-circle' : 'fas fa-circle'"></i> One uppercase letter
+                </div>
+                <div [class]="reqNumber() ? 'requirement valid' : 'requirement'">
+                  <i [class]="reqNumber() ? 'fas fa-check-circle' : 'fas fa-circle'"></i> One number
+                </div>
+                <div [class]="reqSpecial() ? 'requirement valid' : 'requirement'">
+                  <i [class]="reqSpecial() ? 'fas fa-check-circle' : 'fas fa-circle'"></i> One special character
+                  (@$!%*?&amp;#)
+                </div>
+              </div>
+            </div>
+
+            <div class="age-check-wrap">
+              <input
+                type="checkbox"
+                id="ageRequirement"
+                formControlName="ageRequirement"
+              />
+              <label for="ageRequirement">
+                I confirm that I am at least <strong>13 years old</strong> and
+                agree to the Terms of Service.
+              </label>
+            </div>
+            @if (f.ageRequirement.touched && f.ageRequirement.invalid) {
+              <span class="field-error" role="alert">You must confirm your age and agree to the Terms of Service.</span>
+            }
+
+            @if (serverError()) {
+              <div class="server-error" role="alert">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                {{ serverError() }}
+              </div>
+            }
+
+            <button type="submit" class="btn-signup" [disabled]="form.invalid || isSubmitting()">
+              @if (isSubmitting()) {
+                <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Creating Account…
+              } @else {
+                Create Account
+              }
+            </button>
+
+            <p class="signin-link">
+              Already have an account?
+              <a href="sign-in">Sign In</a>
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>

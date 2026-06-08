@@ -1,0 +1,251 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header-flex">
+      <div class="content-header">
+        <h1>Solo Projects</h1>
+        <p>Manage your individual document collection projects</p>
+      </div>
+      <a routerLink="/left-menu-new-solo-project-landing" class="btn-create-new">
+        <i class="fas fa-plus" aria-hidden="true"></i> Create New Project
+      </a>
+    </div>
+
+    <div class="stats-overview">
+      <div class="stat-card-mini stat-green">
+        <h6>Total Projects</h6>
+        <h3>{{ totalProjects() }}</h3>
+      </div>
+      <div class="stat-card-mini stat-gold">
+        <h6>Active</h6>
+        <h3>{{ activeCount() }}</h3>
+      </div>
+      <div class="stat-card-mini stat-green">
+        <h6>Documents Required</h6>
+        <h3>{{ totalDocSlots() }}</h3>
+      </div>
+      <div class="stat-card-mini stat-gold">
+        <h6>Completion Rate</h6>
+        <h3>{{ overallCompletionRate() }}%</h3>
+      </div>
+    </div>
+
+    <div class="filter-tabs" role="tablist">
+      <button class="filter-tab" [class.active]="activeFilter()==='Active'" (click)="applyFilter('Active')" role="tab" [attr.aria-selected]="activeFilter()==='Active'">Active</button>
+      <button class="filter-tab" [class.active]="activeFilter()==='Draft'" (click)="applyFilter('Draft')" role="tab" [attr.aria-selected]="activeFilter()==='Draft'">Draft</button>
+      <button class="filter-tab" [class.active]="activeFilter()==='Completed'" (click)="applyFilter('Completed')" role="tab" [attr.aria-selected]="activeFilter()==='Completed'">Completed</button>
+      <button class="filter-tab" [class.active]="activeFilter()==='Not Completed'" (click)="applyFilter('Not Completed')" role="tab" [attr.aria-selected]="activeFilter()==='Not Completed'">Not Completed</button>
+      <button class="filter-tab" [class.active]="activeFilter()==='Deleted'" (click)="applyFilter('Deleted')" role="tab" [attr.aria-selected]="activeFilter()==='Deleted'">Deleted</button>
+    </div>
+
+    <div class="projects-table-wrap">
+      @if (listService.isLoading()) {
+        <div class="empty-state">
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+          <h3>Loading projects…</h3>
+        </div>
+      }
+
+      @if (!listService.isLoading() && filteredProjects().length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-folder-open" aria-hidden="true"></i>
+          <h3>No Projects Found</h3>
+          <p>You don't have any projects in this category yet.</p>
+          <a routerLink="/left-menu-new-solo-project-landing" class="btn-create-new">
+            <i class="fas fa-plus" aria-hidden="true"></i> Create Your First Project
+          </a>
+        </div>
+      }
+
+      @if (!listService.isLoading() && filteredProjects().length > 0) {
+        <table class="projects-table" role="grid" aria-label="Projects list">
+          <thead>
+            <tr>
+              <th scope="col" class="th-project">Project</th>
+              <th scope="col" class="th-type">Type</th>
+              <th scope="col" class="th-status">Status</th>
+              <th scope="col" class="th-date">
+                @if (activeFilter() === 'Draft') { Created }
+                @else if (activeFilter() === 'Completed' || activeFilter() === 'Deleted') { Date }
+                @else { Deadline }
+              </th>
+              @if (activeFilter() === 'Active') { <th scope="col" class="th-days">Days Left</th> }
+              @if (activeFilter() === 'Not Completed') { <th scope="col" class="th-days">Overdue</th> }
+              <th scope="col" class="th-docs">Docs</th>
+              @if (activeFilter() !== 'Draft' && activeFilter() !== 'Deleted') {
+                <th scope="col" class="th-progress">Progress</th>
+              }
+              <th scope="col" class="th-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (project of filteredProjects(); track project.id) {
+              <tr class="project-row">
+                <td class="col-name">
+                  <div class="project-name-text" [title]="project.name">{{ project.name }}</div>
+                  @if (project.type === 'public' && project.projectCode) {
+                    <div class="project-code-inline">
+                      <i class="fas fa-hashtag" aria-hidden="true"></i>{{ project.projectCode }}
+                      <button class="copy-btn-sm" type="button"
+                        (click)="copyToClipboard(project.projectCode!, $event.currentTarget)"
+                        aria-label="Copy project code">
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  }
+                  <div class="badge-row">
+                    @for (role of userRolesMap()[project.id]; track role) {
+                      @if (role === 'host') {
+                        <span class="role-badge host"><i class="fas fa-user-tie" aria-hidden="true"></i> Host</span>
+                      } @else if (role === 'collaborator') {
+                        <span class="role-badge collaborator"><i class="fas fa-users" aria-hidden="true"></i> Collaborator</span>
+                      } @else if (role === 'support') {
+                        <span class="role-badge support"><i class="fas fa-headset" aria-hidden="true"></i> Support Staff</span>
+                      }
+                    }
+                  </div>
+                </td>
+                <td>
+                  @if (project.type === 'private') {
+                    <span class="project-type-badge badge-private">
+                      <i class="fas fa-lock" aria-hidden="true"></i> Private
+                    </span>
+                  } @else {
+                    <span class="project-type-badge badge-public">
+                      <i class="fas fa-globe" aria-hidden="true"></i> Public
+                    </span>
+                  }
+                </td>
+                <td><span [class]="statusClass(project)">{{ statusLabel(project) }}</span></td>
+                <td class="col-date">
+                  @if (activeFilter() === 'Draft') { {{ formatDate(project.createdAt) }} }
+                  @else if (activeFilter() === 'Completed' || activeFilter() === 'Deleted') { {{ formatDate(project.updatedAt) }} }
+                  @else { {{ formatDate(project.deadline) }} }
+                </td>
+                @if (activeFilter() === 'Active') {
+                  <td class="col-days">{{ daysFromNow(project.deadline) }}d</td>
+                }
+                @if (activeFilter() === 'Not Completed') {
+                  <td class="col-days overdue">{{ -daysFromNow(project.deadline) }}d</td>
+                }
+                <td>{{ project.documents.length }}</td>
+                @if (activeFilter() !== 'Draft' && activeFilter() !== 'Deleted') {
+                  <td class="col-progress">
+                    <div class="progress-cell">
+                      <div class="progress-bar-container">
+                        <div class="progress-bar-fill"
+                             [style.width]="progressPctMap()[project.id] + '%'"
+                             [class.overdue]="activeFilter() === 'Not Completed'">
+                        </div>
+                      </div>
+                      <span class="progress-pct">{{ progressPctMap()[project.id] }}%</span>
+                    </div>
+                  </td>
+                }
+                <td class="col-actions">
+                  <div class="actions-group">
+                    @if (activeFilter() === 'Active') {
+                      <button class="btn-icon btn-view" type="button" (click)="onView(project, $event)" title="View" aria-label="View project">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                      </button>
+                      @if (userRolesMap()[project.id].includes('host')) {
+                        <button class="btn-icon btn-edit" type="button"
+                          [routerLink]="['/new-solo-project', project.type, project.id, 'details']" title="Edit" aria-label="Edit project">
+                          <i class="fas fa-edit" aria-hidden="true"></i>
+                        </button>
+                        <button class="btn-icon btn-complete" type="button"
+                          [disabled]="progressPctMap()[project.id] < 100"
+                          [attr.aria-disabled]="progressPctMap()[project.id] < 100"
+                          (click)="onMarkComplete(project, $event)" title="Mark Complete" aria-label="Mark project complete">
+                          <i class="fas fa-check-circle" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (userRolesMap()[project.id].includes('collaborator')) {
+                        <button class="btn-icon btn-secondary-action" type="button" title="Upload" aria-label="Upload documents">
+                          <i class="fas fa-upload" aria-hidden="true"></i>
+                        </button>
+                      }
+                    }
+                    @if (activeFilter() === 'Draft') {
+                      <button class="btn-icon btn-edit" type="button"
+                        [routerLink]="['/new-solo-project', project.type, project.id, 'details']" title="Edit" aria-label="Edit project">
+                        <i class="fas fa-edit" aria-hidden="true"></i>
+                      </button>
+                      <button class="btn-icon btn-secondary-action" type="button" (click)="onActivate(project, $event)" title="Activate" aria-label="Activate project">
+                        <i class="fas fa-play" aria-hidden="true"></i>
+                      </button>
+                      <button class="btn-icon btn-delete" type="button" (click)="onSoftDelete(project, $event)" aria-label="Delete project">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                      </button>
+                    }
+                    @if (activeFilter() === 'Completed' || activeFilter() === 'Not Completed') {
+                      <button class="btn-icon btn-view" type="button" title="View" aria-label="View project">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                      </button>
+                      <button class="btn-icon btn-secondary-action" type="button" (click)="onDuplicate(project, $event)" title="Duplicate" aria-label="Duplicate project">
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                      </button>
+                      <button class="btn-icon btn-delete" type="button" (click)="onSoftDelete(project, $event)" aria-label="Delete project">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                      </button>
+                    }
+                    @if (activeFilter() === 'Deleted') {
+                      <button class="btn-icon btn-secondary-action" type="button" (click)="onRestore(project, $event)" title="Restore" aria-label="Restore project">
+                        <i class="fas fa-undo" aria-hidden="true"></i>
+                      </button>
+                      <button class="btn-icon btn-delete" type="button"
+                        (click)="onHardDelete(project, $event)"
+                        aria-label="Permanently delete this project" title="Delete Forever">
+                        <i class="fas fa-eraser" aria-hidden="true"></i>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </main>
+</div>
+
+@if (viewingProject(); as vp) {
+  <div class="modal-overlay" role="dialog" aria-modal="true" [attr.aria-label]="'Collaborator links for ' + vp.name" (click)="onViewModalOverlayClick($event)">
+    <div class="view-modal">
+      <div class="view-modal-header">
+        <div>
+          <h2 class="view-modal-title">{{ vp.name }}</h2>
+          <p class="view-modal-subtitle">Share these unique links with each collaborator so they can upload their documents.</p>
+        </div>
+        <button class="view-modal-close" type="button" (click)="closeViewModal()" aria-label="Close modal">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="view-modal-body">
+        @if (vp.collaborators.length === 0) {
+          <p class="no-collabs-msg">This project has no collaborators yet.</p>
+        }
+        @for (collab of vp.collaborators; track collab.email) {
+          <div class="collab-link-row">
+            <div class="collab-avatar">{{ getInitials(collab.firstName, collab.lastName) }}</div>
+            <div class="collab-info">
+              <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
+              <div class="collab-email">{{ collab.email }}</div>
+              <div class="collab-url">{{ getCollaboratorUrl(vp.id, $index) }}</div>
+            </div>
+            <button class="copy-btn collab-copy-btn" type="button"
+              (click)="copyToClipboard(getCollaboratorUrl(vp.id, $index), $event.currentTarget)"
+              aria-label="Copy link for {{ collab.firstName }} {{ collab.lastName }}">
+              <i class="fas fa-copy" aria-hidden="true"></i> Copy
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

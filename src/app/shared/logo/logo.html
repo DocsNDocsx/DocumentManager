@@ -1,0 +1,11 @@
+<a
+  class="logo"
+  [routerLink]="routerLink()"
+  [attr.href]="routerLink() ? null : href()"
+  [attr.aria-label]="ariaLabel()"
+>
+  @if (showImage()) {
+    <img ngSrc="ImageLogox.png" alt="Logo" [width]="imageSize()" [height]="imageSize()" priority />
+  }
+  <div><span class="logo-docs-1">Doc</span><span class="logo-n" [style.color]="nColor() || null">N</span><span class="logo-docs-2">Docs</span></div>
+</a>

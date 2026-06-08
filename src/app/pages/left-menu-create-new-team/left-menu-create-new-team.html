@@ -1,0 +1,211 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Create New Team</h1>
+      <p>Build your team to collaborate on projects together</p>
+    </div>
+
+    <!-- Team Information Section -->
+    <section class="form-section" aria-labelledby="team-info-heading">
+      <h2 class="section-title" id="team-info-heading">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        Team Information
+      </h2>
+
+      <div class="info-box" role="note">
+        <div class="info-box-title">
+          <i class="fas fa-users" aria-hidden="true"></i>
+          What is a Team?
+        </div>
+        <div class="info-box-content">
+          A team is a group of people who work together on projects. You can create team projects that all members can access and manage collaboratively.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="teamName">
+          Team Name <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="text"
+          class="form-control"
+          id="teamName"
+          placeholder="e.g., Research Lab Team, HR Department"
+          required
+          [value]="teamName()"
+          (input)="teamName.set($any($event.target).value)"
+          aria-required="true"
+        />
+        <div class="form-helper" id="teamName-helper">Choose a clear, descriptive name for your team</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="teamDescription">Team Description</label>
+        <textarea
+          class="form-control"
+          id="teamDescription"
+          placeholder="Describe the purpose and goals of this team..."
+          [value]="teamDescription()"
+          (input)="teamDescription.set($any($event.target).value)"
+        ></textarea>
+        <div class="form-helper">This will be visible to all team members</div>
+      </div>
+    </section>
+
+    <!-- Team Members Section -->
+    <section class="form-section" aria-labelledby="team-members-heading">
+      <div class="members-header">
+        <h2 class="section-title" id="team-members-heading">
+          <i class="fas fa-user-friends" aria-hidden="true"></i>
+          Team Members
+        </h2>
+        <span class="member-count" aria-live="polite">{{ memberCount() }} members (min: 2)</span>
+      </div>
+
+      <p class="section-description">
+        Add team members who will collaborate on projects. You are automatically set as the team owner. At least one additional member is required.
+      </p>
+
+      <!-- Owner card (read-only) -->
+      <div class="member-card owner-card" role="group" aria-label="Team owner (you)">
+        <div class="member-header">
+          <div class="member-title">
+            <i class="fas fa-crown" aria-hidden="true"></i>
+            You (Team Owner)
+            <span class="owner-badge">Owner</span>
+          </div>
+        </div>
+        <div class="member-fields">
+          <div class="form-group">
+            <label class="form-label" for="owner-first-name">First Name</label>
+            <input type="text" class="form-control" id="owner-first-name" [value]="ownerFirstName()" readonly aria-readonly="true" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="owner-last-name">Last Name</label>
+            <input type="text" class="form-control" id="owner-last-name" [value]="ownerLastName()" readonly aria-readonly="true" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="owner-email">Email</label>
+            <input type="email" class="form-control" id="owner-email" [value]="ownerEmail()" readonly aria-readonly="true" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="owner-affiliation">Affiliation</label>
+            <input type="text" class="form-control" id="owner-affiliation" value="" readonly aria-readonly="true" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic member cards -->
+      @for (member of members(); track $index) {
+        <div class="member-card" role="group" [attr.aria-label]="'Team Member ' + ($index + 1)">
+          <div class="member-header">
+            <div class="member-title">
+              <i class="fas fa-user" aria-hidden="true"></i>
+              Team Member {{ $index + 1 }}
+              <span class="member-role">Member</span>
+            </div>
+            <button
+              class="btn-remove-member"
+              (click)="removeMember($index)"
+              title="Remove member"
+              [style.visibility]="$index === 0 && members().length === 1 ? 'hidden' : 'visible'"
+              [attr.aria-label]="'Remove Team Member ' + ($index + 1)"
+            >
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="member-fields">
+            <div class="form-group">
+              <label class="form-label" [for]="'member-fn-' + $index">First Name <span class="required" aria-hidden="true">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [id]="'member-fn-' + $index"
+                placeholder="First name"
+                required
+                aria-required="true"
+                [value]="member.firstName"
+                (input)="updateMember($index, 'firstName', $any($event.target).value)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" [for]="'member-ln-' + $index">Last Name <span class="required" aria-hidden="true">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [id]="'member-ln-' + $index"
+                placeholder="Last name"
+                required
+                aria-required="true"
+                [value]="member.lastName"
+                (input)="updateMember($index, 'lastName', $any($event.target).value)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" [for]="'member-email-' + $index">Email <span class="required" aria-hidden="true">*</span></label>
+              <input
+                type="email"
+                class="form-control"
+                [id]="'member-email-' + $index"
+                placeholder="email@example.com"
+                required
+                aria-required="true"
+                [value]="member.email"
+                (input)="updateMember($index, 'email', $any($event.target).value)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" [for]="'member-affil-' + $index">Affiliation</label>
+              <input
+                type="text"
+                class="form-control"
+                [id]="'member-affil-' + $index"
+                placeholder="University / Company"
+                [value]="member.affiliation"
+                (input)="updateMember($index, 'affiliation', $any($event.target).value)"
+              />
+            </div>
+          </div>
+        </div>
+      }
+
+      <button class="btn-add-member" (click)="addMember()" type="button">
+        <i class="fas fa-plus-circle" aria-hidden="true"></i>
+        Add Another Member
+      </button>
+    </section>
+
+    <!-- Action Buttons -->
+    @if (createError()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        {{ createError() }}
+      </div>
+    }
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-back" (click)="goBack()" type="button">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          Back
+        </button>
+      </div>
+      <button
+        class="btn-action btn-continue"
+        (click)="createTeam()"
+        [disabled]="!isFormValid() || isCreating()"
+        type="button"
+        [attr.aria-disabled]="!isFormValid() || isCreating()"
+      >
+        @if (isCreating()) {
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Creating...
+        } @else {
+          Create Team <i class="fas fa-check" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+  </main>
+</div>

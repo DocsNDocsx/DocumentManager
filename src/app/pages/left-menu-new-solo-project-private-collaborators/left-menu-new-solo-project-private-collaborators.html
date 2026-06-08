@@ -1,0 +1,111 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Add Collaborators</h1>
+      <p>Step 2 of 6 — Enter the details of people who will submit documents</p>
+    </div>
+
+    <nav class="step-progress" aria-label="Project creation steps">
+      <div class="step completed"><div class="step-circle" aria-hidden="true"><i class="fas fa-check" aria-hidden="true"></i></div><div class="step-label">Details</div></div>
+      <div class="step-divider completed" aria-hidden="true"></div>
+      <div class="step active" aria-current="step"><div class="step-circle" aria-hidden="true">2</div><div class="step-label">Collaborators</div></div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step locked"><div class="step-circle" aria-hidden="true">3</div><div class="step-label">Documents</div></div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step locked"><div class="step-circle" aria-hidden="true">4</div><div class="step-label">Assignments</div></div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step locked"><div class="step-circle" aria-hidden="true">5</div><div class="step-label">Staff</div></div>
+      <div class="step-divider" aria-hidden="true"></div>
+      <div class="step locked"><div class="step-circle" aria-hidden="true">6</div><div class="step-label">Decision</div></div>
+    </nav>
+
+    <div class="card-section">
+      <h2 class="card-title"><i class="fas fa-users" aria-hidden="true"></i> How many collaborators?</h2>
+      <p class="card-description">Enter the number of people who will be submitting documents, then click Generate Forms to fill in their details.</p>
+      <div class="count-input-group">
+        <div class="count-input-wrapper">
+          <label class="count-label" for="collaboratorCount">Number of Collaborators</label>
+          <input
+            type="number"
+            class="count-input"
+            id="collaboratorCount"
+            min="1"
+            max="100"
+            [value]="collaboratorCount()"
+            (input)="collaboratorCount.set($any($event.target).valueAsNumber)"
+            aria-describedby="collaboratorCountHelp"
+          />
+        </div>
+        <button class="btn-generate" type="button" (click)="generateForms()" aria-label="Generate collaborator forms">
+          <i class="fas fa-plus-circle" aria-hidden="true"></i> Generate Forms
+        </button>
+      </div>
+      <div class="plan-note" id="collaboratorCountHelp" role="note">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <span>Your current plan (Bronze) allows up to <strong>100 collaborators</strong> per project.</span>
+      </div>
+    </div>
+
+    @if (formsGenerated()) {
+      <div class="card-section collaborators-section" aria-live="polite">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-user-edit" aria-hidden="true"></i> Collaborator Details</h2>
+        </div>
+        @for (collab of collaborators(); track trackByIndex($index); let i = $index) {
+          <div class="collab-card">
+            <div class="collab-header">
+              <span class="collab-number">Collaborator {{ i + 1 }}</span>
+              @if (collaborators().length > 1) {
+                <button class="btn-remove" type="button" (click)="removeCollaborator(i)" [attr.aria-label]="'Remove collaborator ' + (i + 1)">
+                  <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+              }
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" [for]="'firstName-' + i">First Name <span aria-hidden="true">*</span></label>
+                <input type="text" class="form-control" [id]="'firstName-' + i" placeholder="John" [value]="collab.firstName" (input)="updateField(i, 'firstName', $any($event.target).value)" required aria-required="true" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'lastName-' + i">Last Name <span aria-hidden="true">*</span></label>
+                <input type="text" class="form-control" [id]="'lastName-' + i" placeholder="Doe" [value]="collab.lastName" (input)="updateField(i, 'lastName', $any($event.target).value)" required aria-required="true" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'email-' + i">Email Address <span aria-hidden="true">*</span></label>
+                <input type="email" class="form-control" [id]="'email-' + i" placeholder="john@example.com" [value]="collab.email" (input)="updateField(i, 'email', $any($event.target).value)" required aria-required="true" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" [for]="'affiliation-' + i">Affiliation</label>
+                <input type="text" class="form-control" [id]="'affiliation-' + i" placeholder="University / Company" [value]="collab.affiliation" (input)="updateField(i, 'affiliation', $any($event.target).value)" />
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="action-buttons">
+      <div class="btn-group-left">
+        <button class="btn-action btn-back" type="button" (click)="back()">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i> Back
+        </button>
+        <button class="btn-action btn-draft" type="button" (click)="saveAsDraft()">
+          <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
+        </button>
+      </div>
+      <button class="btn-action btn-continue" type="button" [disabled]="!isFormValid()" [attr.aria-disabled]="!isFormValid()" (click)="continue()">
+        Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </main>
+</div>
+
+@if (toastVisible()) {
+  <div class="toast-msg" role="status" aria-live="polite">
+    <i class="fas fa-check-circle" aria-hidden="true"></i> {{ toastMsg() }}
+  </div>
+}

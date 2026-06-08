@@ -1,0 +1,17 @@
+<div class="team-selector-section">
+  <div class="team-selector-card">
+    <label class="team-selector-label" for="teamDropdown">
+      <i class="fas fa-users" aria-hidden="true"></i> {{ label() }}
+    </label>
+    <select
+      class="team-select-dropdown"
+      id="teamDropdown"
+      [value]="selectedTeam()"
+      (change)="onChange($any($event.target).value)"
+    >
+      @for (team of teams(); track team.value) {
+        <option [value]="team.value">{{ team.label }}</option>
+      }
+    </select>
+  </div>
+</div>

@@ -1,0 +1,200 @@
+<app-shared-header></app-shared-header>
+
+<div class="main-container">
+  <app-shared-sidebar></app-shared-sidebar>
+
+  <main class="main-content">
+    <div class="content-header-flex">
+      <div class="content-header">
+        <h1>Team Projects</h1>
+        <p>Collaborate on document collection with your team</p>
+      </div>
+      <a routerLink="/left-menu-new-team-project-landing" class="btn-create-new">
+        <i class="fas fa-plus" aria-hidden="true"></i> Create New Project
+      </a>
+    </div>
+
+    <div class="team-selector-container">
+      <label class="team-selector-label" for="teamSelector">
+        <i class="fas fa-users" aria-hidden="true"></i> Select Team:
+      </label>
+      <select class="team-select" id="teamSelector" (change)="onTeamChange($event)" aria-label="Select team">
+        <option value="all">All Teams</option>
+        @for (team of teamProjectsService.teams(); track team.id) {
+          <option [value]="team.id">{{ team.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="stats-overview">
+      <div class="stat-card-mini" style="border-left-color: var(--primary-color)">
+        <h6>Total Projects</h6>
+        <h3>{{ statTotal() }}</h3>
+      </div>
+      <div class="stat-card-mini" style="border-left-color: #22c55e">
+        <h6>Active</h6>
+        <h3>{{ statActive() }}</h3>
+      </div>
+      <div class="stat-card-mini" style="border-left-color: var(--accent-orange)">
+        <h6>Documents Collected</h6>
+        <h3>{{ statDocs() }}</h3>
+      </div>
+    </div>
+
+    <div class="filter-tabs" role="tablist">
+      @for (s of statusList; track s) {
+        <button
+          class="filter-tab"
+          [class.active]="activeStatus() === s"
+          (click)="setStatus(s)"
+          role="tab"
+          [attr.aria-selected]="activeStatus() === s">
+          <i class="fas {{ statusFilterIcon(s) }}" aria-hidden="true"></i> {{ statusLabel(s) }}
+        </button>
+      }
+    </div>
+
+    @if (teamProjectsService.isLoading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <p>Loading projects...</p>
+      </div>
+    } @else if (teamProjectsService.error()) {
+      <div class="error-state" role="alert">
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        <h3>Failed to load projects</h3>
+        <p>{{ teamProjectsService.error() }}</p>
+      </div>
+    } @else {
+      <div class="projects-table-wrap">
+        @if (filteredProjects().length === 0) {
+          <div class="empty-state">
+            <i class="fas fa-folder-open" aria-hidden="true"></i>
+            <h3>No Projects Found</h3>
+            <p>This team doesn't have any projects in this category yet.</p>
+            <a routerLink="/left-menu-new-team-project-landing" class="btn-create-new">
+              <i class="fas fa-plus" aria-hidden="true"></i> Create Your First Team Project
+            </a>
+          </div>
+        }
+        @if (filteredProjects().length > 0) {
+          <table class="projects-table" role="grid" aria-label="Team projects list">
+            <thead>
+              <tr>
+                <th scope="col" class="th-project">Project</th>
+                <th scope="col" class="th-team">Team</th>
+                <th scope="col" class="th-type">Type</th>
+                <th scope="col" class="th-role">Role</th>
+                <th scope="col" class="th-status">Status</th>
+                <th scope="col" class="th-deadline">Deadline</th>
+                <th scope="col" class="th-docs">Docs</th>
+                <th scope="col" class="th-progress">Progress</th>
+                <th scope="col" class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (project of filteredProjects(); track project.id) {
+                <tr class="project-row">
+                  <td class="col-name">
+                    <div class="project-name-text" [title]="project.name">{{ project.name }}</div>
+                    @if (project.type === 'public' && project.projectCode) {
+                      <div class="project-code-inline">
+                        <i class="fas fa-hashtag" aria-hidden="true"></i>{{ project.projectCode }}
+                        <button class="copy-btn-sm" type="button"
+                          (click)="onCopyProjectCode(project, $event)"
+                          [attr.aria-label]="'Copy project code ' + project.projectCode">
+                          <i class="fas fa-copy" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                    }
+                  </td>
+                  <td class="col-team-name">{{ project.teamName }}</td>
+                  <td>
+                    <span class="project-type-badge"
+                      [class.badge-team-private]="project.type === 'private'"
+                      [class.badge-team-public]="project.type === 'public'">
+                      <i class="fas" [class.fa-lock]="project.type === 'private'" [class.fa-globe]="project.type === 'public'" aria-hidden="true"></i>
+                      {{ project.type === 'private' ? 'Private' : 'Public' }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (project.userRole) {
+                      @switch (project.userRole) {
+                        @case ('host') { <span class="role-badge host"><i class="fas fa-crown" aria-hidden="true"></i> Host</span> }
+                        @case ('supervisor') { <span class="role-badge supervisor"><i class="fas fa-user-shield" aria-hidden="true"></i> Supervisor</span> }
+                        @case ('contributor') { <span class="role-badge contributor"><i class="fas fa-user-edit" aria-hidden="true"></i> Contributor</span> }
+                      }
+                    }
+                  </td>
+                  <td><span [class]="statusBadgeClass(project.status)">{{ statusLabel(project.status) }}</span></td>
+                  <td class="col-date">{{ project.deadline ? formatDeadline(project.deadline) : '—' }}</td>
+                  <td class="col-docs">{{ project.documentCount }}</td>
+                  <td class="col-progress">
+                    @if (project.status === 'active' || project.status === 'completed') {
+                      <div class="progress-cell">
+                        <div class="progress-bar-container">
+                          <div class="progress-bar-fill" [style.width.%]="collectionProgress(project)"></div>
+                        </div>
+                        <span class="progress-pct">{{ collectionProgress(project) }}%</span>
+                      </div>
+                    } @else {
+                      <span class="col-date">—</span>
+                    }
+                  </td>
+                  <td class="col-actions">
+                    <div class="actions-group">
+                      @if (project.status === 'active' || project.status === 'completed' || project.status === 'not_completed') {
+                        <button class="btn-icon btn-view" type="button" (click)="onView(project)" title="View" aria-label="View project">
+                          <i class="fas fa-eye" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if ((project.status === 'draft' || project.status === 'active') && project.userRole !== 'contributor') {
+                        <button class="btn-icon btn-edit" type="button" (click)="onEdit(project)" title="Edit" aria-label="Edit project">
+                          <i class="fas fa-edit" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (project.status === 'active' && project.userRole === 'contributor') {
+                        <button class="btn-icon btn-secondary-action" type="button" (click)="onUpload(project)" title="Upload" aria-label="Upload documents">
+                          <i class="fas fa-upload" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (project.status === 'active' && project.type === 'private' && project.userRole !== 'contributor') {
+                        <button class="btn-icon btn-secondary-action" type="button"
+                          (click)="onCopyInviteCode(project, $event)"
+                          [attr.aria-label]="copiedProjectId() === project.id ? 'Invite code copied' : 'Copy invite code'"
+                          title="Invite">
+                          <i class="fas" [class.fa-check]="copiedProjectId() === project.id" [class.fa-user-plus]="copiedProjectId() !== project.id" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (project.status === 'active' && project.type === 'public' && project.userRole !== 'contributor') {
+                        <button class="btn-icon btn-secondary-action" type="button"
+                          (click)="onCopyInviteCode(project, $event)"
+                          title="Share">
+                          <i class="fas" [class.fa-check]="copiedProjectId() === project.id" [class.fa-share]="copiedProjectId() !== project.id" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (project.status === 'active' && project.type === 'private' && (project.userRole === 'host' || project.userRole === 'supervisor')) {
+                        <button class="btn-icon btn-complete" type="button"
+                          [disabled]="completingProjectId() === project.id"
+                          (click)="onMarkComplete(project, $event)" title="Mark Complete">
+                          <i class="fas" [class.fa-spinner]="completingProjectId() === project.id" [class.fa-spin]="completingProjectId() === project.id" [class.fa-check-circle]="completingProjectId() !== project.id" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (canDelete(project)) {
+                        <button class="btn-icon btn-delete" type="button"
+                          [disabled]="deletingProjectId() === project.id"
+                          (click)="onDelete(project, $event)" title="Delete">
+                          <i class="fas" [class.fa-spinner]="deletingProjectId() === project.id" [class.fa-spin]="deletingProjectId() === project.id" [class.fa-trash]="deletingProjectId() !== project.id" aria-hidden="true"></i>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  </main>
+</div>
