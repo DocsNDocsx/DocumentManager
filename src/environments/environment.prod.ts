@@ -3,5 +3,5 @@ export const environment = {
   apiUrl: 'https://api.docsndocs.com/api',
   serverUrl: 'https://api.docsndocs.com',
   // Stripe publishable key (safe to expose in the browser). Use your LIVE key here.
-  stripePublishableKey: 'pk_live_REPLACE_ME',
+  stripePublishableKey: 'pk_live_51Tf2Bi9k8WLSuq9q1Ss8ttwqujucCENVolTTZibalO09fZJrlXP6AvZwD6G4rmxOpmFngEH66qulB1z1Q465Bgdx00CANXm5ne',
 };

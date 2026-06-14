@@ -12,6 +12,8 @@ const submissionRoutes = require('./routes/submissionroutes');
 const teamRoutes = require('./routes/teamroutes');
 const dashboardRoutes = require('./routes/dashboardroutes');
 const internalRoutes = require('./routes/internalroutes');
+const stripeRoutes = require('./routes/striperoutes');
+const stripeWebhookRoutes = require('./routes/stripewebhookroutes');
 
 
 
@@ -28,6 +30,11 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-user-email', 'x-user-otp', 'x-verify-context'],
 }));
+
+// Stripe webhook needs the raw, unparsed body for signature verification, so it
+// is registered before express.json() (which would otherwise consume the body).
+app.use('/api', stripeWebhookRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api', authRoutes);
@@ -39,6 +46,7 @@ app.use('/api', projectRoutes);
 app.use('/api', submissionRoutes);
 app.use('/api', teamRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api', stripeRoutes);
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {

@@ -337,3 +337,33 @@ CREATE TABLE IF NOT EXISTS pending_registrations (
   created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (email)
 );
+
+-- ─────────────────────────────────────────────────────────────────
+-- Stripe integration (usage-based subscriptions)
+-- One Stripe Customer per user; usage subscriptions live in their own table
+-- so they don't have to fit the slug-based `plans`/`subscriptions` model.
+-- ─────────────────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+
+CREATE TABLE IF NOT EXISTS stripe_subscriptions (
+  id                     SERIAL        PRIMARY KEY,
+  userid                 BIGINT        NOT NULL REFERENCES users (userid) ON DELETE CASCADE,
+  stripe_customer_id     VARCHAR(255)  NOT NULL,
+  stripe_subscription_id VARCHAR(255)  NOT NULL UNIQUE,
+  type                   VARCHAR(20)   NOT NULL DEFAULT 'solo',
+  projects               INT           NOT NULL DEFAULT 0,
+  collaborators          INT           NOT NULL DEFAULT 0,
+  days                   INT           NOT NULL DEFAULT 0,
+  amount                 NUMERIC(10,2) NOT NULL DEFAULT 0,
+  currency               VARCHAR(10)   NOT NULL DEFAULT 'usd',
+  status                 VARCHAR(30)   NOT NULL DEFAULT 'incomplete',
+  current_period_end     TIMESTAMP,
+  created_at             TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at             TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_userid ON stripe_subscriptions (userid);
+
+CREATE OR REPLACE TRIGGER trg_stripe_subscriptions_updated_at
+  BEFORE UPDATE ON stripe_subscriptions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
