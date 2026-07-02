@@ -1,5 +1,5 @@
 <header class="top-header">
-  <app-logo routerLink="/dashboard" [showImage]="false" ariaLabel="DocNDocs Home" />
+  <app-logo routerLink="/dashboard" [imageWidth]="180" [imageHeight]="60" ariaLabel="DocNDocs Home" />
   <nav class="top-nav" aria-label="Main navigation">
     <a routerLink="/top-menu-solo-projects" routerLinkActive="active" #soloRLA="routerLinkActive" [attr.aria-current]="soloRLA.isActive ? 'page' : null">Solo Projects</a>
     <a routerLink="/top-menu-teams" routerLinkActive="active" #teamsRLA="routerLinkActive" [attr.aria-current]="teamsRLA.isActive ? 'page' : null">Teams</a>

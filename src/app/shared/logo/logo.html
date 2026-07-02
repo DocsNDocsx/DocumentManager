@@ -5,7 +5,14 @@
   [attr.aria-label]="ariaLabel()"
 >
   @if (showImage()) {
-    <img ngSrc="ImageLogox.png" alt="Logo" [width]="imageSize()" [height]="imageSize()" priority />
+    <img
+      ngSrc="docsndocslogo.jpeg"
+      alt="DocsNDocs logo"
+      [width]="imageWidth() || imageSize() * 3"
+      [height]="imageHeight() || imageSize()"
+      priority
+    />
+  } @else {
+    <div><span class="logo-docs-1">Doc</span><span class="logo-n" [style.color]="nColor() || null">N</span><span class="logo-docs-2">Docs</span></div>
   }
-  <div><span class="logo-docs-1">Doc</span><span class="logo-n" [style.color]="nColor() || null">N</span><span class="logo-docs-2">Docs</span></div>
 </a>

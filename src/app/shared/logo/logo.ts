@@ -15,5 +15,7 @@ export class LogoComponent {
   ariaLabel = input('DocNDocs home');
   showImage = input(true);
   imageSize = input(32);
+  imageWidth = input<number | null>(null);
+  imageHeight = input<number | null>(null);
   nColor = input('');
 }
