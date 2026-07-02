@@ -122,3 +122,36 @@
   color: var(--accent-red);
   border-left-color: var(--accent-red);
 }
+
+@media (max-width: 900px) {
+  .top-header {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.9rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .top-nav {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 1rem;
+  }
+
+  .top-nav a {
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+  }
+
+  .user-dropdown {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .user-greeting {
+    max-width: 100%;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+}
