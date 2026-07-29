@@ -168,8 +168,9 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
   }
 
   saveAsDraft(): void {
-    this.showToast('Project saved as draft');
-    this.wizardService.saveDraft().subscribe({
+    if (!this.isFormValid()) return;
+    this.wizardService.savePublicDocuments({ documents: this.documents() }).subscribe({
+      next: () => this.showToast('Project saved as draft'),
       error: () => this.showToast('Failed to save draft — please try again'),
     });
   }

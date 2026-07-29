@@ -169,8 +169,26 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
 
   saveAsDraft(): void {
     if (!this.isFormValid()) return;
-    this.showToast('Project saved as draft');
-    this.wizardService.saveDraft().subscribe({
+    const staff = this.supportFirstName().trim() ? {
+      firstName: this.supportFirstName(),
+      lastName: this.supportLastName(),
+      email: this.supportEmail(),
+      affiliation: this.supportAffiliation(),
+    } : null;
+    this.wizardService.savePublicDetails({
+      name: this.projectName(),
+      description: this.projectDescription(),
+      deadline: this.projectDeadline(),
+      attachments: this.uploadedFiles(),
+      expectedCollaborators: this.expectedCollaborators(),
+      staff,
+    }).subscribe({
+      next: project => {
+        this.showToast('Project saved as draft');
+        if (!this.route.parent?.snapshot.paramMap.get('projectId')) {
+          this.router.navigate(['/new-solo-project/public', project.id, 'details'], { replaceUrl: true });
+        }
+      },
       error: () => this.showToast('Failed to save draft — please try again'),
     });
   }
