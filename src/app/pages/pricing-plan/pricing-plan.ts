@@ -31,6 +31,7 @@ export class PricingPlanComponent implements OnInit {
   projectType = signal<'solo' | 'team'>('solo');
   projects    = signal(3);
   collaborators = signal(1);
+  documents   = signal(5);
   days        = signal(20);
   subscriptionRequired = signal(false);
 
@@ -39,7 +40,7 @@ export class PricingPlanComponent implements OnInit {
   effectiveCollaborators = computed(() => this.collaborators());
 
   dailyRate = computed(() =>
-    this.projects() * this.effectiveCollaborators() * RATE
+    this.projects() * this.effectiveCollaborators() * this.documents() * RATE
   );
 
   monthlyEstimate = computed(() =>
@@ -51,7 +52,7 @@ export class PricingPlanComponent implements OnInit {
   );
 
   perProjectDay = computed(() =>
-    this.effectiveCollaborators() * RATE
+    this.effectiveCollaborators() * this.documents() * RATE
   );
 
   ngOnInit(): void {
@@ -79,6 +80,10 @@ export class PricingPlanComponent implements OnInit {
     this.collaborators.set(+(event.target as HTMLInputElement).value);
   }
 
+  setDocuments(event: Event): void {
+    this.documents.set(+(event.target as HTMLInputElement).value);
+  }
+
   setDays(event: Event): void {
     this.days.set(+(event.target as HTMLInputElement).value);
   }
@@ -89,6 +94,7 @@ export class PricingPlanComponent implements OnInit {
         type: this.projectType(),
         projects: this.projects(),
         collaborators: this.effectiveCollaborators(),
+        documents: this.documents(),
         days: this.days(),
         monthly: this.monthlyEstimate().toFixed(2),
       },

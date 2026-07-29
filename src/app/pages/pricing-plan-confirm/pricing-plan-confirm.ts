@@ -28,6 +28,7 @@ export class PricingPlanConfirmComponent implements OnInit {
   projectType   = signal('Solo');
   projects      = signal(1);
   collaborators = signal(1);
+  documents     = signal(1);
   days          = signal(20);
   amountCharged = signal('0.00');
   customerName  = signal('Customer');
@@ -43,6 +44,7 @@ export class PricingPlanConfirmComponent implements OnInit {
         );
         this.projects.set(+params['projects'] || 1);
         this.collaborators.set(+params['collaborators'] || 1);
+        this.documents.set(+params['documents'] || 1);
         this.days.set(+params['days'] || 20);
         this.amountCharged.set(params['total'] || '0.00');
         this.customerName.set(params['name'] || 'Customer');

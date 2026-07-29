@@ -124,7 +124,7 @@
       <p class="terms-text">
         By completing this payment, you agree to our
         <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
-        You only pay for active projects and collaborators each day.
+        You only pay for active projects, collaborators, documents, and days.
       </p>
     </div>
 
@@ -150,12 +150,16 @@
         <span class="summary-item-value">{{ collaborators() }}</span>
       </div>
       <div class="summary-item">
+        <span class="summary-item-label">Documents / project</span>
+        <span class="summary-item-value">{{ documents() }}</span>
+      </div>
+      <div class="summary-item">
         <span class="summary-item-label">Active days / month</span>
         <span class="summary-item-value">{{ days() }}</span>
       </div>
       <div class="summary-item">
         <span class="summary-item-label">Rate</span>
-        <span class="summary-item-value">$0.09 / project / collaborator / day</span>
+        <span class="summary-item-value">$0.09 / project / collaborator / document / day</span>
       </div>
       <div class="summary-item">
         <span class="summary-item-label">Subtotal</span>

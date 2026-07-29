@@ -20,6 +20,7 @@ export interface CreateSubscriptionRequest {
   type: 'solo' | 'team';
   projects: number;
   collaborators: number;
+  documents: number;
   days: number;
   /** Estimated monthly total shown to the user (informational; server is source of truth). */
   monthlyEstimate: number;

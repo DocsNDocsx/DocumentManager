@@ -8,7 +8,7 @@
     <!-- Page header -->
     <div class="content-header">
       <h1>Pricing</h1>
-      <p>Simple, usage-based pricing — pay only for active projects and collaborators.</p>
+      <p>Simple, usage-based pricing - pay only for active projects, collaborators, documents, and days.</p>
     </div>
 
     @if (subscriptionRequired()) {
@@ -32,6 +32,11 @@
       <div class="formula-op" aria-hidden="true">×</div>
       <div class="formula-part">
         <div class="formula-val">collaborators</div>
+        <div class="formula-lbl">per project</div>
+      </div>
+      <div class="formula-op" aria-hidden="true">×</div>
+      <div class="formula-part">
+        <div class="formula-val">documents</div>
         <div class="formula-lbl">per project</div>
       </div>
       <div class="formula-op" aria-hidden="true">×</div>
@@ -105,6 +110,24 @@
           [value]="collaborators()"
           (input)="setCollaborators($event)"
           aria-label="Collaborators per project"
+        >
+      </div>
+
+      <!-- Documents slider -->
+      <div class="slider-row">
+        <div class="slider-top">
+          <label class="slider-name" for="docs-slider">Documents per project</label>
+          <span class="slider-val" aria-live="polite">{{ documents() }}</span>
+        </div>
+        <input
+          id="docs-slider"
+          type="range"
+          min="1"
+          max="50"
+          step="1"
+          [value]="documents()"
+          (input)="setDocuments($event)"
+          aria-label="Documents per project"
         >
       </div>
 

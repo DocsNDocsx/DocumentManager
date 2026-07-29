@@ -309,6 +309,7 @@ CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   type                   VARCHAR(20)   NOT NULL DEFAULT 'solo',
   projects               INT           NOT NULL DEFAULT 0,
   collaborators          INT           NOT NULL DEFAULT 0,
+  documents              INT           NOT NULL DEFAULT 0,
   days                   INT           NOT NULL DEFAULT 0,
   amount                 NUMERIC(10,2) NOT NULL DEFAULT 0,
   currency               VARCHAR(10)   NOT NULL DEFAULT 'usd',

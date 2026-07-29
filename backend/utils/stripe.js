@@ -15,9 +15,20 @@ const stripe = secretKey ? new Stripe(secretKey) : null;
 const RATE = 0.09; // $ per project · collaborator · day
 const TAX_RATE = 0.08;
 
+function toUsageNumber(value, fallback = 1) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.floor(parsed);
+}
+
 /** Recurring monthly charge in cents, computed from usage. */
-function computeMonthlyAmountCents({ projects, collaborators, days }) {
-  const base = Number(projects) * Number(collaborators) * RATE * Number(days);
+function computeMonthlyAmountCents({ projects, collaborators, documents, days }) {
+  const base =
+    toUsageNumber(projects) *
+    toUsageNumber(collaborators) *
+    toUsageNumber(documents) *
+    RATE *
+    toUsageNumber(days, 20);
   const withTax = base * (1 + TAX_RATE);
   return Math.max(0, Math.round(withTax * 100));
 }

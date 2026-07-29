@@ -66,13 +66,13 @@ exports.createSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No payment profile found. Please add a card first.' });
     }
 
-    const { paymentMethodId, type = 'solo', projects = 1, collaborators = 1, days = 20 } = req.body ?? {};
+    const { paymentMethodId, type = 'solo', projects = 1, collaborators = 1, documents = 1, days = 20 } = req.body ?? {};
     if (!paymentMethodId) {
       return res.status(400).json({ success: false, message: 'paymentMethodId is required' });
     }
 
     const customerId = user.stripe_customer_id;
-    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, days });
+    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, documents, days });
 
     // Make the saved card the customer's default for invoices.
     await stripe.customers.update(customerId, {
@@ -100,6 +100,7 @@ exports.createSubscription = async (req, res) => {
           type: String(type),
           projects: String(projects),
           collaborators: String(collaborators),
+          documents: String(documents),
           days: String(days),
         },
         expand: ['latest_invoice.payment_intent'],
@@ -114,15 +115,16 @@ exports.createSubscription = async (req, res) => {
 
     await pool.query(
       `INSERT INTO stripe_subscriptions
-         (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, days, amount, currency, status, current_period_end)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (stripe_subscription_id) DO UPDATE SET
          status = EXCLUDED.status,
          amount = EXCLUDED.amount,
+         documents = EXCLUDED.documents,
          current_period_end = EXCLUDED.current_period_end,
          updated_at = CURRENT_TIMESTAMP`,
       [
-        user.userid, customerId, subscription.id, type, projects, collaborators, days,
+        user.userid, customerId, subscription.id, type, projects, collaborators, documents, days,
         (unitAmount / 100).toFixed(2), 'usd', subscription.status, periodEnd,
       ]
     );

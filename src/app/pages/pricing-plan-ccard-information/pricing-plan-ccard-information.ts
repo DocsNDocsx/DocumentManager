@@ -39,6 +39,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   projectType   = signal<'solo' | 'team'>('solo');
   projects      = signal(1);
   collaborators = signal(1);
+  documents     = signal(1);
   days          = signal(20);
   monthlyBase   = signal(0);
 
@@ -76,6 +77,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.projectType.set((params['type'] || 'solo') as 'solo' | 'team');
         this.projects.set(+params['projects'] || 1);
         this.collaborators.set(+params['collaborators'] || 1);
+        this.documents.set(+params['documents'] || 1);
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
       });
@@ -236,6 +238,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         type: this.projectType(),
         projects: this.projects(),
         collaborators: this.collaborators(),
+        documents: this.documents(),
         days: this.days(),
         monthlyEstimate: this.total(),
       })
@@ -248,6 +251,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
               type: this.projectType(),
               projects: this.projects(),
               collaborators: this.collaborators(),
+              documents: this.documents(),
               days: this.days(),
               total: this.total().toFixed(2),
               name: `${this.firstName()} ${this.lastName()}`,
@@ -268,6 +272,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       type: this.projectType(),
       projects: String(this.projects()),
       collaborators: String(this.collaborators()),
+      documents: String(this.documents()),
       days: String(this.days()),
       monthly: String(this.monthlyBase()),
       customerId: this.customerId,
