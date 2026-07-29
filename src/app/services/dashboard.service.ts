@@ -12,6 +12,7 @@ import {
   DashboardRecentProjectsApiResponse,
   DashboardActivityApiResponse,
   DashboardAllActivityApiResponse,
+  StorageSummaryApiResponse,
 } from '../models/dashboard.models';
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +59,7 @@ export class DashboardService {
           documentsThisWeek: statsRes.documentsThisWeek,
           activeCollaborators: statsRes.activeCollaborators,
           storageUsedPercent: statsRes.storageUsedPercent,
+          storageUsedLabel: statsRes.storageUsedLabel,
         });
         this.recentProjects.set(projectsRes.projects);
         this.activities.set(activityRes.activities);
@@ -94,5 +96,15 @@ export class DashboardService {
         this.logger.error('Failed to load all activity', err);
       },
     });
+  }
+
+  getStorageSummary(teamId = 'all') {
+    const userid = this.auth.currentUserId();
+    const params = new HttpParams()
+      .set('userid', userid)
+      .set('teamId', teamId);
+    return this.http.get<StorageSummaryApiResponse>(
+      `${environment.apiUrl}/dashboard/storage`, { params }
+    );
   }
 }

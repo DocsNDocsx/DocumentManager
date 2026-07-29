@@ -97,7 +97,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
 
   generateForms(): void {
     const n = this.collaboratorCount();
-    if (n < 1 || n > 100) return;
+    if (n < 1) return;
     this.collaborators.set(
       Array.from({ length: n }, () => ({ firstName: '', lastName: '', email: '', affiliation: '' }))
     );

@@ -8,6 +8,7 @@ export interface DashboardStats {
   documentsThisWeek: number;
   activeCollaborators: number;
   storageUsedPercent: number;
+  storageUsedLabel: string;
 }
 
 export interface DashboardProject {
@@ -45,6 +46,7 @@ export interface DashboardStatsApiResponse {
   documentsThisWeek: number;
   activeCollaborators: number;
   storageUsedPercent: number;
+  storageUsedLabel: string;
 }
 
 export interface DashboardRecentProjectsApiResponse {
@@ -60,4 +62,41 @@ export interface DashboardActivityApiResponse {
 export interface DashboardAllActivityApiResponse {
   success: boolean;
   activities: ActivityItem[];
+}
+
+export interface StorageStatusSummary {
+  count: string;
+  size: string;
+  percent: string;
+  percentNum: number;
+}
+
+export interface StorageDataSet {
+  title: string;
+  subtitle: string;
+  totalUsed: string;
+  totalUsedSub: string;
+  totalProjects: number;
+  totalProjectsSub: string;
+  totalDocs: number;
+  totalDocsSub: string;
+  statuses: {
+    active: StorageStatusSummary;
+    draft: StorageStatusSummary;
+    completed: StorageStatusSummary;
+    notCompleted: StorageStatusSummary;
+    deleted: StorageStatusSummary;
+  };
+}
+
+export interface StorageTeamOption {
+  value: string;
+  label: string;
+}
+
+export interface StorageSummaryApiResponse {
+  success: boolean;
+  solo: StorageDataSet;
+  team: StorageDataSet;
+  teams: StorageTeamOption[];
 }

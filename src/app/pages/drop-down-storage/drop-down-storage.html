@@ -9,6 +9,18 @@
       <p>{{ data().subtitle }}</p>
     </div>
 
+    @if (errorMessage()) {
+      <div class="storage-message error" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        {{ errorMessage() }}
+      </div>
+    } @else if (isLoading()) {
+      <div class="storage-message" role="status" aria-live="polite">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        Loading storage usage...
+      </div>
+    }
+
     <div class="view-toggle-bar">
       <button class="view-toggle-btn" [class.active]="currentView() === 'solo'" (click)="switchView('solo')" type="button">
         <i class="fas fa-user"></i> Solo Projects
@@ -42,7 +54,7 @@
     @if (currentView() === 'team') {
       <app-team-selector
         label="View Storage for Team:"
-        [teams]="teamOptions"
+        [teams]="teamOptions()"
         [selectedTeam]="currentTeam()"
         (teamChange)="switchTeam($event)"
       />

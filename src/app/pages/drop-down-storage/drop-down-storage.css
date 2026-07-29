@@ -95,6 +95,25 @@
   color: #fff;
 }
 
+.storage-message {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.storage-message.error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
 .storage-overview {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

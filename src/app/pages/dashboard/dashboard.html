@@ -49,8 +49,11 @@
         </div>
         <h6>Storage Used</h6>
         <h2 class="stat-value-blue">
-          @if (dashboard.stats(); as s) { {{ s.storageUsedPercent }}% } @else { -- }
+          @if (dashboard.stats(); as s) { {{ s.storageUsedLabel }} } @else { -- }
         </h2>
+        <small class="text-muted">
+          @if (dashboard.stats(); as s) { of 10 GB ({{ s.storageUsedPercent }}%) } @else { Submitted files }
+        </small>
         <div class="progress-custom">
           <div class="progress-bar-custom" [style.width]="progressWidth()"></div>
         </div>
