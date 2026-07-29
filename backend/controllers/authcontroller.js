@@ -301,11 +301,11 @@ exports.deleteAccount = async (req, res) => {
 
 
     const [activeSubs] = await pool.query(
-      "SELECT id FROM subscriptions WHERE userid = ? AND status = 'active'",
+      "SELECT id FROM stripe_subscriptions WHERE userid = ? AND status IN ('active', 'trialing')",
       [userid]
     );
     if (activeSubs.length > 0) {
-      return res.status(400).json({ success: false, message: 'Cancel all active subscriptions before deleting account' });
+      return res.status(400).json({ success: false, message: 'Cancel all active Stripe subscriptions before deleting account' });
     }
 
     await pool.query('DELETE FROM users WHERE userid = ?', [userid]);

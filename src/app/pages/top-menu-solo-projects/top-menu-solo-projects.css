@@ -86,7 +86,7 @@
 }
 .stat-card-mini:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.09); }
 .stat-card-mini.stat-green { border-left-color: var(--primary-color); }
-.stat-card-mini.stat-gold  { border-left-color: var(--accent-orange); }
+.stat-card-mini.stat-orange  { border-left-color: var(--accent-orange); }
 
 .stat-card-mini h6 {
   color: var(--text-light);

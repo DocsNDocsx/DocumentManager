@@ -189,7 +189,7 @@ exports.activateProject = async (req, res) => {
       rows[0].name
     );
 
-    // Notify collaborators — non-blocking
+    // Notify collaborators and support staff - non-blocking
     try {
       const project = parseProject(rows[0]);
       const collaborators = project.collaborators ?? [];
@@ -203,6 +203,13 @@ exports.activateProject = async (req, res) => {
         ? `<div class="code-section"><p class="code-label">Project Code</p><div class="code-box"><p class="code-value">${project.projectCode}</p></div></div>`
         : '';
 
+      if (project.staff?.email) {
+        collaborators.push({
+          ...project.staff,
+          name: [project.staff.firstName, project.staff.lastName].filter(Boolean).join(' ') || 'Support Staff',
+        });
+      }
+
       await Promise.all(
         collaborators
           .filter(c => c.email)
@@ -214,7 +221,7 @@ exports.activateProject = async (req, res) => {
               .replace('{{PROJECT_NAME}}', project.name)
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
               .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock);
-            return sendEmail(c.email, `DocsNDocs: "${project.name}" is now active — submit your documents`, body);
+            return sendEmail(c.email, `DocsNDocs: "${project.name}" is now active`, body);
           })
       );
     } catch (emailErr) {

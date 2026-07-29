@@ -136,7 +136,7 @@ export class DropDownPaymentHistoryComponent implements OnInit {
   exportCSV(): void {
     const data = this.data();
     const teamCol = this.isTeamView();
-    const header = ['Date', 'Invoice', 'Plan', ...(teamCol ? ['Details'] : []), 'Amount', 'Status', 'Payment Method'];
+    const header = ['Date', 'Invoice', 'Subscription', ...(teamCol ? ['Details'] : []), 'Amount', 'Status', 'Payment Method'];
     const rows = data.payments.map(p => [
       p.date, p.invoice, p.plan, ...(teamCol ? [p.teams ?? ''] : []),
       p.amount, p.status, p.method,

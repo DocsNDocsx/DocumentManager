@@ -99,7 +99,12 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
         this.wizardService.reset();
         this.router.navigate(['/top-menu-solo-projects']);
       },
-      error: () => {},
+      error: err => {
+        if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
+          this.showToast('Please subscribe before activating a project');
+          this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'solo' } });
+        }
+      },
     });
   }
 

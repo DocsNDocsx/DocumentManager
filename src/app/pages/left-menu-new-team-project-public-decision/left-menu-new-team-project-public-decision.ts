@@ -23,6 +23,8 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
   confirmModalOpen = signal(false);
   codeModalOpen = signal(false);
   projectCode = signal('');
+  toastMsg = signal('');
+  toastVisible = signal(false);
 
   readonly teamName = computed(() => this.teamWizardService.teamName());
   readonly projectName = computed(() => this.teamWizardService.project()?.name ?? '');
@@ -61,8 +63,19 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
         this.projectCode.set(project.projectCode ?? '');
         this.codeModalOpen.set(true);
       },
-      error: () => {},
+      error: err => {
+        if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
+          this.showSubscribePrompt();
+        }
+      },
     });
+  }
+
+  private showSubscribePrompt(): void {
+    this.toastMsg.set('Please subscribe before activating a project');
+    this.toastVisible.set(true);
+    setTimeout(() => this.toastVisible.set(false), 3000);
+    this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'team' } });
   }
 
   closeCodeModal(): void {

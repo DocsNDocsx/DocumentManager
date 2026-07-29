@@ -11,6 +11,13 @@
       <p>Simple, usage-based pricing — pay only for active projects and collaborators.</p>
     </div>
 
+    @if (subscriptionRequired()) {
+      <div class="subscribe-required" role="alert">
+        <i class="fas fa-lock" aria-hidden="true"></i>
+        <span>Please subscribe before activating a project.</span>
+      </div>
+    }
+
     <!-- Formula banner -->
     <div class="formula-banner" role="region" aria-label="Pricing formula">
       <div class="formula-part">

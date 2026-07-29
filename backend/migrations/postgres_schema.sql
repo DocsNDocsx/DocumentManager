@@ -36,49 +36,6 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ─────────────────────────────────────────────────────────────────
--- plans + plan_features
--- ─────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS plans (
-  id             SERIAL         PRIMARY KEY,
-  slug           VARCHAR(100)   NOT NULL UNIQUE,
-  name           VARCHAR(255)   NOT NULL,
-  price_monthly  NUMERIC(10,2)  NOT NULL DEFAULT 0,
-  price_annual   NUMERIC(10,2)  NOT NULL DEFAULT 0,
-  max_storage_gb INT            NOT NULL DEFAULT 0,
-  min_members    INT            NOT NULL DEFAULT 0,
-  max_members    INT            NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS plan_features (
-  id         SERIAL        PRIMARY KEY,
-  plan_id    INT           NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
-  feature    VARCHAR(500)  NOT NULL,
-  sort_order INT           NOT NULL DEFAULT 0
-);
-
--- Seed plans — adjust prices/features to match your frontend
-INSERT INTO plans (slug, name, price_monthly, price_annual, max_storage_gb, min_members, max_members)
-VALUES
-  ('free',   'Free',   0,     0,     1,   1,  0),
-  ('bronze', 'Bronze', 9.99,  99.99, 5,   1,  5),
-  ('silver', 'Silver', 24.99, 249.99,20,  6,  15),
-  ('gold',   'Gold',   49.99, 499.99,100, 16, 100)
-ON CONFLICT (slug) DO NOTHING;
-
--- ─────────────────────────────────────────────────────────────────
--- subscriptions
--- ─────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS subscriptions (
-  id              SERIAL        PRIMARY KEY,
-  userid          BIGINT        NOT NULL REFERENCES users (userid) ON DELETE CASCADE,
-  plan_id         INT           NOT NULL REFERENCES plans (id),
-  billing_cycle   VARCHAR(20)   NOT NULL DEFAULT 'monthly',
-  status          VARCHAR(20)   NOT NULL DEFAULT 'active',
-  started_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  next_payment_at TIMESTAMP
-);
-
--- ─────────────────────────────────────────────────────────────────
 -- payment_cards
 -- ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS payment_cards (
@@ -340,8 +297,7 @@ CREATE TABLE IF NOT EXISTS pending_registrations (
 
 -- ─────────────────────────────────────────────────────────────────
 -- Stripe integration (usage-based subscriptions)
--- One Stripe Customer per user; usage subscriptions live in their own table
--- so they don't have to fit the slug-based `plans`/`subscriptions` model.
+-- One Stripe Customer per user; usage billing lives in stripe_subscriptions.
 -- ─────────────────────────────────────────────────────────────────
 ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
 

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -24,6 +24,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   protected listService = inject(ProjectListService);
   private auth = inject(AuthService);
   private logger = inject(LoggingService);
+  private router = inject(Router);
 
   dropdownOpen = signal(false);
   activeFilter = signal<FilterTab>('Active');
@@ -161,7 +162,12 @@ export class TopMenuSoloProjectsComponent implements OnInit {
         this.logger.info('Project activated', { id: project.id });
         this.listService.updateOne(project.id, { status: res.project.status, projectCode: res.project.projectCode });
       },
-      error: err => this.logger.error('Failed to activate project', err),
+      error: err => {
+        this.logger.error('Failed to activate project', err);
+        if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
+          this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'solo' } });
+        }
+      },
     });
   }
 

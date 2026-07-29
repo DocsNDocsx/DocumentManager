@@ -19,7 +19,6 @@ import { DropDownStorageComponent } from './pages/drop-down-storage/drop-down-st
 import { DropDownPaymentHistoryComponent } from './pages/drop-down-payment-history/drop-down-payment-history';
 import { DropDownPaymentCardsComponent } from './pages/drop-down-payment-cards/drop-down-payment-cards';
 import { DropDownAccountSettingsComponent } from './pages/drop-down-account-settings/drop-down-account-settings';
-import { DropDownUpgradePaymentPlanComponent } from './pages/drop-down-upgrade-payment-plan/drop-down-upgrade-payment-plan';
 import { TopMenuSoloProjectsComponent } from './pages/top-menu-solo-projects/top-menu-solo-projects';
 import { TopMenuTeamsComponent } from './pages/top-menu-teams/top-menu-teams';
 import { TopMenuTeamsEditTeamsComponent } from './pages/top-menu-teams-edit-teams/top-menu-teams-edit-teams';
@@ -83,7 +82,6 @@ export const routes: Routes = [
     { path: 'drop-down-payment-history', component: DropDownPaymentHistoryComponent, canActivate: [authGuard] },
     { path: 'drop-down-payment-cards', component: DropDownPaymentCardsComponent, canActivate: [authGuard] },
     { path: 'drop-down-account-settings', component: DropDownAccountSettingsComponent, canActivate: [authGuard] },
-    { path: 'drop-down-upgrade-payment-plan', component: DropDownUpgradePaymentPlanComponent, canActivate: [authGuard] },
 
     // Top-menu pages
     { path: 'top-menu-solo-projects', component: TopMenuSoloProjectsComponent, canActivate: [authGuard] },

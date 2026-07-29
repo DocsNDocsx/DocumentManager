@@ -32,6 +32,7 @@ export class PricingPlanComponent implements OnInit {
   projects    = signal(3);
   collaborators = signal(1);
   days        = signal(20);
+  subscriptionRequired = signal(false);
 
   isSolo = computed(() => this.projectType() === 'solo');
 
@@ -62,6 +63,7 @@ export class PricingPlanComponent implements OnInit {
           this.projectType.set('team');
           if (this.collaborators() < 2) this.collaborators.set(2);
         }
+        this.subscriptionRequired.set(params['subscriptionRequired'] === '1');
       });
   }
 

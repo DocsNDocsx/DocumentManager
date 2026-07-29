@@ -52,6 +52,23 @@
   font-size: 1.05rem;
 }
 
+.subscribe-required {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: #fff7ed;
+  border: 2px solid #fed7aa;
+  border-radius: 12px;
+  color: #9a3412;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 1.1rem;
+}
+
+.subscribe-required i {
+  color: #ea580c;
+}
+
 /* ── Formula banner ── */
 
 .formula-banner {

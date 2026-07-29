@@ -73,7 +73,12 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
     this.confirmModalOpen.set(false);
     this.wizardService.activateProject().subscribe({
       next: () => this.codeModalOpen.set(true),
-      error: () => {},
+      error: err => {
+        if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
+          this.showToast('Please subscribe before activating a project');
+          this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'solo' } });
+        }
+      },
     });
   }
 

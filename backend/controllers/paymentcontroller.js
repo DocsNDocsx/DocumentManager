@@ -26,16 +26,17 @@ exports.getPaymentHistory = async (req, res) => {
     );
 
     const [subRows] = await pool.query(
-      `SELECT p.name AS plan_name, s.billing_cycle, s.next_payment_at
-       FROM subscriptions s
-       JOIN plans p ON p.id = s.plan_id
-       WHERE s.userid = ? AND s.status = 'active'
+      `SELECT type, amount, status, current_period_end
+       FROM stripe_subscriptions
+       WHERE userid = ? AND type = ? AND status IN ('active', 'trialing')
+       ORDER BY updated_at DESC
        LIMIT 1`,
-      [userid]
+      [userid, type]
     );
 
     const summary = summaryRows[0];
     const sub = subRows[0] ?? null;
+    const subscriptionLabel = sub?.type === 'team' ? 'Team usage subscription' : 'Solo usage subscription';
 
     res.json({
       success: true,
@@ -44,12 +45,12 @@ exports.getPaymentHistory = async (req, res) => {
         totalSpentSub: 'Last 12 months',
         totalPayments: summary.total_payments,
         totalPaymentsSub: 'All time',
-        currentPlan: sub?.plan_name ?? 'Free',
-        currentPlanSub: sub ? `${sub.billing_cycle === 'monthly' ? 'Monthly' : 'Annual'} billing` : 'No active plan',
-        nextPayment: sub?.next_payment_at
-          ? new Date(sub.next_payment_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : '—',
-        nextPaymentSub: sub?.next_payment_at ? '' : 'No upcoming payment',
+        currentPlan: sub ? subscriptionLabel : 'No active subscription',
+        currentPlanSub: sub ? `$${parseFloat(sub.amount ?? 0).toFixed(2)} current usage total` : 'Subscribe to activate projects',
+        nextPayment: sub?.current_period_end
+          ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '-',
+        nextPaymentSub: sub?.current_period_end ? 'Current period ends' : 'No upcoming payment',
       },
       payments: payments.map(p => ({
         date: new Date(p.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -57,7 +58,7 @@ exports.getPaymentHistory = async (req, res) => {
         plan: p.plan,
         amount: `$${parseFloat(p.amount).toFixed(2)}`,
         status: p.status,
-        method: p.payment_method ?? '—',
+        method: p.payment_method ?? '-',
       })),
     });
   } catch (err) {

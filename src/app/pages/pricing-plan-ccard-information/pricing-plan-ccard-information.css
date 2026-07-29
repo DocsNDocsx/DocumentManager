@@ -13,15 +13,6 @@
   --text-light: #6b7280;
   --border-color: #e5e7eb;
   --bg-light: #f9fafb;
-  --bronze: #cd7f32;
-  --bronze-light: #f5e6d3;
-  --bronze-dark: #a0622a;
-  --silver: #6b7f99;
-  --silver-light: #e8ecf0;
-  --silver-dark: #4e5f74;
-  --gold: #d4a017;
-  --gold-light: #fdf3d6;
-  --gold-dark: #a87d10;
 }
 
 * {
@@ -243,31 +234,6 @@
   color: var(--primary-color);
 }
 
-.plan-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 1rem;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin-bottom: 1.2rem;
-}
-
-.plan-badge.bronze {
-  background: var(--bronze-light);
-  color: var(--bronze-dark);
-}
-
-.plan-badge.silver {
-  background: var(--silver-light);
-  color: var(--silver-dark);
-}
-
-.plan-badge.gold {
-  background: var(--gold-light);
-  color: var(--gold-dark);
-}
 
 .summary-item {
   display: flex;

@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
-  computed,
   effect,
   inject,
   signal,
@@ -11,16 +10,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { TeamsService } from '../../services/teams.service';
-import { SubscriptionService } from '../../services/subscription.service';
 import { TeamDetail, TeamDetailMember } from '../../models/team.models';
 import { LoggingService } from '../../services/logging.service';
-
-interface Plan {
-  name: string;
-  min: number;
-  max: number;
-  price: number;
-}
 
 type EditableMember = Omit<TeamDetailMember, 'id' | 'isOwner'> & { isNew: boolean };
 
@@ -38,10 +29,7 @@ export class TopMenuTeamsEditTeamsComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   readonly teamsService = inject(TeamsService);
-  private subscriptionService = inject(SubscriptionService);
   private logger = inject(LoggingService);
-
-  plans = signal<Plan[]>([]);
 
   _teamId = signal('');
 
@@ -50,8 +38,6 @@ export class TopMenuTeamsEditTeamsComponent implements OnInit {
   teamName = signal('');
   teamDescription = signal('');
   members = signal<EditableMember[]>([]);
-  originalMemberCount = signal(0);
-  showModal = signal(false);
   isSaving = signal(false);
   saveError = signal<string | null>(null);
 
@@ -75,39 +61,9 @@ export class TopMenuTeamsEditTeamsComponent implements OnInit {
               isNew: false,
             }))
         );
-        this.originalMemberCount.set(detail.members.length);
       }
     });
   }
-
-  pricingState = computed(() => {
-    const origCount = this.originalMemberCount();
-    const newCount = this.members().length + 1;
-    if (newCount === origCount) return null;
-
-    const origPlan = this.getPlan(origCount);
-    const newPlan = this.getPlan(newCount);
-    const same = origPlan.name === newPlan.name;
-    const upgrade = newPlan.price > origPlan.price;
-    const diff = newPlan.price - origPlan.price;
-    const absDiff = Math.abs(diff);
-    const memberDiff = newCount - origCount;
-    const memberSign = memberDiff > 0 ? '+' : '';
-    const deltaSign = diff > 0 ? '+' : '-';
-    const newPlanBoxClass = same ? 'current' : upgrade ? 'upgrade' : 'downgrade';
-    const deltaClass = same ? 'same' : upgrade ? 'upgrade' : 'downgrade';
-
-    return {
-      origCount, newCount, origPlan, newPlan, same, upgrade,
-      diff, absDiff, memberDiff, memberSign, deltaSign,
-      newPlanBoxClass, deltaClass,
-    };
-  });
-
-  saveDisabled = computed(() => {
-    const state = this.pricingState();
-    return state !== null && !state.same;
-  });
 
   ngOnInit() {
     const teamId = this.route.snapshot.queryParamMap.get('id');
@@ -117,19 +73,6 @@ export class TopMenuTeamsEditTeamsComponent implements OnInit {
     }
     this._teamId.set(teamId);
     this.teamsService.loadDetail(teamId);
-    this.subscriptionService.getPlans().subscribe({
-      next: res => this.plans.set(
-        res.plans
-          .filter(p => p.max_members > 0)
-          .map(p => ({ name: p.name, min: p.min_members, max: p.max_members, price: p.price_monthly }))
-      ),
-      error: err => this.logger.error('Failed to load plans', err),
-    });
-  }
-
-  private getPlan(count: number): Plan {
-    const plans = this.plans();
-    return plans.find(p => count >= p.min && count <= p.max) ?? plans[plans.length - 1] ?? { name: '—', min: 0, max: 0, price: 0 };
   }
 
   toggleDropdown(event: MouseEvent) {
@@ -164,25 +107,7 @@ export class TopMenuTeamsEditTeamsComponent implements OnInit {
 
   attemptSave() {
     if (!this.validateForm()) return;
-    const state = this.pricingState();
-    if (state && !state.same) {
-      this.showModal.set(true);
-      return;
-    }
     this.saveChanges();
-  }
-
-  confirmAndSave() {
-    this.showModal.set(false);
-    this.saveChanges();
-  }
-
-  closeModal() {
-    this.showModal.set(false);
-  }
-
-  onModalBackdropClick(event: MouseEvent) {
-    if (event.target === event.currentTarget) this.closeModal();
   }
 
   goBack() {

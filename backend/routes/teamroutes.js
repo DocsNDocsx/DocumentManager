@@ -1,5 +1,6 @@
 const express = require('express');
 const verifyJwt = require('../middleware/auth');
+const requireActiveSubscription = require('../middleware/subscription');
 const teamController = require('../controllers/teamcontroller');
 const teamSubmissionController = require('../controllers/teamsubmissioncontroller');
 const teamSubmissionUpload = require('../utils/teamSubmissionUpload');
@@ -18,7 +19,10 @@ router.get('/teams/projects/stats', teamController.getTeamProjectStats);
 router.get('/teams/projects', teamController.getTeamProjects);
 router.get('/teams/projects/:id', teamController.getTeamProject);
 router.post('/teams/projects', teamController.createTeamProject);
-router.patch('/teams/projects/:id', teamController.updateTeamProject);
+router.patch('/teams/projects/:id', (req, res, next) => {
+  if (req.body?.status === 'active') return requireActiveSubscription(req, res, next);
+  return next();
+}, teamController.updateTeamProject);
 router.get('/teams/projects/:id/collaborators', teamController.getProjectCollaborators);
 router.post('/teams/projects/:id/collaborators', teamController.saveProjectCollaborators);
 router.post('/teams/projects/:id/documents', teamController.saveProjectDocuments);

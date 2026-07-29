@@ -6,236 +6,49 @@
   <main class="main-content">
     <div class="content-header">
       <h1>Account Settings</h1>
-      <p>Manage your subscription plans and account preferences</p>
+      <p>Manage your account preferences</p>
     </div>
 
-    <div class="view-toggle-bar">
-      <button class="view-toggle-btn" [class.active]="currentView() === 'cancel'" (click)="switchView('cancel')">
-        <i class="fas fa-ban"></i> Cancel Pricing Plan
-      </button>
-      <button class="view-toggle-btn" [class.active]="currentView() === 'delete'" (click)="switchView('delete')">
-        <i class="fas fa-trash-alt"></i> Delete Account
-      </button>
-    </div>
-
-    @if (currentView() === 'cancel') {
-      <div id="cancelSection">
-        <!-- Solo Projects Plan -->
-        <div class="settings-section">
-          <div class="section-header">
-            <div class="section-title-group">
-              <h2><i class="fas fa-user"></i> Solo Projects Plan</h2>
-              <p>Manage your solo projects subscription</p>
-            </div>
-          </div>
-          @if (isLoading()) {
-            <div class="plan-status-card" aria-live="polite">Loading subscription…</div>
-          } @else if (errorMessage()) {
-            <div class="plan-status-card" role="alert">{{ errorMessage() }}</div>
-          } @else {
-            <div class="plan-status-card">
-              <div class="plan-info">
-                <div class="plan-info-row">
-                  <span class="plan-label">Current Plan:</span>
-                  <span class="plan-value">{{ soloSub()?.planName ?? 'Free' }} (${{ (soloSub()?.priceMonthly ?? 0).toFixed(2) }}/month)</span>
-                </div>
-                <div class="plan-info-row">
-                  <span class="plan-label">Status:</span>
-                  @if (soloIsCanceled()) {
-                    <span class="plan-value status-canceled">
-                      <i class="fas fa-times-circle"></i> Canceled
-                      @if (soloSub()?.nextPaymentAt) { (Active until {{ soloSub()!.nextPaymentAt | date:'MMM d, y' }}) }
-                    </span>
-                  } @else {
-                    <span class="plan-value status-active"><i class="fas fa-check-circle"></i> Active</span>
-                  }
-                </div>
-                <div class="plan-info-row">
-                  <span class="plan-label">Next Billing Date:</span>
-                  <span class="plan-value">{{ soloSub()?.nextPaymentAt ? (soloSub()!.nextPaymentAt | date:'MMM d, y') : 'N/A' }}</span>
-                </div>
-                <div class="plan-info-row">
-                  <span class="plan-label">Access Until:</span>
-                  <span class="plan-value">{{ soloSub()?.nextPaymentAt ? (soloSub()!.nextPaymentAt | date:'MMM d, y') : 'N/A' }}</span>
-                </div>
-              </div>
-              <button class="btn-cancel-plan" (click)="openCancelPlanModal('solo')" [disabled]="soloIsCanceled() || isCancelling()">
-                @if (soloIsCanceled()) {
-                  <i class="fas fa-check"></i> Plan Canceled
-                } @else if (isCancelling()) {
-                  Canceling…
-                } @else {
-                  <i class="fas fa-ban"></i> Cancel Solo Plan
-                }
-              </button>
-            </div>
-          }
-        </div>
-
-        <!-- Team Projects Plans -->
-        <div class="settings-section">
-          <div class="section-header">
-            <div class="section-title-group">
-              <h2><i class="fas fa-users"></i> Team Projects Plans</h2>
-              <p>Manage subscriptions for each of your teams separately</p>
-            </div>
-          </div>
-
-          <div class="plan-status-card">
-            <div class="team-card-title"><i class="fas fa-users"></i> Alpha Marketing Group</div>
-            <div class="plan-info">
-              <div class="plan-info-row"><span class="plan-label">Current Plan:</span><span class="plan-value">Gold ($60/month)</span></div>
-              <div class="plan-info-row">
-                <span class="plan-label">Status:</span>
-                @if (getTeamStatus('team-alpha').canceled) {
-                  <span class="plan-value status-canceled"><i class="fas fa-times-circle"></i> Canceled (Active until Mar 2, 2026)</span>
-                } @else {
-                  <span class="plan-value status-active"><i class="fas fa-check-circle"></i> Active</span>
-                }
-              </div>
-              <div class="plan-info-row"><span class="plan-label">Team Members:</span><span class="plan-value">12 members</span></div>
-              <div class="plan-info-row"><span class="plan-label">Next Billing Date:</span><span class="plan-value">Mar 2, 2026</span></div>
-            </div>
-            <button class="btn-cancel-plan" (click)="openCancelPlanModal('team-alpha')" [disabled]="getTeamStatus('team-alpha').canceled">
-              @if (getTeamStatus('team-alpha').canceled) {
-                <i class="fas fa-check"></i> Plan Canceled
-              } @else {
-                <i class="fas fa-ban"></i> Cancel Alpha Marketing Group Plan
-              }
-            </button>
-          </div>
-
-          <div class="plan-status-card">
-            <div class="team-card-title"><i class="fas fa-users"></i> Product Development Team</div>
-            <div class="plan-info">
-              <div class="plan-info-row"><span class="plan-label">Current Plan:</span><span class="plan-value">Gold ($60/month)</span></div>
-              <div class="plan-info-row">
-                <span class="plan-label">Status:</span>
-                @if (getTeamStatus('team-product').canceled) {
-                  <span class="plan-value status-canceled"><i class="fas fa-times-circle"></i> Canceled (Active until Mar 2, 2026)</span>
-                } @else {
-                  <span class="plan-value status-active"><i class="fas fa-check-circle"></i> Active</span>
-                }
-              </div>
-              <div class="plan-info-row"><span class="plan-label">Team Members:</span><span class="plan-value">8 members</span></div>
-              <div class="plan-info-row"><span class="plan-label">Next Billing Date:</span><span class="plan-value">Mar 2, 2026</span></div>
-            </div>
-            <button class="btn-cancel-plan" (click)="openCancelPlanModal('team-product')" [disabled]="getTeamStatus('team-product').canceled">
-              @if (getTeamStatus('team-product').canceled) {
-                <i class="fas fa-check"></i> Plan Canceled
-              } @else {
-                <i class="fas fa-ban"></i> Cancel Product Development Team Plan
-              }
-            </button>
-          </div>
-
-          <div class="plan-status-card">
-            <div class="team-card-title"><i class="fas fa-users"></i> Finance Department</div>
-            <div class="plan-info">
-              <div class="plan-info-row"><span class="plan-label">Current Plan:</span><span class="plan-value">Silver ($30/month)</span></div>
-              <div class="plan-info-row">
-                <span class="plan-label">Status:</span>
-                @if (getTeamStatus('team-finance').canceled) {
-                  <span class="plan-value status-canceled"><i class="fas fa-times-circle"></i> Canceled (Active until Mar 2, 2026)</span>
-                } @else {
-                  <span class="plan-value status-active"><i class="fas fa-check-circle"></i> Active</span>
-                }
-              </div>
-              <div class="plan-info-row"><span class="plan-label">Team Members:</span><span class="plan-value">6 members</span></div>
-              <div class="plan-info-row"><span class="plan-label">Next Billing Date:</span><span class="plan-value">Mar 2, 2026</span></div>
-            </div>
-            <button class="btn-cancel-plan" (click)="openCancelPlanModal('team-finance')" [disabled]="getTeamStatus('team-finance').canceled">
-              @if (getTeamStatus('team-finance').canceled) {
-                <i class="fas fa-check"></i> Plan Canceled
-              } @else {
-                <i class="fas fa-ban"></i> Cancel Finance Department Plan
-              }
-            </button>
-          </div>
-
-          <div class="plan-status-card">
-            <div class="team-card-title"><i class="fas fa-users"></i> Research &amp; Analytics</div>
-            <div class="plan-info">
-              <div class="plan-info-row"><span class="plan-label">Current Plan:</span><span class="plan-value">Silver ($30/month)</span></div>
-              <div class="plan-info-row">
-                <span class="plan-label">Status:</span>
-                @if (getTeamStatus('team-research').canceled) {
-                  <span class="plan-value status-canceled"><i class="fas fa-times-circle"></i> Canceled (Active until Mar 2, 2026)</span>
-                } @else {
-                  <span class="plan-value status-active"><i class="fas fa-check-circle"></i> Active</span>
-                }
-              </div>
-              <div class="plan-info-row"><span class="plan-label">Team Members:</span><span class="plan-value">5 members</span></div>
-              <div class="plan-info-row"><span class="plan-label">Next Billing Date:</span><span class="plan-value">Mar 2, 2026</span></div>
-            </div>
-            <button class="btn-cancel-plan" (click)="openCancelPlanModal('team-research')" [disabled]="getTeamStatus('team-research').canceled">
-              @if (getTeamStatus('team-research').canceled) {
-                <i class="fas fa-check"></i> Plan Canceled
-              } @else {
-                <i class="fas fa-ban"></i> Cancel Research &amp; Analytics Plan
-              }
-            </button>
+    <div id="deleteSection">
+      <div class="settings-section danger-zone">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h2><i class="fas fa-exclamation-triangle"></i> Danger Zone</h2>
+            <p>Once you delete your account, there is no going back</p>
           </div>
         </div>
+
+        @if (errorMessage()) {
+          <div class="warning-box" role="alert">
+            <h4><i class="fas fa-exclamation-circle"></i> Cannot Delete Account</h4>
+            <p>{{ errorMessage() }}</p>
+          </div>
+        }
 
         <div class="warning-box">
           <h4><i class="fas fa-info-circle"></i> Important Information</h4>
-          <p style="margin-bottom:0.8rem">When you cancel a pricing plan:</p>
+          <p style="margin-bottom:0.8rem">Deleting your account will:</p>
           <ul>
-            <li>Your subscription will be canceled but remain active until the end of the current billing period</li>
-            <li>You will continue to have full access until the billing period ends</li>
-            <li>No refunds will be issued for the remaining time in the current period</li>
-            <li>After cancellation, you can delete your account if you wish</li>
-            <li>You can reactivate your plan at any time before the period ends</li>
+            <li>Permanently delete all your solo projects and documents</li>
+            <li>Remove you from all team projects</li>
+            <li>Delete all payment information</li>
+            <li>Remove all personal data from our servers</li>
           </ul>
+          <p style="margin-top:1rem;font-weight:600;color:#991b1b">
+            <i class="fas fa-exclamation-circle"></i> This action cannot be undone.
+          </p>
         </div>
-      </div>
-    }
 
-    @if (currentView() === 'delete') {
-      <div id="deleteSection">
-        <div class="settings-section danger-zone">
-          <div class="section-header">
-            <div class="section-title-group">
-              <h2><i class="fas fa-exclamation-triangle"></i> Danger Zone</h2>
-              <p>Once you delete your account, there is no going back</p>
-            </div>
-          </div>
-          <div class="warning-box">
-            <h4><i class="fas fa-info-circle"></i> Important Information</h4>
-            <p style="margin-bottom:0.8rem;font-weight:600;color:var(--accent-red)">
-              <i class="fas fa-exclamation-triangle"></i> Before you can delete your account:
-            </p>
-            <ul style="margin-bottom:1rem">
-              <li><strong>You must cancel all active subscription plans first</strong></li>
-              <li>You can only delete your account if your plans are canceled and waiting for the billing period to end</li>
-            </ul>
-            <p style="margin-bottom:0.8rem">Deleting your account will:</p>
-            <ul>
-              <li>Permanently delete all your solo projects and documents</li>
-              <li>Remove you from all team projects</li>
-              <li>Delete all payment information</li>
-              <li>Remove all personal data from our servers</li>
-            </ul>
-            <p style="margin-top:1rem;font-weight:600;color:#991b1b">
-              <i class="fas fa-clock"></i> 24-Hour Grace Period: After confirming deletion, you have 24 hours to cancel the deletion request.
-            </p>
-            <p style="margin-top:0.5rem;font-weight:600;color:#991b1b">
-              <i class="fas fa-exclamation-circle"></i> After 24 hours, this action cannot be undone!
-            </p>
-          </div>
-          <button class="btn-delete-account" (click)="openDeleteAccountModal()" [disabled]="hasAnyActivePlan()">
-            <i class="fas fa-trash-alt"></i> Delete My Account
-          </button>
-        </div>
+        <button class="btn-delete-account" (click)="openDeleteAccountModal()" [disabled]="isDeleting()">
+          <i class="fas fa-trash-alt"></i> Delete My Account
+        </button>
       </div>
-    }
+    </div>
   </main>
 </div>
 
-<!-- Delete account modal -->
 @if (showDeleteAccountModal()) {
-  <div class="modal-overlay show" role="dialog" aria-modal="true" aria-labelledby="deleteAccountModalTitle" (click)="onModalOverlayClick($event, 'delete')">
+  <div class="modal-overlay show" role="dialog" aria-modal="true" aria-labelledby="deleteAccountModalTitle" data-modal-id="delete" (click)="onModalOverlayClick($event)">
     <div class="modal-box">
       <div class="modal-header">
         <h2 class="modal-title" id="deleteAccountModalTitle">Confirm Account Deletion</h2>
@@ -254,47 +67,13 @@
       </div>
       <div class="modal-footer">
         <button class="btn-modal btn-cancel" (click)="closeDeleteAccountModal()">Cancel</button>
-        <button class="btn-modal btn-confirm-delete" (click)="confirmDeleteAccount()" [disabled]="confirmDeleteInput().trim() !== 'DELETE'">Delete Account</button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- Cancel plan modal -->
-@if (showCancelPlanModal()) {
-  <div class="modal-overlay show" role="dialog" aria-modal="true" aria-labelledby="cancelPlanModalTitle" (click)="onModalOverlayClick($event, 'cancel')">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2 class="modal-title" id="cancelPlanModalTitle">{{ cancelPlanTitle() }}</h2>
-        <p class="modal-subtitle">Your access continues until the end of the billing period</p>
-      </div>
-      <div class="modal-body">
-        <div class="confirm-text">
-          <strong>Are you sure you want to cancel?</strong><br>
-          @if (pendingCancelKey() === 'solo' && soloSub()?.nextPaymentAt) {
-            Your plan will be canceled but you'll continue to have full access until <strong>{{ soloSub()!.nextPaymentAt | date:'MMM d, y' }}</strong>. After that date, you will lose access to all features of this plan.
+        <button class="btn-modal btn-confirm-delete" (click)="confirmDeleteAccount()" [disabled]="confirmDeleteInput().trim() !== 'DELETE' || isDeleting()">
+          @if (isDeleting()) {
+            Deleting...
           } @else {
-            Your plan will be canceled but you'll continue to have full access until the end of the billing period.
+            Delete Account
           }
-        </div>
-        <div class="warning-box" style="margin-top:1.5rem">
-          <h4><i class="fas fa-info-circle"></i> What happens next:</h4>
-          <ul style="margin:0.5rem 0 0 1.5rem">
-            <li>Your subscription is canceled immediately</li>
-            @if (pendingCancelKey() === 'solo' && soloSub()?.nextPaymentAt) {
-              <li>You keep full access until {{ soloSub()!.nextPaymentAt | date:'MMM d, y' }}</li>
-              <li>You can reactivate anytime before {{ soloSub()!.nextPaymentAt | date:'MMM d, y' }}</li>
-            } @else {
-              <li>You keep full access until the end of the billing period</li>
-              <li>You can reactivate anytime before the period ends</li>
-            }
-            <li>No refund for the remaining period</li>
-          </ul>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-modal btn-cancel" (click)="closeCancelPlanModal()">Keep My Plan</button>
-        <button class="btn-modal btn-confirm-delete" (click)="confirmCancelPlan()">Yes, Cancel Plan</button>
+        </button>
       </div>
     </div>
   </div>
