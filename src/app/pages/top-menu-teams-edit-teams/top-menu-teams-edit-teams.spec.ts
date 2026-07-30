@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
+import { provideRouter } from '@angular/router';
 
 import { TopMenuTeamsEditTeamsComponent } from './top-menu-teams-edit-teams';
 
@@ -9,7 +9,8 @@ describe('TopMenuTeamsEditTeamsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TopMenuTeamsEditTeamsComponent, RouterModule.forRoot([])],
+      imports: [TopMenuTeamsEditTeamsComponent],
+      providers: [provideRouter([{ path: 'top-menu-teams', children: [] }])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TopMenuTeamsEditTeamsComponent);

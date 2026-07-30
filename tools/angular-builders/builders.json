@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/angular-builders",
+  "builders": {
+    "coverage-dev-server": {
+      "implementation": "./coverage-dev-server.cjs",
+      "schema": "./coverage-dev-server.schema.json",
+      "description": "Angular dev server with Istanbul instrumentation for Cypress coverage."
+    }
+  }
+}

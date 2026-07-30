@@ -18,6 +18,11 @@ const stripeWebhookRoutes = require('./routes/stripewebhookroutes');
 
 const app = express();
 
+/* istanbul ignore next */
+if (global.__coverage__) {
+  require('@cypress/code-coverage/middleware/express')(app);
+}
+
 // Trust the first proxy hop (required on Vercel/any reverse proxy for rate limiting to work correctly)
 app.set('trust proxy', 1);
 

@@ -7,8 +7,15 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:unit:coverage": "ng test --coverage --watch=false --coverage-reporters=text-summary --coverage-reporters=json-summary",
     "cypress:open": "cypress open",
-    "cypress:run": "cypress run"
+    "cypress:run": "cypress run",
+    "cypress:run:live": "cypress run --config baseUrl=https://www.docsndocs.com,specPattern=cypress/e2e/live/**/*.cy.ts --env apiUrl=https://api.docsndocs.com/api,coverage=false",
+    "cypress:run:coverage": "cross-env CYPRESS_coverage=true cypress run --spec cypress/e2e/coverage/**/*.cy.ts",
+    "start:coverage:frontend": "cross-env CYPRESS_COVERAGE=true ng run docsndocs:serve-coverage:development",
+    "start:coverage:backend": "node scripts/start-backend-coverage.cjs",
+    "test:e2e:coverage": "concurrently -k -s first -n backend,frontend,test \"npm run start:coverage:backend\" \"npm run start:coverage:frontend\" \"wait-on http://localhost:3000 http://localhost:4200 && npm run cypress:run:coverage\"",
+    "coverage:summary": "node scripts/print-coverage-summary.cjs"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
@@ -27,10 +34,46 @@
     "@angular/build": "^21.2.11",
     "@angular/cli": "^21.2.11",
     "@angular/compiler-cli": "^21.2.0",
+    "@cypress/code-coverage": "^4.0.3",
+    "@docsndocs/angular-builders": "file:tools/angular-builders",
+    "@vitest/coverage-v8": "^4.1.10",
+    "babel-plugin-istanbul": "^8.0.0",
+    "concurrently": "^10.0.4",
+    "cross-env": "^10.1.0",
     "cypress": "^15.15.0",
+    "istanbul-lib-instrument": "^6.0.3",
     "jsdom": "^28.0.0",
+    "nyc": "^18.0.0",
     "prettier": "^3.8.1",
+    "start-server-and-test": "^3.0.11",
     "typescript": "~5.9.2",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "wait-on": "^9.1.0"
+  },
+  "nyc": {
+    "all": true,
+    "extension": [
+      ".js",
+      ".ts"
+    ],
+    "include": [
+      "backend/**/*.js",
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "backend/tests/**",
+      "backend/migrations/**",
+      "cypress/**",
+      "src/**/*.spec.ts",
+      "src/environments/**"
+    ],
+    "reporter": [
+      "html",
+      "lcov",
+      "text-summary",
+      "json-summary"
+    ],
+    "report-dir": "coverage",
+    "cache": false
   }
 }

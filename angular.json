@@ -70,6 +70,15 @@
           },
           "defaultConfiguration": "development"
         },
+        "serve-coverage": {
+          "builder": "@docsndocs/angular-builders:coverage-dev-server",
+          "configurations": {
+            "development": {
+              "buildTarget": "docsndocs:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
         "test": {
           "builder": "@angular/build:unit-test"
         }
