@@ -89,6 +89,26 @@ export class AuthService {
     return localStorage.getItem('auth_token');
   }
 
+  hasValidToken(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+    if (this.isTokenExpired(token)) {
+      this.logout();
+      return false;
+    }
+    return true;
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1] ?? ''));
+      if (!payload?.exp) return false;
+      return Date.now() >= Number(payload.exp) * 1000;
+    } catch {
+      return true;
+    }
+  }
+
   saveUserFirstname(firstname: string) {
     localStorage.setItem('user_firstname', firstname);
     this.currentUserFirstname.set(firstname);
