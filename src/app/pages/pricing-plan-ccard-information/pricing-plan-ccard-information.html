@@ -141,10 +141,12 @@
         <span class="summary-item-label">Type</span>
         <span class="summary-item-value">{{ projectType() === 'solo' ? 'Solo' : 'Team' }} Projects</span>
       </div>
-      <div class="summary-item">
-        <span class="summary-item-label">Active projects</span>
-        <span class="summary-item-value">{{ projects() }}</span>
-      </div>
+      @if (projects() > 1) {
+        <div class="summary-item">
+          <span class="summary-item-label">Active projects</span>
+          <span class="summary-item-value">{{ projects() }}</span>
+        </div>
+      }
       <div class="summary-item">
         <span class="summary-item-label">Collaborators / project</span>
         <span class="summary-item-value">{{ collaborators() }}</span>
@@ -154,8 +156,8 @@
         <span class="summary-item-value">{{ documents() }}</span>
       </div>
       <div class="summary-item">
-        <span class="summary-item-label">Active days / month</span>
-        <span class="summary-item-value">{{ days() }}</span>
+        <span class="summary-item-label">Duration</span>
+        <span class="summary-item-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
       </div>
       <div class="summary-item">
         <span class="summary-item-label">Rate</span>
@@ -171,12 +173,12 @@
       </div>
 
       <div class="summary-total">
-        <span class="summary-total-label">Est. Monthly Total</span>
+        <span class="summary-total-label">Est. Total</span>
         <span class="summary-total-value">${{ total().toFixed(2) }}</span>
       </div>
 
       <p class="billing-cycle-note">
-        Billed monthly based on actual daily usage. Cancel anytime.
+        Calculated from the project duration and usage entered before activation.
       </p>
 
       <div class="trust-row">

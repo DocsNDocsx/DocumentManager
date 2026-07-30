@@ -11,10 +11,12 @@
       <span class="detail-label">Project type</span>
       <span class="detail-value">{{ projectType() }} Projects</span>
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Active projects</span>
-      <span class="detail-value">{{ projects() }}</span>
-    </div>
+    @if (projects() > 1) {
+      <div class="detail-row">
+        <span class="detail-label">Active projects</span>
+        <span class="detail-value">{{ projects() }}</span>
+      </div>
+    }
     <div class="detail-row">
       <span class="detail-label">Collaborators / project</span>
       <span class="detail-value">{{ collaborators() }}</span>
@@ -24,8 +26,8 @@
       <span class="detail-value">{{ documents() }}</span>
     </div>
     <div class="detail-row">
-      <span class="detail-label">Active days / month</span>
-      <span class="detail-value">{{ days() }}</span>
+      <span class="detail-label">Duration</span>
+      <span class="detail-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
     </div>
     <div class="detail-row">
       <span class="detail-label">Est. amount charged</span>
