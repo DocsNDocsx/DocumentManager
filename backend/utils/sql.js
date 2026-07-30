@@ -16,6 +16,7 @@ if (client === 'mysql') {
   db = {
     async query(sql, params)   { return pool.query(sql, params ?? []); },
     async execute(sql, params) { return pool.execute(sql, params ?? []); },
+    async end()                { return pool.end(); },
   };
 } else {
   const { Pool } = require('pg');
@@ -36,6 +37,9 @@ if (client === 'mysql') {
     },
     async execute(sql, params) {
       return this.query(sql, params);
+    },
+    async end() {
+      return pool.end();
     },
   };
 }

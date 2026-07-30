@@ -5,10 +5,14 @@
   "scripts": {
     "start": "node server.js",
     "vercel-build": "node scripts/migrate.js",
-    "test": "jest --runInBand --forceExit"
+    "test": "jest --runInBand --forceExit",
+    "test:coverage": "jest --runInBand --forceExit --coverage --coverageReporters=text-summary --coverageReporters=json-summary"
   },
   "jest": {
     "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/tests/setupEnv.js"
+    ],
     "testMatch": [
       "**/tests/**/*.test.js"
     ]

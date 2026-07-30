@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:unit:coverage": "ng test --coverage --watch=false --coverage-reporters=text-summary --coverage-reporters=json-summary",
+    "test:backend:coverage": "npm --prefix backend run test:coverage",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
     "cypress:run:live": "cypress run --config baseUrl=https://www.docsndocs.com,specPattern=cypress/e2e/live/**/*.cy.ts --env apiUrl=https://api.docsndocs.com/api,coverage=false",

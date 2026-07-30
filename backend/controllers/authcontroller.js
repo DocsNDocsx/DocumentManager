@@ -248,14 +248,43 @@ exports.uploadAvatar = async (req, res) => {
   try {
     const { email, userid } = req.body;
     if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
-    const avatarPath = `/public/avatars/${userid}/${req.file.originalname}`;
+    const avatarPath = `/api/auth/profile/avatar/${userid}`;
+    const avatarData = req.file.buffer.toString('base64');
 
 
-    await pool.query('UPDATE users SET avatar_url = ? WHERE email = ?', [avatarPath, email]);
+    await pool.query(
+      'UPDATE users SET avatar_url = ?, avatar_data = ?, avatar_mime_type = ?, avatar_filename = ? WHERE email = ?',
+      [avatarPath, avatarData, req.file.mimetype, req.file.originalname, email]
+    );
 
     res.json({ success: true, avatarPath });
   } catch (err) {
     console.error('Avatar upload error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.getAvatar = async (req, res) => {
+  try {
+    const { userid } = req.params;
+    const [rows] = await pool.query(
+      'SELECT avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
+      [userid]
+    );
+    const avatar = rows[0];
+    if (!avatar?.avatar_data || !avatar?.avatar_mime_type) {
+      return res.status(404).json({ success: false, message: 'Avatar not found' });
+    }
+
+    const image = Buffer.from(avatar.avatar_data, 'base64');
+    res.set('Content-Type', avatar.avatar_mime_type);
+    res.set('Cache-Control', 'private, max-age=300');
+    if (avatar.avatar_filename) {
+      res.set('Content-Disposition', `inline; filename="${avatar.avatar_filename}"`);
+    }
+    return res.send(image);
+  } catch (err) {
+    console.error('Get avatar error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

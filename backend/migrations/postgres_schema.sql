@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS users (
   organization  VARCHAR(255),
   issubscribed  VARCHAR(10)   NOT NULL DEFAULT 'false',
   avatar_url    VARCHAR(1000),
+  avatar_data   TEXT,
+  avatar_mime_type VARCHAR(255),
+  avatar_filename  VARCHAR(500),
   phone         VARCHAR(50),
   timezone      VARCHAR(100),
   notif_pref    VARCHAR(100),
@@ -300,6 +303,9 @@ CREATE TABLE IF NOT EXISTS pending_registrations (
 -- One Stripe Customer per user; usage billing lives in stripe_subscriptions.
 -- ─────────────────────────────────────────────────────────────────
 ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_mime_type VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_filename VARCHAR(500);
 
 CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   id                     SERIAL        PRIMARY KEY,

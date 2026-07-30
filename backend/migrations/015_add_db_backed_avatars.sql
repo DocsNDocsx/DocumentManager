@@ -1,0 +1,6 @@
+USE docsndocs;
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS avatar_data LONGTEXT NULL,
+  ADD COLUMN IF NOT EXISTS avatar_mime_type VARCHAR(255) NULL,
+  ADD COLUMN IF NOT EXISTS avatar_filename VARCHAR(500) NULL;
