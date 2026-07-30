@@ -4,6 +4,7 @@ const path = require('path');
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 
 exports.createSubmission = async (req, res) => {
   try {
@@ -19,9 +20,13 @@ exports.createSubmission = async (req, res) => {
     const [projects] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
     if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
-    const filePath = `/public/uploads/submissions/${projectId}/${collabIndex}/${file.originalname}`;
     const collabIdx = Number(collabIndex);
     const docIdx = Number(docIndex);
+    const filePath = await uploadToBlob({
+      folder: `submissions/solo/${projectId}/${collabIdx}`,
+      prefix: `doc-${docIdx}`,
+      file,
+    });
 
     // Multer sends body fields as strings; cast to number so the unique index
     // (project_id, collaborator_index, document_index) matches correctly.

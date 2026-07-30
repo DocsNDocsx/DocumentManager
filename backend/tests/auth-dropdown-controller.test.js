@@ -11,6 +11,9 @@ jest.mock('../utils/loginUser', () => ({
 jest.mock('../utils/emailservice', () => ({
   sendEmail: jest.fn(),
 }));
+jest.mock('../utils/blobStorage', () => ({
+  uploadToBlob: jest.fn(),
+}));
 jest.mock('fs', () => ({
   readFileSync: jest.fn(() => '<html>{{BASE_URL}} {{OTP}}</html>'),
 }));
@@ -20,6 +23,7 @@ const crypto = require('crypto');
 const { insertUser } = require('../utils/createUser');
 const { loginUser } = require('../utils/loginUser');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 const pool = require('../utils/sql');
 const authController = require('../controllers/authcontroller');
 
@@ -36,6 +40,7 @@ describe('authcontroller dropdown/account APIs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+    uploadToBlob.mockResolvedValue('https://blob.example.com/avatars/avatar.png');
   });
 
   it('logs in a valid user and returns token plus user details', async () => {
@@ -357,22 +362,31 @@ describe('authcontroller dropdown/account APIs', () => {
   });
 
   it('uploads avatar metadata for the profile API', async () => {
-    pool.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '123' }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
     const res = mockResponse();
     const buffer = Buffer.from('avatar-bytes');
 
     await authController.uploadAvatar({
-      body: { email: 'user@example.com', userid: '123' },
+      user: { email: 'user@example.com' },
+      body: { email: 'other@example.com', userid: '999' },
       file: { originalname: 'avatar.png', mimetype: 'image/png', buffer },
     }, res);
 
-    expect(pool.query).toHaveBeenCalledWith(
-      'UPDATE users SET avatar_url = ?, avatar_data = ?, avatar_mime_type = ?, avatar_filename = ? WHERE email = ?',
-      ['/api/auth/profile/avatar/123', buffer.toString('base64'), 'image/png', 'avatar.png', 'user@example.com'],
+    expect(uploadToBlob).toHaveBeenCalledWith({
+      folder: 'avatars',
+      prefix: '123',
+      file: { originalname: 'avatar.png', mimetype: 'image/png', buffer },
+    });
+    expect(pool.query).toHaveBeenNthCalledWith(
+      2,
+      'UPDATE users SET avatar_url = ?, avatar_data = NULL, avatar_mime_type = ?, avatar_filename = ? WHERE userid = ?',
+      ['https://blob.example.com/avatars/avatar.png', 'image/png', 'avatar.png', '123'],
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      avatarPath: '/api/auth/profile/avatar/123',
+      avatarPath: 'https://blob.example.com/avatars/avatar.png',
     });
   });
 
@@ -410,7 +424,7 @@ describe('authcontroller dropdown/account APIs', () => {
   it('requires an uploaded file for avatar updates', async () => {
     const res = mockResponse();
 
-    await authController.uploadAvatar({ body: { email: 'user@example.com', userid: '123' } }, res);
+    await authController.uploadAvatar({ user: { email: 'user@example.com' }, body: {} }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'No file uploaded' });

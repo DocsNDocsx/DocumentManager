@@ -5,6 +5,9 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { LoggingService } from './logging.service';
 import {
+  ProjectAttachment,
+} from '../models/project.models';
+import {
   TeamProjectCollaboratorInput,
   TeamProjectDocumentRequirement,
   TeamProjectDraft,
@@ -33,6 +36,7 @@ export class TeamProjectWizardService {
     deadline: string;
     type?: 'private' | 'public';
     expectedCollaborators?: number;
+    attachments?: ProjectAttachment[];
     supportStaff?: { firstName: string; lastName: string; email: string; affiliation: string } | null;
   }): Observable<TeamProjectDraft> {
     const body = {

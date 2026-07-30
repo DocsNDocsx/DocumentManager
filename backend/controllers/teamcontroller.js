@@ -19,6 +19,9 @@ function parseProjectRow(p) {
   const docs = p.documents == null
     ? []
     : typeof p.documents === 'string' ? JSON.parse(p.documents) : p.documents;
+  const attachments = p.attachments == null
+    ? []
+    : typeof p.attachments === 'string' ? JSON.parse(p.attachments) : p.attachments;
   const staff = p.support_staff == null
     ? null
     : typeof p.support_staff === 'string' ? JSON.parse(p.support_staff) : p.support_staff;
@@ -34,6 +37,7 @@ function parseProjectRow(p) {
     expectedCollaborators: p.expected_collaborators ?? null,
     projectCode: p.project_code ?? null,
     documents: docs,
+    attachments,
     supportStaff: staff,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
@@ -276,7 +280,7 @@ exports.deleteTeam = async (req, res) => {
 
 exports.createTeamProject = async (req, res) => {
   try {
-    const { userId, teamId, name, description, deadline, type, completedStep, expectedCollaborators, supportStaff } = req.body;
+    const { userId, teamId, name, description, deadline, type, completedStep, expectedCollaborators, supportStaff, attachments } = req.body;
 
     if (!userId)  return res.status(400).json({ success: false, message: 'userId is required' });
     if (!teamId)  return res.status(400).json({ success: false, message: 'teamId is required' });
@@ -286,9 +290,13 @@ exports.createTeamProject = async (req, res) => {
     const stepValue = completedStep ?? 1;
 
     await pool.query(
-      `INSERT INTO team_projects (id, team_id, name, description, type, status, deadline, completed_step, expected_collaborators, support_staff)
-       VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)`,
-      [projectId, teamId, name, description ?? null, type ?? 'private', deadline ?? null, stepValue, expectedCollaborators ?? null, supportStaff ? JSON.stringify(supportStaff) : null]
+      `INSERT INTO team_projects (id, team_id, name, description, type, status, deadline, completed_step, expected_collaborators, attachments, support_staff)
+       VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)`,
+      [
+        projectId, teamId, name, description ?? null, type ?? 'private', deadline ?? null,
+        stepValue, expectedCollaborators ?? null, JSON.stringify(attachments ?? []),
+        supportStaff ? JSON.stringify(supportStaff) : null,
+      ]
     );
 
     await pool.query(
@@ -308,7 +316,7 @@ exports.createTeamProject = async (req, res) => {
 exports.updateTeamProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, deadline, status, completedStep, expectedCollaborators, supportStaff } = req.body;
+    const { name, description, deadline, status, completedStep, expectedCollaborators, supportStaff, attachments } = req.body;
 
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -320,6 +328,7 @@ exports.updateTeamProject = async (req, res) => {
     if (description !== undefined)          { setClauses.push('description = ?');           values.push(description); }
     if (deadline !== undefined)             { setClauses.push('deadline = ?');              values.push(deadline); }
     if (expectedCollaborators !== undefined){ setClauses.push('expected_collaborators = ?');values.push(expectedCollaborators); }
+    if (attachments !== undefined)           { setClauses.push('attachments = ?');           values.push(JSON.stringify(attachments)); }
     if (completedStep !== undefined)        { setClauses.push('completed_step = ?');        values.push(completedStep); }
     if (supportStaff !== undefined)         { setClauses.push('support_staff = ?');         values.push(supportStaff ? JSON.stringify(supportStaff) : null); }
 

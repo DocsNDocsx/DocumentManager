@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS team_projects (
   expected_collaborators INT,
   project_code           VARCHAR(50),
   documents              JSONB,
+  attachments            JSONB         NOT NULL DEFAULT '[]',
   support_staff          JSONB,
   completed_step         SMALLINT      NOT NULL DEFAULT 1,
   created_at             TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,

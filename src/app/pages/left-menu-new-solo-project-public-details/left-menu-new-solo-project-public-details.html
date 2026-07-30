@@ -184,8 +184,8 @@
         <button
           class="btn-action btn-draft"
           type="button"
-          [disabled]="!isFormValid()"
-          [attr.aria-disabled]="!isFormValid()"
+          [disabled]="!isFormValid() || isUploading()"
+          [attr.aria-disabled]="!isFormValid() || isUploading()"
           (click)="saveAsDraft()"
         >
           <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
@@ -194,8 +194,8 @@
       <button
         class="btn-action btn-continue"
         type="button"
-        [disabled]="!isFormValid()"
-        [attr.aria-disabled]="!isFormValid()"
+        [disabled]="!isFormValid() || isUploading()"
+        [attr.aria-disabled]="!isFormValid() || isUploading()"
         (click)="continue()"
       >
         Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>

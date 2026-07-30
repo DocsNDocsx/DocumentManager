@@ -4,6 +4,8 @@ import { SharedHeaderComponent } from '../../shared/shared-header/shared-header'
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { TeamsService } from '../../services/teams.service';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
+import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
+import { ProjectAttachment } from '../../models/project.models';
 
 @Component({
   selector: 'app-left-menu-new-team-project-private-details',
@@ -20,6 +22,7 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly teamsService = inject(TeamsService);
   readonly teamWizardService = inject(TeamProjectWizardService);
+  private readonly attachmentUploadService = inject(ProjectAttachmentUploadService);
 
   dropdownOpen = signal(false);
 
@@ -27,8 +30,10 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   projectName = signal('');
   projectDescription = signal('');
   projectDeadline = signal('');
-  uploadedFiles = signal<{ name: string; size: string }[]>([]);
+  uploadedFiles = signal<ProjectAttachment[]>([]);
   dragOver = signal(false);
+  isUploading = signal(false);
+  private pendingUploads = 0;
 
   readonly teams = computed(() => this.teamsService.hostedTeams());
   readonly selectedTeamName = computed(() =>
@@ -64,6 +69,7 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
       this.projectName.set(proj.name);
       this.projectDescription.set(proj.description ?? '');
       this.projectDeadline.set(proj.deadline ? proj.deadline.split('T')[0] : '');
+      this.uploadedFiles.set(proj.attachments ?? []);
       const name = this.teams().find(t => t.id === proj.teamId)?.name ?? '';
       if (name) this.teamWizardService.teamName.set(name);
     }
@@ -120,11 +126,31 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
 
   private handleFiles(files: File[]): void {
     const current = this.uploadedFiles();
-    const newFiles = files
+    files
       .filter(f => f.size <= 50 * 1024 * 1024)
       .filter(f => !current.some(c => c.name === f.name))
-      .map(f => ({ name: f.name, size: this.formatSize(f.size) }));
-    this.uploadedFiles.set([...current, ...newFiles]);
+      .forEach(file => this.uploadFile(file));
+  }
+
+  private uploadFile(file: File): void {
+    this.pendingUploads += 1;
+    this.isUploading.set(true);
+
+    this.attachmentUploadService.upload(file, 'team').subscribe({
+      next: attachment => {
+        this.uploadedFiles.update(list => list.some(item => item.name === attachment.name) ? list : [...list, attachment]);
+      },
+      error: () => {
+        this.teamWizardService.saveError.set(`Failed to upload ${file.name}`);
+        this.finishUpload();
+      },
+      complete: () => this.finishUpload(),
+    });
+  }
+
+  private finishUpload(): void {
+    this.pendingUploads = Math.max(0, this.pendingUploads - 1);
+    this.isUploading.set(this.pendingUploads > 0);
   }
 
   removeFile(index: number): void {
@@ -138,13 +164,14 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   }
 
   onContinue(): void {
-    if (!this.isFormValid()) return;
+    if (!this.isFormValid() || this.isUploading()) return;
     this.teamWizardService.teamName.set(this.selectedTeamName());
     this.teamWizardService.saveDetails({
       teamId: this.selectedTeamId(),
       name: this.projectName().trim(),
       description: this.projectDescription().trim(),
       deadline: this.projectDeadline(),
+      attachments: this.uploadedFiles(),
     }).subscribe({
       next: () => this.router.navigate(['/new-team-project/private/collaborators']),
       error: () => { /* error displayed via teamWizardService.saveError() */ },

@@ -9,16 +9,21 @@ function loadApp() {
     execute: jest.fn(),
     end: jest.fn(),
   }));
+  jest.doMock('../utils/blobStorage', () => ({
+    uploadToBlob: jest.fn().mockResolvedValue('https://blob.example.com/avatars/avatar.png'),
+  }));
 
   return {
     app: require('../app'),
     pool: require('../utils/sql'),
+    blobStorage: require('../utils/blobStorage'),
   };
 }
 
 describe('POST /api/auth/profile/avatar', () => {
   afterEach(() => {
     jest.dontMock('../utils/sql');
+    jest.dontMock('../utils/blobStorage');
   });
 
   function authHeader() {
@@ -42,8 +47,10 @@ describe('POST /api/auth/profile/avatar', () => {
   });
 
   it('uploads profile photo through the real multipart API route', async () => {
-    const { app, pool } = loadApp();
-    pool.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const { app, pool, blobStorage } = loadApp();
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '123' }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
     const avatar = Buffer.from('avatar');
 
     const res = await request(app)
@@ -59,11 +66,20 @@ describe('POST /api/auth/profile/avatar', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
-      avatarPath: '/api/auth/profile/avatar/123',
+      avatarPath: 'https://blob.example.com/avatars/avatar.png',
     });
-    expect(pool.query).toHaveBeenCalledWith(
-      'UPDATE users SET avatar_url = ?, avatar_data = ?, avatar_mime_type = ?, avatar_filename = ? WHERE email = ?',
-      ['/api/auth/profile/avatar/123', avatar.toString('base64'), 'image/png', 'avatar.png', 'user@example.com'],
+    expect(blobStorage.uploadToBlob).toHaveBeenCalledWith({
+      folder: 'avatars',
+      prefix: '123',
+      file: expect.objectContaining({
+        originalname: 'avatar.png',
+        mimetype: 'image/png',
+      }),
+    });
+    expect(pool.query).toHaveBeenNthCalledWith(
+      2,
+      'UPDATE users SET avatar_url = ?, avatar_data = NULL, avatar_mime_type = ?, avatar_filename = ? WHERE userid = ?',
+      ['https://blob.example.com/avatars/avatar.png', 'image/png', 'avatar.png', '123'],
     );
   });
 

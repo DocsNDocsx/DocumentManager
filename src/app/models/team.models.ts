@@ -1,3 +1,5 @@
+import { ProjectAttachment } from './project.models';
+
 export interface TeamMember {
   id: string;
   firstName: string;
@@ -170,6 +172,7 @@ export interface TeamProjectDraft {
   projectCode: string | null;
   expectedCollaborators: number | null;
   documents: TeamProjectDocumentRequirement[];
+  attachments?: ProjectAttachment[];
   supportStaff: { firstName: string; lastName: string; email: string; affiliation: string } | null;
   createdAt: string;
   updatedAt: string;

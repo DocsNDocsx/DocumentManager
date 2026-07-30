@@ -4,6 +4,7 @@ const path = require('path');
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 
 function parseProject(row) {
   const jsonCols = ['collaborators', 'documents', 'assignments', 'attachments'];
@@ -268,6 +269,32 @@ exports.deleteProject = async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('Delete project error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.uploadProjectAttachment = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const scope = req.body?.scope === 'team' ? 'team' : 'solo';
+    const emailPrefix = (req.user?.email ?? 'user').replace(/[^a-zA-Z0-9._-]+/g, '-');
+    const url = await uploadToBlob({
+      folder: `project-attachments/${scope}/${emailPrefix}`,
+      file: req.file,
+    });
+
+    res.status(201).json({
+      success: true,
+      attachment: {
+        name: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype,
+        url,
+      },
+    });
+  } catch (err) {
+    console.error('Upload project attachment error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ProjectWizardService } from '../../services/project-wizard.service';
+import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
+import { ProjectAttachment } from '../../models/project.models';
 
 @Component({
   selector: 'app-left-menu-new-solo-project-public-details',
@@ -19,6 +21,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
+  private attachmentUploadService = inject(ProjectAttachmentUploadService);
   dropdownOpen = signal(false);
 
   toastMsg = signal('');
@@ -40,8 +43,10 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   projectDescription = signal('');
   projectDeadline = signal('');
   expectedCollaborators = signal('');
-  uploadedFiles = signal<{ name: string; size: string; iconClass: string }[]>([]);
+  uploadedFiles = signal<ProjectAttachment[]>([]);
   isDragOver = signal(false);
+  isUploading = signal(false);
+  private pendingUploads = 0;
 
   supportFirstName = signal('');
   supportLastName = signal('');
@@ -130,15 +135,36 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
 
   private handleFiles(files: FileList): void {
     const current = this.uploadedFiles();
-    const added = Array.from(files).filter(f => {
-      if (f.size > 50 * 1024 * 1024) return false;
-      return !current.some(c => c.name === f.name);
-    }).map(f => ({
-      name: f.name,
-      size: this.formatSize(f.size),
-      iconClass: this.getIconClass(f.name),
-    }));
-    this.uploadedFiles.update(list => [...list, ...added]);
+    Array.from(files)
+      .filter(f => {
+        if (f.size > 50 * 1024 * 1024) {
+          this.showToast(`${f.name} is larger than 50 MB`);
+          return false;
+        }
+        return !current.some(c => c.name === f.name);
+      })
+      .forEach(file => this.uploadFile(file));
+  }
+
+  private uploadFile(file: File): void {
+    this.pendingUploads += 1;
+    this.isUploading.set(true);
+
+    this.attachmentUploadService.upload(file, 'solo').subscribe({
+      next: attachment => {
+        this.uploadedFiles.update(list => list.some(item => item.name === attachment.name) ? list : [...list, attachment]);
+      },
+      error: () => {
+        this.showToast(`Failed to upload ${file.name}`);
+        this.finishUpload();
+      },
+      complete: () => this.finishUpload(),
+    });
+  }
+
+  private finishUpload(): void {
+    this.pendingUploads = Math.max(0, this.pendingUploads - 1);
+    this.isUploading.set(this.pendingUploads > 0);
   }
 
   removeFile(index: number): void {
@@ -168,7 +194,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   }
 
   saveAsDraft(): void {
-    if (!this.isFormValid()) return;
+    if (!this.isFormValid() || this.isUploading()) return;
     const staff = this.supportFirstName().trim() ? {
       firstName: this.supportFirstName(),
       lastName: this.supportLastName(),
@@ -194,7 +220,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   }
 
   continue(): void {
-    if (!this.isFormValid()) return;
+    if (!this.isFormValid() || this.isUploading()) return;
     const staff = this.supportFirstName().trim() ? {
       firstName: this.supportFirstName(),
       lastName: this.supportLastName(),

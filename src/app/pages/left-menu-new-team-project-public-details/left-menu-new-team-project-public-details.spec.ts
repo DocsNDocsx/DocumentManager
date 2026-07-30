@@ -3,10 +3,12 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 
 import { LeftMenuNewTeamProjectPublicDetailsComponent } from './left-menu-new-team-project-public-details';
 import { TeamsService } from '../../services/teams.service';
 import { Team } from '../../models/team.models';
+import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 
 const MOCK_TEAMS: Team[] = [
   {
@@ -59,6 +61,19 @@ describe('LeftMenuNewTeamProjectPublicDetailsComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: TeamsService, useValue: mockTeamsService() },
+        {
+          provide: ProjectAttachmentUploadService,
+          useValue: {
+            upload: () => of({
+              name: 'test.pdf',
+              size: '7 B',
+              iconClass: 'fa-file-pdf',
+              url: 'https://blob.example.com/test.pdf',
+              bytes: 7,
+              mimeType: 'application/pdf',
+            }),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -159,6 +174,7 @@ describe('LeftMenuNewTeamProjectPublicDetailsComponent', () => {
 
     expect(component.uploadedFiles().length).toBe(1);
     expect(component.uploadedFiles()[0].name).toBe('test.pdf');
+    expect(component.uploadedFiles()[0].url).toBe('https://blob.example.com/test.pdf');
   });
 
   it('should remove a file by index', () => {

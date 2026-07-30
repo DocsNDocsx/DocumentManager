@@ -2,9 +2,11 @@ const express = require('express');
 const verifyJwt = require('../middleware/auth');
 const requireActiveSubscription = require('../middleware/subscription');
 const projectController = require('../controllers/projectcontroller');
+const projectAttachmentUpload = require('../utils/projectAttachmentUpload');
 const router = express.Router();
 router.use(verifyJwt);
 
+router.post('/project-attachments', projectAttachmentUpload.single('file'), projectController.uploadProjectAttachment);
 router.post('/projects', projectController.createProject);
 router.get('/projects', projectController.getProjects);
 router.get('/projects/:id', projectController.getProject);

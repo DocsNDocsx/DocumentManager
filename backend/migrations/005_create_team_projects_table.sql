@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS team_projects (
   type        ENUM('private','public') NOT NULL DEFAULT 'private',
   status      ENUM('active','draft','completed','not_completed','deleted') NOT NULL DEFAULT 'draft',
   deadline    DATETIME      NULL,
+  attachments JSON          NULL,
   created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

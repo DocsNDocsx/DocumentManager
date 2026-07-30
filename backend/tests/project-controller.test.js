@@ -5,6 +5,9 @@ jest.mock('../utils/logActivity', () => jest.fn());
 jest.mock('../utils/emailservice', () => ({
   sendEmail: jest.fn(),
 }));
+jest.mock('../utils/blobStorage', () => ({
+  uploadToBlob: jest.fn(),
+}));
 jest.mock('fs', () => ({
   readFileSync: jest.fn(() => (
     '{{BASE_URL}} {{COLLABORATOR_NAME}} {{PROJECT_NAME}} {{DEADLINE_BLOCK}} {{PROJECT_CODE_BLOCK}}'
@@ -14,6 +17,7 @@ jest.mock('fs', () => ({
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 const projectController = require('../controllers/projectcontroller');
 
 function mockResponse() {
@@ -49,6 +53,7 @@ function projectRow(overrides = {}) {
 describe('projectcontroller', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    uploadToBlob.mockResolvedValue('https://blob.example.com/project-files/file.pdf');
   });
 
   it('requires userid and project name when creating a project', async () => {
@@ -296,5 +301,36 @@ describe('projectcontroller', () => {
     expect(pool.query).toHaveBeenNthCalledWith(1, 'DELETE FROM submissions WHERE project_id = ?', ['project-1']);
     expect(pool.query).toHaveBeenNthCalledWith(2, 'DELETE FROM projects WHERE id = ?', ['project-1']);
     expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  it('uploads project attachment files to Blob and returns metadata', async () => {
+    const res = mockResponse();
+    const file = {
+      originalname: 'project-plan.pdf',
+      size: 4096,
+      mimetype: 'application/pdf',
+      buffer: Buffer.from('file-bytes'),
+    };
+
+    await projectController.uploadProjectAttachment({
+      user: { email: 'owner@example.com' },
+      body: { scope: 'team' },
+      file,
+    }, res);
+
+    expect(uploadToBlob).toHaveBeenCalledWith({
+      folder: 'project-attachments/team/owner-example.com',
+      file,
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      attachment: {
+        name: 'project-plan.pdf',
+        size: 4096,
+        mimeType: 'application/pdf',
+        url: 'https://blob.example.com/project-files/file.pdf',
+      },
+    });
   });
 });

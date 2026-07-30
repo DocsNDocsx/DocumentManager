@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../utils/sql');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 
 // GET /teams/projects/:id/upload-info/:collaboratorId
 exports.getUploadInfo = async (req, res) => {
@@ -198,8 +199,11 @@ exports.createSubmission = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Collaborator not found' });
     }
     const docIdx = Number(docIndex);
-    const ext = path.extname(file.originalname);
-    const filePath = `/public/uploads/team-submissions/${id}/${collaboratorId}/doc-${docIdx}${ext}`;
+    const filePath = await uploadToBlob({
+      folder: `submissions/team/${id}/${collaboratorId}`,
+      prefix: `doc-${docIdx}`,
+      file,
+    });
 
     const [existing] = await pool.query(
       `SELECT id FROM team_project_submissions WHERE project_id = ? AND collaborator_id = ? AND document_index = ?`,

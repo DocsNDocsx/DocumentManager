@@ -2,6 +2,9 @@ export interface ProjectAttachment {
   name: string;
   size: string;
   iconClass: string;
+  url?: string;
+  bytes?: number;
+  mimeType?: string;
 }
 
 export interface ProjectCollaborator {

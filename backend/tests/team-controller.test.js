@@ -64,6 +64,7 @@ function teamProjectRow(overrides = {}) {
     expected_collaborators: 5,
     project_code: null,
     documents: JSON.stringify([{ name: 'CV' }]),
+    attachments: JSON.stringify([]),
     support_staff: JSON.stringify({ firstName: 'Support', lastName: 'Staff', email: 'support@example.com' }),
     created_at: '2026-07-01T00:00:00.000Z',
     updated_at: '2026-07-02T00:00:00.000Z',
@@ -228,6 +229,7 @@ describe('teamcontroller', () => {
         name: 'Team Intake',
         type: 'public',
         expectedCollaborators: 5,
+        attachments: [{ name: 'overview.pdf', url: 'https://blob.example.com/overview.pdf' }],
         supportStaff: { email: 'support@example.com' },
       },
     }, res);
@@ -244,6 +246,7 @@ describe('teamcontroller', () => {
         null,
         1,
         5,
+        JSON.stringify([{ name: 'overview.pdf', url: 'https://blob.example.com/overview.pdf' }]),
         JSON.stringify({ email: 'support@example.com' }),
       ]),
     );
@@ -282,6 +285,30 @@ describe('teamcontroller', () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       project: expect.objectContaining({ status: 'active', projectCode: 'ABCD-2345' }),
+    });
+  });
+
+  it('updates team project attachments', async () => {
+    const attachments = [{ name: 'overview.pdf', url: 'https://blob.example.com/overview.pdf' }];
+    pool.query
+      .mockResolvedValueOnce([[teamProjectRow()]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[teamProjectRow({ attachments: JSON.stringify(attachments) })]]);
+    const res = mockResponse();
+
+    await teamController.updateTeamProject({
+      params: { id: 'team-project-1' },
+      body: { attachments },
+    }, res);
+
+    expect(pool.query).toHaveBeenNthCalledWith(
+      2,
+      'UPDATE team_projects SET attachments = ? WHERE id = ?',
+      [JSON.stringify(attachments), 'team-project-1'],
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      project: expect.objectContaining({ attachments }),
     });
   });
 

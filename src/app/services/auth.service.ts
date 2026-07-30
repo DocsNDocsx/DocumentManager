@@ -120,7 +120,8 @@ export class AuthService {
   }
 
   saveUserAvatar(avatarPath: string) {
-    const fullUrl = avatarPath ? `${environment.serverUrl}${avatarPath}` : '';
+    const isAbsoluteUrl = /^https?:\/\//i.test(avatarPath);
+    const fullUrl = avatarPath ? (isAbsoluteUrl ? avatarPath : `${environment.serverUrl}${avatarPath}`) : '';
     localStorage.setItem('user_avatar', fullUrl);
     this.currentUserAvatar.set(fullUrl);
   }

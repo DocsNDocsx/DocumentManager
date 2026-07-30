@@ -4,6 +4,9 @@ jest.mock('../utils/sql', () => ({
 jest.mock('../utils/emailservice', () => ({
   sendEmail: jest.fn(),
 }));
+jest.mock('../utils/blobStorage', () => ({
+  uploadToBlob: jest.fn(),
+}));
 jest.mock('fs', () => ({
   readFileSync: jest.fn(() => (
     '{{BASE_URL}} {{OWNER_NAME}} {{COLLABORATOR_NAME}} {{PROJECT_NAME}} {{DOCUMENT_NAME}} ' +
@@ -13,6 +16,7 @@ jest.mock('fs', () => ({
 
 const pool = require('../utils/sql');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 const teamSubmissionController = require('../controllers/teamsubmissioncontroller');
 
 function mockResponse() {
@@ -46,6 +50,7 @@ function teamSubmissionRow(overrides = {}) {
 describe('teamsubmissioncontroller', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    uploadToBlob.mockResolvedValue('https://blob.example.com/team/team-doc.pdf');
   });
 
   it('gets upload info for a collaborator', async () => {
@@ -291,9 +296,14 @@ describe('teamsubmissioncontroller', () => {
         0,
         'team-doc.pdf',
         2048,
-        '/public/uploads/team-submissions/team-project-1/collab-1/doc-0.pdf',
+        'https://blob.example.com/team/team-doc.pdf',
       ],
     );
+    expect(uploadToBlob).toHaveBeenCalledWith({
+      folder: 'submissions/team/team-project-1/collab-1',
+      prefix: 'doc-0',
+      file: file(),
+    });
     expect(sendEmail).toHaveBeenCalledWith(
       'host@example.com',
       'DocsNDocs: New submission in "Team Intake"',
@@ -321,7 +331,7 @@ describe('teamsubmissioncontroller', () => {
     expect(pool.query).toHaveBeenNthCalledWith(
       3,
       expect.stringContaining('UPDATE team_project_submissions'),
-      ['updated.docx', 4096, '/public/uploads/team-submissions/team-project-1/collab-1/doc-2.docx', 'team-project-1', 'collab-1', 2],
+      ['updated.docx', 4096, 'https://blob.example.com/team/team-doc.pdf', 'team-project-1', 'collab-1', 2],
     );
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({

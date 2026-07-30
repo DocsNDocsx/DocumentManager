@@ -5,6 +5,9 @@ jest.mock('../utils/logActivity', () => jest.fn());
 jest.mock('../utils/emailservice', () => ({
   sendEmail: jest.fn(),
 }));
+jest.mock('../utils/blobStorage', () => ({
+  uploadToBlob: jest.fn(),
+}));
 jest.mock('fs', () => ({
   readFileSync: jest.fn(() => (
     '{{BASE_URL}} {{OWNER_NAME}} {{COLLABORATOR_NAME}} {{PROJECT_NAME}} {{DOCUMENT_NAME}} ' +
@@ -15,6 +18,7 @@ jest.mock('fs', () => ({
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 const submissionController = require('../controllers/submissioncontroller');
 
 function mockResponse() {
@@ -40,7 +44,7 @@ function submissionRow(overrides = {}) {
     document_index: 1,
     file_name: 'transcript.pdf',
     file_size: 2048,
-    file_path: '/public/uploads/submissions/project-1/0/transcript.pdf',
+    file_path: 'https://blob.example.com/solo/transcript.pdf',
     status: 'submitted',
     feedback: null,
     ...overrides,
@@ -68,6 +72,7 @@ function projectNotificationRow(overrides = {}) {
 describe('submissioncontroller', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    uploadToBlob.mockResolvedValue('https://blob.example.com/solo/transcript.pdf');
   });
 
   it('requires an uploaded file when creating a submission', async () => {
@@ -135,9 +140,14 @@ describe('submissioncontroller', () => {
         1,
         'transcript.pdf',
         2048,
-        '/public/uploads/submissions/project-1/0/transcript.pdf',
+        'https://blob.example.com/solo/transcript.pdf',
       ],
     );
+    expect(uploadToBlob).toHaveBeenCalledWith({
+      folder: 'submissions/solo/project-1/0',
+      prefix: 'doc-1',
+      file: uploadFile(),
+    });
     expect(logActivity).toHaveBeenCalledWith(
       '123',
       'upload',
@@ -172,7 +182,7 @@ describe('submissioncontroller', () => {
     expect(pool.query).toHaveBeenNthCalledWith(
       3,
       expect.stringContaining('UPDATE submissions'),
-      ['updated.pdf', 4096, '/public/uploads/submissions/project-1/0/updated.pdf', 'project-1', 0, 1],
+      ['updated.pdf', 4096, 'https://blob.example.com/solo/transcript.pdf', 'project-1', 0, 1],
     );
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({

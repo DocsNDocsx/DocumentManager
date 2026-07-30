@@ -181,9 +181,9 @@
       </div>
       <button class="btn-action btn-continue" type="button"
         (click)="onContinue()"
-        [disabled]="!isFormValid() || teamWizardService.isSaving()"
-        [attr.aria-disabled]="!isFormValid() || teamWizardService.isSaving()">
-        @if (teamWizardService.isSaving()) {
+        [disabled]="!isFormValid() || teamWizardService.isSaving() || isUploading()"
+        [attr.aria-disabled]="!isFormValid() || teamWizardService.isSaving() || isUploading()">
+        @if (teamWizardService.isSaving() || isUploading()) {
           <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Saving...
         } @else {
           Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>

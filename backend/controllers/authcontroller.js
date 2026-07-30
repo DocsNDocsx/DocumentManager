@@ -6,6 +6,7 @@ const path = require('path');
 const { insertUser } = require('../utils/createUser');
 const { loginUser } = require('../utils/loginUser');
 const { sendEmail } = require('../utils/emailservice');
+const { uploadToBlob } = require('../utils/blobStorage');
 
 const pool = require('../utils/sql');
 
@@ -246,15 +247,23 @@ async function verifySignup(to, otp, res) {
 
 exports.uploadAvatar = async (req, res) => {
   try {
-    const { email, userid } = req.body;
+    const email = req.user?.email;
+    if (!email) return res.status(401).json({ success: false, message: 'Unauthorized' });
     if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
-    const avatarPath = `/api/auth/profile/avatar/${userid}`;
-    const avatarData = req.file.buffer.toString('base64');
 
+    const [users] = await pool.query('SELECT userid FROM users WHERE email = ?', [email]);
+    const user = users[0];
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const avatarPath = await uploadToBlob({
+      folder: 'avatars',
+      prefix: String(user.userid),
+      file: req.file,
+    });
 
     await pool.query(
-      'UPDATE users SET avatar_url = ?, avatar_data = ?, avatar_mime_type = ?, avatar_filename = ? WHERE email = ?',
-      [avatarPath, avatarData, req.file.mimetype, req.file.originalname, email]
+      'UPDATE users SET avatar_url = ?, avatar_data = NULL, avatar_mime_type = ?, avatar_filename = ? WHERE userid = ?',
+      [avatarPath, req.file.mimetype, req.file.originalname, user.userid]
     );
 
     res.json({ success: true, avatarPath });
