@@ -29,7 +29,6 @@ export class PricingPlanComponent implements OnInit {
   readonly rate = RATE;
 
   projectType = signal<'solo' | 'team'>('solo');
-  projects    = signal(3);
   collaborators = signal(1);
   documents   = signal(5);
   days        = signal(20);
@@ -40,7 +39,7 @@ export class PricingPlanComponent implements OnInit {
   effectiveCollaborators = computed(() => this.collaborators());
 
   dailyRate = computed(() =>
-    this.projects() * this.effectiveCollaborators() * this.documents() * RATE
+    this.effectiveCollaborators() * this.documents() * RATE
   );
 
   monthlyEstimate = computed(() =>
@@ -49,10 +48,6 @@ export class PricingPlanComponent implements OnInit {
 
   annualEstimate = computed(() =>
     this.monthlyEstimate() * 12
-  );
-
-  perProjectDay = computed(() =>
-    this.effectiveCollaborators() * this.documents() * RATE
   );
 
   ngOnInit(): void {
@@ -72,10 +67,6 @@ export class PricingPlanComponent implements OnInit {
     this.projectType.set(type);
   }
 
-  setProjects(event: Event): void {
-    this.projects.set(+(event.target as HTMLInputElement).value);
-  }
-
   setCollaborators(event: Event): void {
     this.collaborators.set(+(event.target as HTMLInputElement).value);
   }
@@ -92,7 +83,7 @@ export class PricingPlanComponent implements OnInit {
     this.router.navigate(['/pricing-plan-ccard-information'], {
       queryParams: {
         type: this.projectType(),
-        projects: this.projects(),
+        projects: 1,
         collaborators: this.effectiveCollaborators(),
         documents: this.documents(),
         days: this.days(),

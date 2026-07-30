@@ -8,7 +8,7 @@
     <!-- Page header -->
     <div class="content-header">
       <h1>Pricing</h1>
-      <p>Simple, usage-based pricing - pay only for active projects, collaborators, documents, and days.</p>
+      <p>Simple, usage-based pricing - pay only for collaborators, documents, and duration.</p>
     </div>
 
     @if (subscriptionRequired()) {
@@ -23,11 +23,6 @@
       <div class="formula-part">
         <div class="formula-val">${{ rate }}</div>
         <div class="formula-lbl">flat rate</div>
-      </div>
-      <div class="formula-op" aria-hidden="true">×</div>
-      <div class="formula-part">
-        <div class="formula-val">projects</div>
-        <div class="formula-lbl">active this period</div>
       </div>
       <div class="formula-op" aria-hidden="true">×</div>
       <div class="formula-part">
@@ -76,24 +71,6 @@
       <h2 class="calc-title">
         <i class="fas fa-calculator" aria-hidden="true"></i> Estimate your cost
       </h2>
-
-      <!-- Projects slider -->
-      <div class="slider-row">
-        <div class="slider-top">
-          <label class="slider-name" for="proj-slider">Active projects</label>
-          <span class="slider-val" aria-live="polite">{{ projects() }}</span>
-        </div>
-        <input
-          id="proj-slider"
-          type="range"
-          min="1"
-          max="50"
-          step="1"
-          [value]="projects()"
-          (input)="setProjects($event)"
-          aria-label="Number of active projects"
-        >
-      </div>
 
       <!-- Collaborators slider -->
       <div class="slider-row">
@@ -165,9 +142,9 @@
         </div>
         <div class="metric">
           <div class="metric-label">
-            <i class="fas fa-folder" aria-hidden="true"></i> Per project/day
+            <i class="fas fa-folder" aria-hidden="true"></i> Usage / day
           </div>
-          <div class="metric-value">{{ fmt(perProjectDay()) }}</div>
+          <div class="metric-value">{{ fmt(dailyRate()) }}</div>
         </div>
         <div class="metric">
           <div class="metric-label">
