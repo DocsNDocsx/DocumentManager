@@ -5,6 +5,7 @@ import { SharedHeaderComponent } from '../../shared/shared-header/shared-header'
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
+import { BillingEstimateService } from '../../services/billing-estimate.service';
 import { environment } from '../../../environments/environment';
 
 interface CollabItem {
@@ -25,6 +26,7 @@ export class LeftMenuNewTeamProjectPrivateDecisionComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   readonly wizardService = inject(TeamProjectWizardService);
+  private readonly billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
   modalOpen = signal(false);
@@ -90,7 +92,18 @@ export class LeftMenuNewTeamProjectPrivateDecisionComponent implements OnInit {
     this.toastMsg.set('Please subscribe before activating a project');
     this.toastVisible.set(true);
     setTimeout(() => this.toastVisible.set(false), 3000);
-    this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'team' } });
+    const project = this.wizardService.project();
+    if (project) {
+      const queryParams = this.billingEstimate.buildTeamActivationQuery(project, this.collabCount());
+      if (!queryParams) {
+        this.toastMsg.set('Please add a valid deadline before activating this project');
+        this.toastVisible.set(true);
+        return;
+      }
+      this.router.navigate(['/pricing-plan-ccard-information'], {
+        queryParams,
+      });
+    }
   }
 
   saveAsDraft(): void {

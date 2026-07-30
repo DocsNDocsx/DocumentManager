@@ -4,6 +4,7 @@ import { SharedHeaderComponent } from '../../shared/shared-header/shared-header'
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 import { ProjectWizardService } from '../../services/project-wizard.service';
+import { BillingEstimateService } from '../../services/billing-estimate.service';
 
 @Component({
   selector: 'app-left-menu-new-solo-project-public-decision',
@@ -18,6 +19,7 @@ import { ProjectWizardService } from '../../services/project-wizard.service';
 export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy {
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
+  private billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
   confirmModalOpen = signal(false);
@@ -42,7 +44,7 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
   project = computed(() => this.wizardService.project());
   projectName = computed(() => this.project()?.name ?? '');
   projectDescription = computed(() => this.project()?.description ?? '');
-  projectDeadline = computed(() => this.project()?.deadline ?? '');
+  projectDeadline = computed(() => (this.project()?.deadline ?? '').split('T')[0]);
   expectedCollaborators = computed(() => this.project()?.expectedCollaborators ?? 0);
   documents = computed(() => this.project()?.documents ?? []);
   supportStaff = computed(() => this.project()?.staff ?? null);
@@ -76,7 +78,17 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
       error: err => {
         if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
           this.showToast('Please subscribe before activating a project');
-          this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'solo' } });
+          const project = this.project();
+          if (project) {
+            const queryParams = this.billingEstimate.buildSoloActivationQuery(project);
+            if (!queryParams) {
+              this.showToast('Please add a valid deadline before activating this project');
+              return;
+            }
+            this.router.navigate(['/pricing-plan-ccard-information'], {
+              queryParams,
+            });
+          }
         }
       },
     });

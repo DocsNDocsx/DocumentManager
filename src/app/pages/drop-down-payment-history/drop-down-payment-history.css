@@ -89,7 +89,7 @@
 
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2.5rem;
 }
@@ -104,8 +104,6 @@
 }
 .summary-card:nth-child(1) { animation-delay: 0.1s; }
 .summary-card:nth-child(2) { animation-delay: 0.2s; }
-.summary-card:nth-child(3) { animation-delay: 0.3s; }
-.summary-card:nth-child(4) { animation-delay: 0.4s; }
 .summary-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
 .summary-card-icon {
   width: 50px; height: 50px;

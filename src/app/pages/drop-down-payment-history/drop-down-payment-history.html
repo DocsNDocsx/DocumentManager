@@ -31,18 +31,6 @@
         <div class="summary-card-value">{{ data().summary.totalPayments }}</div>
         <div class="summary-card-sub">{{ data().summary.totalPaymentsSub }}</div>
       </div>
-      <div class="summary-card">
-        <div class="summary-card-icon blue"><i class="fas fa-star"></i></div>
-        <div class="summary-card-label">Current Subscription</div>
-        <div class="summary-card-value" style="font-size: 1.4rem">{{ data().summary.currentPlan }}</div>
-        <div class="summary-card-sub">{{ data().summary.currentPlanSub }}</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-card-icon purple"><i class="fas fa-calendar-check"></i></div>
-        <div class="summary-card-label">Next Payment</div>
-        <div class="summary-card-value" style="font-size: 1.3rem">{{ data().summary.nextPayment }}</div>
-        <div class="summary-card-sub">{{ data().summary.nextPaymentSub }}</div>
-      </div>
     </div>
 
     @if (isTeamView()) {

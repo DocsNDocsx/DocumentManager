@@ -116,7 +116,7 @@
                                 <div class="project-meta">
                                   <i class="fas fa-users" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>{{ project.collaboratorCount }} collaborators &nbsp;·&nbsp;
                                   <i class="fas fa-file-alt" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>{{ project.documentCount }} document types &nbsp;·&nbsp;
-                                  <i class="fas fa-calendar" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>Due {{ project.deadline ?? 'No deadline' }}
+                                  <i class="fas fa-calendar" style="color: var(--primary-color); margin-right: 3px" aria-hidden="true"></i>Due {{ formatDeadline(project.deadline) }}
                                 </div>
                               </div>
                             </div>

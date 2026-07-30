@@ -8,6 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { Project } from '../../models/project.models';
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
+import { BillingEstimateService } from '../../services/billing-estimate.service';
 
 type FilterTab = 'Active' | 'Draft' | 'Completed' | 'Not Completed' | 'Deleted';
 
@@ -25,6 +26,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   private auth = inject(AuthService);
   private logger = inject(LoggingService);
   private router = inject(Router);
+  private billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
   activeFilter = signal<FilterTab>('Active');
@@ -165,7 +167,11 @@ export class TopMenuSoloProjectsComponent implements OnInit {
       error: err => {
         this.logger.error('Failed to activate project', err);
         if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
-          this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'solo' } });
+          const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.collaborators?.length);
+          if (!queryParams) return;
+          this.router.navigate(['/pricing-plan-ccard-information'], {
+            queryParams,
+          });
         }
       },
     });

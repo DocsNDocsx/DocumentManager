@@ -96,6 +96,10 @@ export class TopMenuTeamsViewTeamsComponent implements OnInit {
     return map[status] || 'status-pending';
   }
 
+  formatDeadline(deadline: string | null): string {
+    return deadline ? deadline.split('T')[0] : 'No deadline';
+  }
+
   isDetailLoading(teamId: string): boolean {
     return this.teamsService.teamDetailsLoading()[teamId] ?? false;
   }

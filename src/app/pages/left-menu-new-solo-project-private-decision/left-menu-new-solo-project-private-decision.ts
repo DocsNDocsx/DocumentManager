@@ -5,6 +5,7 @@ import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sideb
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 import { ProjectWizardService } from '../../services/project-wizard.service';
 import { LoggingService } from '../../services/logging.service';
+import { BillingEstimateService } from '../../services/billing-estimate.service';
 
 @Component({
   selector: 'app-left-menu-new-solo-project-private-decision',
@@ -20,6 +21,7 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
   private logger = inject(LoggingService);
+  private billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
   modalOpen = signal(false);
@@ -52,7 +54,7 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
   project = computed(() => this.wizardService.project());
   projectName = computed(() => this.project()?.name ?? '');
   projectDescription = computed(() => this.project()?.description ?? '');
-  projectDeadline = computed(() => this.project()?.deadline ?? '');
+  projectDeadline = computed(() => (this.project()?.deadline ?? '').split('T')[0]);
   collaborators = computed(() => this.project()?.collaborators ?? []);
   documents = computed(() => this.project()?.documents ?? []);
   assignments = computed(() => this.project()?.assignments ?? {});
@@ -102,7 +104,17 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
       error: err => {
         if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
           this.showToast('Please subscribe before activating a project');
-          this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'solo' } });
+          const project = this.project();
+          if (project) {
+            const queryParams = this.billingEstimate.buildSoloActivationQuery(project, this.collabCount());
+            if (!queryParams) {
+              this.showToast('Please add a valid deadline before activating this project');
+              return;
+            }
+            this.router.navigate(['/pricing-plan-ccard-information'], {
+              queryParams,
+            });
+          }
         }
       },
     });

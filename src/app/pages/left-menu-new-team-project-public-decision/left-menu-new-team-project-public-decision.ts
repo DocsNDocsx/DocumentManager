@@ -4,6 +4,7 @@ import { SharedHeaderComponent } from '../../shared/shared-header/shared-header'
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
+import { BillingEstimateService } from '../../services/billing-estimate.service';
 
 @Component({
   selector: 'app-left-menu-new-team-project-public-decision',
@@ -18,6 +19,7 @@ import { TeamProjectWizardService } from '../../services/team-project-wizard.ser
 export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
   private readonly router = inject(Router);
   readonly teamWizardService = inject(TeamProjectWizardService);
+  private readonly billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
   confirmModalOpen = signal(false);
@@ -29,7 +31,7 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
   readonly teamName = computed(() => this.teamWizardService.teamName());
   readonly projectName = computed(() => this.teamWizardService.project()?.name ?? '');
   readonly projectDescription = computed(() => this.teamWizardService.project()?.description ?? '');
-  readonly projectDeadline = computed(() => this.teamWizardService.project()?.deadline ?? '');
+  readonly projectDeadline = computed(() => (this.teamWizardService.project()?.deadline ?? '').split('T')[0]);
   readonly expectedCollaborators = computed(() => this.teamWizardService.project()?.expectedCollaborators ?? 0);
   readonly documents = computed(() => this.teamWizardService.project()?.documents ?? []);
 
@@ -75,7 +77,18 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
     this.toastMsg.set('Please subscribe before activating a project');
     this.toastVisible.set(true);
     setTimeout(() => this.toastVisible.set(false), 3000);
-    this.router.navigate(['/pricing-plan'], { queryParams: { subscriptionRequired: '1', type: 'team' } });
+    const project = this.teamWizardService.project();
+    if (project) {
+      const queryParams = this.billingEstimate.buildTeamActivationQuery(project);
+      if (!queryParams) {
+        this.toastMsg.set('Please add a valid deadline before activating this project');
+        this.toastVisible.set(true);
+        return;
+      }
+      this.router.navigate(['/pricing-plan-ccard-information'], {
+        queryParams,
+      });
+    }
   }
 
   closeCodeModal(): void {
