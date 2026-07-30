@@ -123,8 +123,10 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
           this.customerId = res.customerId;
           this.mountPaymentElement();
         },
-        error: () =>
-          this.validationError.set('Could not initialize payment. Please try again in a moment.'),
+        error: err => {
+          const message = err?.error?.message ?? 'Could not initialize payment. Please try again in a moment.';
+          this.validationError.set(message);
+        },
       });
   }
 

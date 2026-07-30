@@ -13,6 +13,17 @@ async function getUserFromToken(req) {
   return rows[0] ?? null;
 }
 
+async function isUsableStripeCustomer(customerId) {
+  if (!customerId) return false;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return !customer.deleted;
+  } catch (err) {
+    if (err?.code === 'resource_missing') return false;
+    throw err;
+  }
+}
+
 /**
  * POST /api/stripe/setup-intent
  * Creates (or reuses) the Stripe Customer for the signed-in user and returns a
@@ -28,7 +39,7 @@ exports.createSetupIntent = async (req, res) => {
     const name = `${user.firstname ?? ''} ${user.lastname ?? ''}`.trim() || (req.body?.name ?? '');
 
     let customerId = user.stripe_customer_id;
-    if (!customerId) {
+    if (!(await isUsableStripeCustomer(customerId))) {
       const customer = await stripe.customers.create({
         email: user.email,
         name,
