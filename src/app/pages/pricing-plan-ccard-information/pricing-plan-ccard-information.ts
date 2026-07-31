@@ -18,6 +18,10 @@ import { AuthService } from '../../services/auth.service';
 import { StripeService } from '../../services/stripe.service';
 
 const TAX_RATE = 0.08;
+const VOUCHERS: Record<string, { percentOff: number; label: string }> = {
+  WELCOME10: { percentOff: 10, label: 'Welcome voucher' },
+  LAUNCH25: { percentOff: 25, label: 'Launch voucher' },
+};
 
 @Component({
   selector: 'app-pricing-plan-ccard-information',
@@ -42,10 +46,23 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   documents     = signal(1);
   days          = signal(20);
   monthlyBase   = signal(0);
+  voucherCode = signal('');
+  appliedVoucherCode = signal('');
+  voucherError = signal('');
 
   subtotal  = computed(() => this.monthlyBase());
   tax       = computed(() => Math.round(this.subtotal() * TAX_RATE * 100) / 100);
-  total     = computed(() => this.subtotal() + this.tax());
+  grossTotal = computed(() => this.subtotal() + this.tax());
+  voucherDiscount = computed(() => {
+    const voucher = VOUCHERS[this.appliedVoucherCode()];
+    if (!voucher) return 0;
+    return Math.round(this.grossTotal() * voucher.percentOff) / 100;
+  });
+  total = computed(() => Math.max(0, this.grossTotal() - this.voucherDiscount()));
+  appliedVoucherLabel = computed(() => {
+    const voucher = VOUCHERS[this.appliedVoucherCode()];
+    return voucher ? `${voucher.label} (${voucher.percentOff}% off)` : '';
+  });
 
   firstName = signal('');
   lastName  = signal('');
@@ -80,6 +97,11 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.documents.set(+params['documents'] || 1);
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
+        const voucherCode = this.normalizeVoucherCode(params['voucherCode']);
+        if (voucherCode && VOUCHERS[voucherCode]) {
+          this.voucherCode.set(voucherCode);
+          this.appliedVoucherCode.set(voucherCode);
+        }
       });
 
     // Prefill billing details from the signed-in user when available.
@@ -208,6 +230,31 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     // the flow resumes in finalizeAfterRedirect() when the user returns.
   }
 
+  applyVoucher(): void {
+    const code = this.normalizeVoucherCode(this.voucherCode());
+    this.voucherCode.set(code);
+    this.voucherError.set('');
+
+    if (!code) {
+      this.voucherError.set('Enter a voucher code.');
+      return;
+    }
+
+    if (!VOUCHERS[code]) {
+      this.appliedVoucherCode.set('');
+      this.voucherError.set('Voucher code is not valid.');
+      return;
+    }
+
+    this.appliedVoucherCode.set(code);
+  }
+
+  clearVoucher(): void {
+    this.voucherCode.set('');
+    this.appliedVoucherCode.set('');
+    this.voucherError.set('');
+  }
+
   /** Resumes the flow after a 3-D Secure redirect back to this page. */
   private async finalizeAfterRedirect(clientSecret: string): Promise<void> {
     this.processing.set(true);
@@ -243,6 +290,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         documents: this.documents(),
         days: this.days(),
         monthlyEstimate: this.total(),
+        voucherCode: this.appliedVoucherCode() || null,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -256,6 +304,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
               documents: this.documents(),
               days: this.days(),
               total: this.total().toFixed(2),
+              voucherCode: this.appliedVoucherCode() || null,
               name: `${this.firstName()} ${this.lastName()}`,
             },
           });
@@ -279,6 +328,11 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       monthly: String(this.monthlyBase()),
       customerId: this.customerId,
     });
+    if (this.appliedVoucherCode()) params.set('voucherCode', this.appliedVoucherCode());
     return `${base}?${params.toString()}`;
+  }
+
+  private normalizeVoucherCode(code: unknown): string {
+    return String(code || '').trim().toUpperCase();
   }
 }

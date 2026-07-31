@@ -24,6 +24,8 @@ export interface CreateSubscriptionRequest {
   days: number;
   /** Estimated monthly total shown to the user (informational; server is source of truth). */
   monthlyEstimate: number;
+  /** Optional server-validated discount voucher code. */
+  voucherCode?: string | null;
 }
 
 export interface CreateSubscriptionResponse {

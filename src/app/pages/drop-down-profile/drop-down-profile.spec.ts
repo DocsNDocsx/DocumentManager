@@ -100,4 +100,92 @@ describe('DropDownProfileComponent', () => {
     expect(component.toastError()).toBe(true);
     expect(component.toastMsg()).toBe('Failed to upload photo.');
   });
+
+  it('saves profile fields and updates stored names', () => {
+    authService.updateProfile.mockReturnValue(of({ success: true, message: 'Profile updated successfully' }));
+    component.firstName.set('Mridul');
+    component.lastName.set('Mishra');
+    component.phone.set('555-0100');
+    component.timezone.set('UTC');
+    component.notifPref.set('email');
+
+    component.saveProfile();
+
+    expect(authService.updateProfile).toHaveBeenCalledWith({
+      email: 'cypress@example.com',
+      firstname: 'Mridul',
+      lastname: 'Mishra',
+      phone: '555-0100',
+      timezone: 'UTC',
+      notifPref: 'email',
+    });
+    expect(authService.saveUserFirstname).toHaveBeenCalledWith('Mridul');
+    expect(authService.saveUserLastname).toHaveBeenCalledWith('Mishra');
+    expect(component.isSaving()).toBe(false);
+    expect(component.toastError()).toBe(false);
+    expect(component.toastMsg()).toBe('Profile saved successfully.');
+  });
+
+  it('blocks profile save when new password confirmation does not match', () => {
+    component.newPw.set('NewPassword1!');
+    component.confirmPw.set('DifferentPassword1!');
+
+    component.saveProfile();
+
+    expect(authService.updateProfile).not.toHaveBeenCalled();
+    expect(component.toastError()).toBe(true);
+    expect(component.toastMsg()).toBe('Passwords do not match.');
+  });
+
+  it('sends password fields when changing password', () => {
+    authService.updateProfile.mockReturnValue(of({ success: true, message: 'Profile updated successfully' }));
+    component.currentPw.set('old-password');
+    component.newPw.set('NewPassword1!');
+    component.confirmPw.set('NewPassword1!');
+
+    component.saveProfile();
+
+    expect(authService.updateProfile).toHaveBeenCalledWith(expect.objectContaining({
+      currentPw: 'old-password',
+      newPw: 'NewPassword1!',
+    }));
+    expect(component.currentPw()).toBe('');
+    expect(component.newPw()).toBe('');
+    expect(component.confirmPw()).toBe('');
+  });
+
+  it('shows backend profile update errors', () => {
+    authService.updateProfile.mockReturnValue(throwError(() => ({ error: { message: 'Current password is incorrect' } })));
+
+    component.saveProfile();
+
+    expect(component.isSaving()).toBe(false);
+    expect(component.toastError()).toBe(true);
+    expect(component.toastMsg()).toBe('Current password is incorrect');
+  });
+
+  it('resets password fields and computes initials', () => {
+    component.firstName.set('mridul');
+    component.lastName.set('mishra');
+    component.currentPw.set('old');
+    component.newPw.set('new');
+    component.confirmPw.set('new');
+
+    expect(component.initials()).toBe('MM');
+
+    component.resetForm();
+
+    expect(component.currentPw()).toBe('');
+    expect(component.newPw()).toBe('');
+    expect(component.confirmPw()).toBe('');
+    expect(component.toastMsg()).toBe('Changes discarded.');
+  });
+
+  it('toggles dropdown open and closed', () => {
+    component.toggleDropdown(new MouseEvent('click'));
+    expect(component.dropdownOpen()).toBe(true);
+
+    component.closeDropdown();
+    expect(component.dropdownOpen()).toBe(false);
+  });
 });

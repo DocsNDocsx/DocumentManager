@@ -14,6 +14,10 @@ function loadStripeController({ stripe = {}, amountCents = 972, productId = 'pro
   jest.doMock('../utils/stripe', () => ({
     stripe,
     computeMonthlyAmountCents: jest.fn(() => amountCents),
+    getVoucher: jest.fn(code => (
+      code === 'WELCOME10' ? { code: 'WELCOME10', percentOff: 10, label: 'Welcome voucher' } : null
+    )),
+    normalizeVoucherCode: jest.fn(code => String(code || '').trim().toUpperCase()),
     getProductId: jest.fn(async () => productId),
   }));
 
@@ -196,6 +200,7 @@ describe('stripecontroller', () => {
           collaborators: 2,
           documents: 3,
           days: 20,
+          voucherCode: 'welcome10',
         },
       }, res);
 
@@ -204,6 +209,7 @@ describe('stripecontroller', () => {
         collaborators: 2,
         documents: 3,
         days: 20,
+        voucherCode: 'WELCOME10',
       });
       expect(stripe.customers.update).toHaveBeenCalledWith('cus_123', {
         invoice_settings: { default_payment_method: 'pm_123' },
@@ -223,6 +229,9 @@ describe('stripecontroller', () => {
         }),
         { idempotencyKey: 'sub_123_pm_123' },
       );
+      expect(stripe.subscriptions.create.mock.calls[0][0].metadata).toEqual(expect.objectContaining({
+        voucherCode: 'WELCOME10',
+      }));
       expect(pool.query).toHaveBeenLastCalledWith(
         "UPDATE users SET issubscribed = 'true' WHERE userid = ?",
         [123],
@@ -231,7 +240,39 @@ describe('stripecontroller', () => {
         success: true,
         subscriptionId: 'sub_123',
         status: 'active',
+        voucherCode: 'WELCOME10',
       }));
+    });
+
+    it('rejects invalid voucher codes before charging the card', async () => {
+      const stripe = {
+        customers: {
+          update: jest.fn(async () => ({})),
+        },
+        subscriptions: {
+          create: jest.fn(async () => ({ id: 'sub_123', status: 'active' })),
+        },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query.mockResolvedValueOnce([[{
+        userid: 123,
+        email: 'paid@example.com',
+        stripe_customer_id: 'cus_123',
+      }]]);
+      const res = mockResponse();
+
+      await controller.createSubscription({
+        user: { email: 'paid@example.com' },
+        body: {
+          paymentMethodId: 'pm_123',
+          voucherCode: 'bad-code',
+        },
+      }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid voucher code' });
+      expect(stripe.customers.update).not.toHaveBeenCalled();
+      expect(stripe.subscriptions.create).not.toHaveBeenCalled();
     });
 
     it('uses default usage values and ignores client-side estimates', async () => {
@@ -271,6 +312,7 @@ describe('stripecontroller', () => {
         collaborators: 1,
         documents: 1,
         days: 20,
+        voucherCode: '',
       });
       expect(stripe.subscriptions.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -292,6 +334,7 @@ describe('stripecontroller', () => {
         subscriptionId: 'sub_defaults',
         status: 'active',
         nextPaymentAt: null,
+        voucherCode: null,
       });
     });
   });

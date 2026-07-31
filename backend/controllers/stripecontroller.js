@@ -1,5 +1,5 @@
 const pool = require('../utils/sql');
-const { stripe, computeMonthlyAmountCents, getProductId } = require('../utils/stripe');
+const { stripe, computeMonthlyAmountCents, getProductId, getVoucher, normalizeVoucherCode } = require('../utils/stripe');
 
 // The JWT only carries the user's email, so we resolve the authoritative user
 // (and userid) from it here rather than trusting any id sent in the request body.
@@ -77,13 +77,31 @@ exports.createSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No payment profile found. Please add a card first.' });
     }
 
-    const { paymentMethodId, type = 'solo', projects = 1, collaborators = 1, documents = 1, days = 20 } = req.body ?? {};
+    const {
+      paymentMethodId,
+      type = 'solo',
+      projects = 1,
+      collaborators = 1,
+      documents = 1,
+      days = 20,
+      voucherCode,
+    } = req.body ?? {};
     if (!paymentMethodId) {
       return res.status(400).json({ success: false, message: 'paymentMethodId is required' });
     }
+    const normalizedVoucherCode = normalizeVoucherCode(voucherCode);
+    if (normalizedVoucherCode && !getVoucher(normalizedVoucherCode)) {
+      return res.status(400).json({ success: false, message: 'Invalid voucher code' });
+    }
 
     const customerId = user.stripe_customer_id;
-    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, documents, days });
+    const unitAmount = computeMonthlyAmountCents({
+      projects,
+      collaborators,
+      documents,
+      days,
+      voucherCode: normalizedVoucherCode,
+    });
 
     // Make the saved card the customer's default for invoices.
     await stripe.customers.update(customerId, {
@@ -113,6 +131,7 @@ exports.createSubscription = async (req, res) => {
           collaborators: String(collaborators),
           documents: String(documents),
           days: String(days),
+          voucherCode: normalizedVoucherCode,
         },
         expand: ['latest_invoice.payment_intent'],
       },
@@ -147,6 +166,7 @@ exports.createSubscription = async (req, res) => {
       subscriptionId: subscription.id,
       status: subscription.status,
       nextPaymentAt: periodEnd,
+      voucherCode: normalizedVoucherCode || null,
     });
   } catch (err) {
     console.error('Create subscription error:', err.message);

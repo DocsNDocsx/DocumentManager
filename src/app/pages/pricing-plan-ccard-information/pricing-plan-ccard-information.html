@@ -171,6 +171,39 @@
         <span class="summary-item-label">Tax (estimated 8%)</span>
         <span class="summary-item-value">${{ tax().toFixed(2) }}</span>
       </div>
+      <div class="voucher-box">
+        <label class="voucher-label" for="voucherCode">Voucher code</label>
+        <div class="voucher-row">
+          <input
+            type="text"
+            class="voucher-input"
+            id="voucherCode"
+            placeholder="WELCOME10"
+            [value]="voucherCode()"
+            (input)="voucherCode.set($any($event.target).value)"
+            (keyup.enter)="applyVoucher()" />
+          @if (appliedVoucherCode()) {
+            <button type="button" class="voucher-button secondary" (click)="clearVoucher()">Clear</button>
+          } @else {
+            <button type="button" class="voucher-button" (click)="applyVoucher()">Apply</button>
+          }
+        </div>
+        @if (voucherError()) {
+          <div class="voucher-error">{{ voucherError() }}</div>
+        }
+        @if (appliedVoucherCode()) {
+          <div class="voucher-success">
+            <i class="fas fa-tag" aria-hidden="true"></i>
+            {{ appliedVoucherCode() }} applied
+          </div>
+        }
+      </div>
+      @if (appliedVoucherCode()) {
+        <div class="summary-item discount">
+          <span class="summary-item-label">{{ appliedVoucherLabel() }}</span>
+          <span class="summary-item-value">-${{ voucherDiscount().toFixed(2) }}</span>
+        </div>
+      }
 
       <div class="summary-total">
         <span class="summary-total-label">Est. Total</span>

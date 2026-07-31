@@ -1,5 +1,8 @@
 const {
   computeMonthlyAmountCents,
+  computeDiscountCents,
+  getVoucher,
+  normalizeVoucherCode,
   RATE,
   TAX_RATE,
 } = require('../utils/stripe');
@@ -65,5 +68,35 @@ describe('Stripe pricing utilities', () => {
     });
 
     expect(cents).toBe(4374);
+  });
+
+  it('normalizes and resolves supported voucher codes', () => {
+    expect(normalizeVoucherCode(' welcome10 ')).toBe('WELCOME10');
+    expect(getVoucher('launch25')).toEqual({
+      code: 'LAUNCH25',
+      percentOff: 25,
+      label: 'Launch voucher',
+    });
+    expect(getVoucher('missing')).toBeNull();
+  });
+
+  it('applies voucher discounts to server-side pricing', () => {
+    const fullPrice = computeMonthlyAmountCents({
+      projects: 1,
+      collaborators: 1,
+      documents: 5,
+      days: 20,
+    });
+    const discounted = computeMonthlyAmountCents({
+      projects: 1,
+      collaborators: 1,
+      documents: 5,
+      days: 20,
+      voucherCode: 'WELCOME10',
+    });
+
+    expect(fullPrice).toBe(972);
+    expect(computeDiscountCents(fullPrice, 'WELCOME10')).toBe(97);
+    expect(discounted).toBe(875);
   });
 });

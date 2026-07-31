@@ -57,11 +57,19 @@ export class BillingEstimateService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dueDate = new Date(deadline);
+    const dueDate = this.parseDeadline(deadline);
     if (Number.isNaN(dueDate.getTime())) return null;
     dueDate.setHours(0, 0, 0, 0);
 
     const daysUntilDeadline = Math.ceil((dueDate.getTime() - today.getTime()) / 86_400_000);
     return Math.max(daysUntilDeadline, 1);
+  }
+
+  private parseDeadline(deadline: string): Date {
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(deadline);
+    if (!dateOnly) return new Date(deadline);
+
+    const [, year, month, day] = dateOnly;
+    return new Date(Number(year), Number(month) - 1, Number(day));
   }
 }
