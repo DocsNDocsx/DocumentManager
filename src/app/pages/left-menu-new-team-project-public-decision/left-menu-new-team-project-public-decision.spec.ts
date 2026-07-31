@@ -74,4 +74,16 @@ describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
       queryParams: { type: 'team', monthly: '12.00' },
     });
   });
+
+  it('returns to team projects without activating when editing an active project', () => {
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    expect(component.isActiveProject()).toBe(true);
+
+    component.finishEditing();
+
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
+  });
 });

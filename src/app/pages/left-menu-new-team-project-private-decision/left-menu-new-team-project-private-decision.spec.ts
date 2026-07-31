@@ -93,4 +93,17 @@ describe('LeftMenuNewTeamProjectPrivateDecisionComponent', () => {
       queryParams: { type: 'team', monthly: '10.00' },
     });
   });
+
+  it('returns to team projects without activating when editing an active project', () => {
+    http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1/collaborators`).flush({ success: true, collaborators: [] });
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    expect(component.isActiveProject()).toBe(true);
+
+    component.finishEditing();
+
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
+  });
 });

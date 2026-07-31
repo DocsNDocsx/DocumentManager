@@ -44,11 +44,10 @@ describe('PricingPlanCcardInformationComponent', () => {
     };
     const elements = {
       create: vi.fn(() => paymentElement),
-      submit: vi.fn().mockResolvedValue({}),
     };
     stripe = {
       elements: vi.fn(() => elements),
-      confirmSetup: vi.fn(),
+      confirmCardSetup: vi.fn(),
       retrieveSetupIntent: vi.fn(),
     };
     stripeService = {
@@ -150,7 +149,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     await component.submitPayment();
 
     expect(component.validationError()).toBe('Please fill in all billing information fields.');
-    expect(stripe.confirmSetup).not.toHaveBeenCalled();
+    expect(stripe.confirmCardSetup).not.toHaveBeenCalled();
   });
 
   it('validates billing email format', async () => {
@@ -203,7 +202,7 @@ describe('PricingPlanCcardInformationComponent', () => {
 
   it('shows payment form loading error when Stripe objects are missing', async () => {
     (component as any).stripe = null;
-    (component as any).elements = null;
+    (component as any).paymentElement = null;
     (component as any).clientSecret = '';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -224,6 +223,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     (component as any).stripe = stripe;
     const elements = stripe.elements();
     (component as any).elements = elements;
+    (component as any).paymentElement = paymentElement;
     (component as any).clientSecret = 'seti_secret';
     (component as any).customerId = 'cus_123';
     component.firstName.set('Mridul');
@@ -235,13 +235,12 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.zip.set('10001');
     component.voucherCode.set('launch25');
     component.applyVoucher();
-    stripe.confirmSetup.mockResolvedValueOnce({
+    stripe.confirmCardSetup.mockResolvedValueOnce({
       setupIntent: { status: 'succeeded', payment_method: 'pm_123' },
     });
 
     await component.submitPayment();
 
-    expect(elements.submit).toHaveBeenCalled();
     expect(paymentElement.unmount).toHaveBeenCalled();
     expect(paymentElement.destroy).toHaveBeenCalled();
     expect(stripeService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({
@@ -260,15 +259,17 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(activationReq.request.method).toBe('PATCH');
     expect(activationReq.request.body).toEqual({ status: 'active', completedStep: 5 });
     activationReq.flush({ success: true, project: { id: 'team-project-1', status: 'active' } });
-    expect(stripe.confirmSetup).toHaveBeenCalledWith(expect.objectContaining({
-      confirmParams: expect.objectContaining({
-        payment_method_data: expect.objectContaining({
+    expect(stripe.confirmCardSetup).toHaveBeenCalledWith(
+      'seti_secret',
+      expect.objectContaining({
+        payment_method: expect.objectContaining({
+          card: paymentElement,
           billing_details: expect.objectContaining({
             phone: '',
           }),
         }),
       }),
-    }));
+    );
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-confirm'], {
       queryParams: expect.objectContaining({
         type: 'team',
@@ -284,6 +285,7 @@ describe('PricingPlanCcardInformationComponent', () => {
   it('shows an activation error if subscription succeeds but project activation fails', async () => {
     (component as any).stripe = stripe;
     (component as any).elements = stripe.elements();
+    (component as any).paymentElement = paymentElement;
     (component as any).clientSecret = 'seti_secret';
     (component as any).customerId = 'cus_123';
     component.firstName.set('Mridul');
@@ -293,7 +295,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.city.set('New York');
     component.state.set('NY');
     component.zip.set('10001');
-    stripe.confirmSetup.mockResolvedValueOnce({
+    stripe.confirmCardSetup.mockResolvedValueOnce({
       setupIntent: { status: 'succeeded', payment_method: 'pm_123' },
     });
 
@@ -309,10 +311,11 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(component.processing()).toBe(false);
   });
 
-  it('shows Stripe confirmSetup errors', async () => {
+  it('shows Stripe confirmCardSetup errors', async () => {
     (component as any).stripe = stripe;
     const elements = stripe.elements();
     (component as any).elements = elements;
+    (component as any).paymentElement = paymentElement;
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -321,11 +324,10 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.city.set('New York');
     component.state.set('NY');
     component.zip.set('10001');
-    stripe.confirmSetup.mockResolvedValueOnce({ error: { message: 'Card declined' } });
+    stripe.confirmCardSetup.mockResolvedValueOnce({ error: { message: 'Card declined' } });
 
     await component.submitPayment();
 
-    expect(elements.submit).toHaveBeenCalled();
     expect(component.validationError()).toBe('Card declined');
     expect(component.processing()).toBe(false);
   });
@@ -333,6 +335,7 @@ describe('PricingPlanCcardInformationComponent', () => {
   it('shows thrown Stripe integration errors instead of leaving an unhandled promise', async () => {
     (component as any).stripe = stripe;
     (component as any).elements = stripe.elements();
+    (component as any).paymentElement = paymentElement;
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -341,7 +344,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.city.set('New York');
     component.state.set('NY');
     component.zip.set('10001');
-    stripe.confirmSetup.mockRejectedValueOnce(new Error('Missing billing phone'));
+    stripe.confirmCardSetup.mockRejectedValueOnce(new Error('Missing billing phone'));
 
     await component.submitPayment();
 
@@ -349,11 +352,10 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(component.processing()).toBe(false);
   });
 
-  it('shows Payment Element submit validation errors before confirming setup', async () => {
-    const elements = stripe.elements();
-    elements.submit.mockResolvedValueOnce({ error: { message: 'Select a payment method' } });
+  it('shows card setup validation errors before creating a subscription', async () => {
     (component as any).stripe = stripe;
-    (component as any).elements = elements;
+    (component as any).elements = stripe.elements();
+    (component as any).paymentElement = paymentElement;
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -363,10 +365,11 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.state.set('NY');
     component.zip.set('10001');
 
+    stripe.confirmCardSetup.mockResolvedValueOnce({ error: { message: 'Select a payment method' } });
+
     await component.submitPayment();
 
-    expect(elements.submit).toHaveBeenCalled();
-    expect(stripe.confirmSetup).not.toHaveBeenCalled();
+    expect(stripe.confirmCardSetup).toHaveBeenCalled();
     expect(component.validationError()).toBe('Select a payment method');
     expect(component.processing()).toBe(false);
   });
@@ -376,6 +379,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     (component as any).stripe = stripe;
     const elements = stripe.elements();
     (component as any).elements = elements;
+    (component as any).paymentElement = paymentElement;
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -384,7 +388,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.city.set('New York');
     component.state.set('NY');
     component.zip.set('10001');
-    stripe.confirmSetup.mockResolvedValueOnce({
+    stripe.confirmCardSetup.mockResolvedValueOnce({
       setupIntent: { status: 'succeeded', payment_method: 'pm_123' },
     });
 

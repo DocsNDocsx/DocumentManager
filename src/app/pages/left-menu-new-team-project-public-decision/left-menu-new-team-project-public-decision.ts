@@ -32,6 +32,7 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
   readonly projectName = computed(() => this.teamWizardService.project()?.name ?? '');
   readonly projectDescription = computed(() => this.teamWizardService.project()?.description ?? '');
   readonly projectDeadline = computed(() => (this.teamWizardService.project()?.deadline ?? '').split('T')[0]);
+  readonly isActiveProject = computed(() => this.teamWizardService.project()?.status === 'active');
   readonly expectedCollaborators = computed(() => this.teamWizardService.project()?.expectedCollaborators ?? 0);
   readonly documents = computed(() => this.teamWizardService.project()?.documents ?? []);
 
@@ -93,6 +94,11 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
 
   closeCodeModal(): void {
     this.codeModalOpen.set(false);
+    this.teamWizardService.reset();
+    this.router.navigate(['/top-menu-team-projects']);
+  }
+
+  finishEditing(): void {
     this.teamWizardService.reset();
     this.router.navigate(['/top-menu-team-projects']);
   }

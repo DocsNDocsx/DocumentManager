@@ -76,4 +76,16 @@ describe('LeftMenuNewSoloProjectPrivateDecisionComponent', () => {
       queryParams: { type: 'solo' },
     });
   });
+
+  it('returns to project list without activating when editing an active project', () => {
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    expect(component.isActiveProject()).toBe(true);
+
+    component.finishEditing();
+
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);
+  });
 });

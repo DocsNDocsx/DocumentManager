@@ -14,7 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
-import type { Stripe, StripeElements, StripePaymentElement } from '@stripe/stripe-js';
+import type { Stripe, StripeCardElement, StripeElements } from '@stripe/stripe-js';
 import { Observable, of } from 'rxjs';
 import { LogoComponent } from '../../shared/logo/logo';
 import { AuthService } from '../../services/auth.service';
@@ -42,7 +42,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   private stripeService = inject(StripeService);
   private http = inject(HttpClient);
 
-  /** Host element where the Stripe Payment Element iframe is mounted. */
+  /** Host element where the Stripe card iframe is mounted. */
   private paymentElementRef = viewChild<ElementRef<HTMLDivElement>>('paymentElement');
 
   projectType   = signal<'solo' | 'team'>('solo');
@@ -81,14 +81,14 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   country   = signal('US');
 
   validationError = signal('');
-  /** True once the Payment Element has been mounted and is ready for input. */
+  /** True once the card field has been mounted and is ready for input. */
   stripeReady = signal(false);
   /** True while a payment is being confirmed / subscription created. */
   processing = signal(false);
 
   private stripe: Stripe | null = null;
   private elements: StripeElements | null = null;
-  private paymentElement: StripePaymentElement | null = null;
+  private paymentElement: StripeCardElement | null = null;
   private clientSecret = '';
   private customerId = '';
   private viewReady = false;
@@ -163,18 +163,27 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       });
   }
 
-  /** Mounts the Payment Element once both the view and the client secret are ready. */
+  /** Mounts the card-only Stripe Element once both the view and the client secret are ready. */
   private mountPaymentElement(): void {
     if (!this.stripe || !this.clientSecret || !this.viewReady || this.paymentElement) return;
 
-    this.elements = this.stripe.elements({
-      clientSecret: this.clientSecret,
-      appearance: { theme: 'stripe', variables: { colorPrimary: '#1b5e4f' } },
-    });
+    this.elements = this.stripe.elements();
 
-    // Billing details are collected by our own form, so the element should not duplicate them.
-    this.paymentElement = this.elements.create('payment', {
-      fields: { billingDetails: 'never' },
+    this.paymentElement = this.elements.create('card', {
+      hidePostalCode: true,
+      style: {
+        base: {
+          color: '#1f2937',
+          fontFamily: '"DM Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+          fontSize: '15px',
+          '::placeholder': {
+            color: '#9ca3af',
+          },
+        },
+        invalid: {
+          color: '#ef4444',
+        },
+      },
     });
 
     const host = this.paymentElementRef()?.nativeElement;
@@ -215,45 +224,32 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       return;
     }
 
-    if (!this.stripe || !this.elements || !this.clientSecret) {
+    if (!this.stripe || !this.paymentElement || !this.clientSecret) {
       this.validationError.set('The payment form is still loading. Please wait a moment and try again.');
       return;
     }
 
     this.processing.set(true);
 
-    const submitResult = await this.elements.submit();
-    if (submitResult.error) {
-      this.validationError.set(submitResult.error.message ?? 'Please check your payment details and try again.');
-      this.processing.set(false);
-      return;
-    }
-
     let confirmResult: any;
     try {
-      confirmResult = await this.stripe.confirmSetup({
-        elements: this.elements,
-        clientSecret: this.clientSecret,
-        confirmParams: {
-          return_url: this.buildReturnUrl(),
-          payment_method_data: {
-            billing_details: {
-              name: `${this.firstName()} ${this.lastName()}`.trim(),
-              email: this.email(),
-              phone: '',
-              address: {
-                line1: this.address1(),
-                line2: this.address2() || undefined,
-                city: this.city(),
-                state: this.state(),
-                postal_code: this.zip(),
-                country: this.country(),
-              },
+      confirmResult = await this.stripe.confirmCardSetup(this.clientSecret, {
+        payment_method: {
+          card: this.paymentElement,
+          billing_details: {
+            name: `${this.firstName()} ${this.lastName()}`.trim(),
+            email: this.email(),
+            phone: '',
+            address: {
+              line1: this.address1(),
+              line2: this.address2() || undefined,
+              city: this.city(),
+              state: this.state(),
+              postal_code: this.zip(),
+              country: this.country(),
             },
           },
         },
-        // Avoid a full-page redirect unless the bank requires it (e.g. 3-D Secure).
-        redirect: 'if_required',
       });
     } catch (err: any) {
       this.validationError.set(err?.message ?? 'We could not confirm your card. Please check the details and try again.');

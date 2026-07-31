@@ -91,7 +91,8 @@
         </h2>
 
         <div class="form-group">
-          <span class="form-label" id="cardDetailsLabel">Card Details <span class="required">*</span></span>          @if (!stripeReady()) {
+          <span class="form-label" id="cardDetailsLabel">Card Details <span class="required">*</span></span>
+          @if (!stripeReady()) {
             <span class="stripe-loading">
               <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading secure payment field...
             </span>

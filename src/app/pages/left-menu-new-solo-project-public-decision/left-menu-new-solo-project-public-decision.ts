@@ -45,6 +45,7 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
   projectName = computed(() => this.project()?.name ?? '');
   projectDescription = computed(() => this.project()?.description ?? '');
   projectDeadline = computed(() => (this.project()?.deadline ?? '').split('T')[0]);
+  isActiveProject = computed(() => this.project()?.status === 'active');
   expectedCollaborators = computed(() => this.project()?.expectedCollaborators ?? 0);
   documents = computed(() => this.project()?.documents ?? []);
   supportStaff = computed(() => this.project()?.staff ?? null);
@@ -96,6 +97,11 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
 
   closeCodeModal(): void {
     this.codeModalOpen.set(false);
+    this.wizardService.reset();
+    this.router.navigate(['/top-menu-solo-projects']);
+  }
+
+  finishEditing(): void {
     this.wizardService.reset();
     this.router.navigate(['/top-menu-solo-projects']);
   }

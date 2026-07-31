@@ -37,6 +37,7 @@ export class LeftMenuNewTeamProjectPrivateDecisionComponent implements OnInit {
   projectName = computed(() => this.wizardService.project()?.name ?? '');
   projectDescription = computed(() => this.wizardService.project()?.description ?? '');
   projectDeadline = computed(() => (this.wizardService.project()?.deadline ?? '').split('T')[0]);
+  isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
   teamName = computed(() => this.wizardService.teamName());
   documents = computed(() => this.wizardService.project()?.documents ?? []);
   collabCount = computed(() => this.collaborators().length);
@@ -86,6 +87,11 @@ export class LeftMenuNewTeamProjectPrivateDecisionComponent implements OnInit {
         }
       },
     });
+  }
+
+  finishEditing(): void {
+    this.wizardService.reset();
+    this.router.navigate(['/top-menu-team-projects']);
   }
 
   private showSubscribePrompt(): void {
