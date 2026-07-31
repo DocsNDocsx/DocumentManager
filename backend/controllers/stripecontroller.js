@@ -65,6 +65,63 @@ exports.createSetupIntent = async (req, res) => {
 };
 
 /**
+ * POST /api/stripe/tax-estimate
+ * Uses Stripe Tax to estimate sales tax from the billing address before the
+ * customer submits payment. The final invoice tax is still calculated by Stripe.
+ */
+exports.estimateTax = async (req, res) => {
+  try {
+    if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
+
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const amountCents = Number(req.body?.amountCents);
+    const billingAddress = req.body?.billingAddress ?? {};
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+      return res.status(400).json({ success: false, message: 'amountCents must be greater than zero' });
+    }
+    if (!billingAddress.postalCode || !billingAddress.country) {
+      return res.status(400).json({ success: false, message: 'Billing ZIP/postal code and country are required' });
+    }
+
+    const calculation = await stripe.tax.calculations.create({
+      currency: 'usd',
+      customer_details: {
+        address: {
+          line1: billingAddress.line1 || undefined,
+          line2: billingAddress.line2 || undefined,
+          city: billingAddress.city || undefined,
+          state: billingAddress.state || undefined,
+          postal_code: billingAddress.postalCode,
+          country: billingAddress.country,
+        },
+        address_source: 'billing',
+      },
+      line_items: [
+        {
+          amount: Math.round(amountCents),
+          reference: 'docsndocs_usage',
+          tax_behavior: 'exclusive',
+        },
+      ],
+    });
+
+    res.json({
+      success: true,
+      calculationId: calculation.id,
+      taxAmountCents: calculation.tax_amount_exclusive ?? 0,
+      totalAmountCents: calculation.amount_total ?? amountCents,
+      taxAmount: (calculation.tax_amount_exclusive ?? 0) / 100,
+      totalAmount: (calculation.amount_total ?? amountCents) / 100,
+    });
+  } catch (err) {
+    console.error('Tax estimate error:', err.message);
+    res.status(500).json({ success: false, message: 'Could not estimate tax' });
+  }
+};
+
+/**
  * POST /api/stripe/subscription
  * Attaches the confirmed PaymentMethod as the customer's default and creates the
  * recurring subscription, pricing it server-side from the usage parameters.

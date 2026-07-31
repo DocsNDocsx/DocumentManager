@@ -56,6 +56,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
+  estimatedSalesTax = signal(0);
+  taxEstimateLoading = signal(false);
+  taxEstimateError = signal('');
 
   subtotal  = computed(() => this.monthlyBase());
   grossTotal = computed(() => this.subtotal());
@@ -70,7 +73,8 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     if (amount <= 0) return 0;
     return Math.round((amount * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE) * 100) / 100;
   });
-  total = computed(() => this.subtotalAfterDiscount() + this.stripeProcessingFee());
+  taxableAmount = computed(() => this.subtotalAfterDiscount() + this.stripeProcessingFee());
+  total = computed(() => this.taxableAmount() + this.estimatedSalesTax());
   appliedVoucherLabel = computed(() => {
     const voucher = VOUCHERS[this.appliedVoucherCode()];
     return voucher ? `${voucher.label} (${voucher.percentOff}% off)` : '';
@@ -98,6 +102,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   private clientSecret = '';
   private customerId = '';
   private viewReady = false;
+  private taxEstimateTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.route.queryParams
@@ -138,6 +143,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   }
 
   ngOnDestroy(): void {
+    if (this.taxEstimateTimer) clearTimeout(this.taxEstimateTimer);
     this.teardownPaymentElement();
   }
 
@@ -296,12 +302,72 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     }
 
     this.appliedVoucherCode.set(code);
+    this.queueTaxEstimate();
   }
 
   clearVoucher(): void {
     this.voucherCode.set('');
     this.appliedVoucherCode.set('');
     this.voucherError.set('');
+    this.queueTaxEstimate();
+  }
+
+  updateBillingAddress(
+    field: 'address1' | 'address2' | 'city' | 'state' | 'zip' | 'country',
+    value: string,
+  ): void {
+    const setters = {
+      address1: this.address1,
+      address2: this.address2,
+      city: this.city,
+      state: this.state,
+      zip: this.zip,
+      country: this.country,
+    };
+    setters[field].set(value);
+    this.queueTaxEstimate();
+  }
+
+  private queueTaxEstimate(): void {
+    if (this.taxEstimateTimer) clearTimeout(this.taxEstimateTimer);
+    this.taxEstimateTimer = setTimeout(() => this.estimateTax(), 500);
+  }
+
+  private estimateTax(): void {
+    this.taxEstimateTimer = null;
+    this.taxEstimateError.set('');
+
+    const amountCents = Math.round(this.taxableAmount() * 100);
+    if (amountCents <= 0 || !this.zip().trim() || !this.country().trim()) {
+      this.estimatedSalesTax.set(0);
+      this.taxEstimateLoading.set(false);
+      return;
+    }
+
+    this.taxEstimateLoading.set(true);
+    this.stripeService.estimateTax({
+      amountCents,
+      billingAddress: {
+        line1: this.address1() || undefined,
+        line2: this.address2() || undefined,
+        city: this.city() || undefined,
+        state: this.state() || undefined,
+        postalCode: this.zip(),
+        country: this.country(),
+      },
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: estimate => {
+          this.estimatedSalesTax.set(Number(estimate.taxAmount) || 0);
+          this.taxEstimateLoading.set(false);
+        },
+        error: () => {
+          this.estimatedSalesTax.set(0);
+          this.taxEstimateError.set('Tax will be finalized by Stripe after payment details are submitted.');
+          this.taxEstimateLoading.set(false);
+        },
+      });
   }
 
   /** Resumes the flow after a 3-D Secure redirect back to this page. */

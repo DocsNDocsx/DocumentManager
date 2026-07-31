@@ -359,4 +359,98 @@ describe('stripecontroller', () => {
       });
     });
   });
+
+  describe('estimateTax', () => {
+    it('estimates tax using Stripe Tax and the billing ZIP/address', async () => {
+      const stripe = {
+        tax: {
+          calculations: {
+            create: jest.fn(async () => ({
+              id: 'taxcalc_123',
+              tax_amount_exclusive: 19,
+              amount_total: 233,
+            })),
+          },
+        },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query.mockResolvedValueOnce([[{
+        userid: 123,
+        email: 'paid@example.com',
+        stripe_customer_id: 'cus_123',
+      }]]);
+      const res = mockResponse();
+
+      await controller.estimateTax({
+        user: { email: 'paid@example.com' },
+        body: {
+          amountCents: 214,
+          billingAddress: {
+            line1: '123 Main St',
+            city: 'New York',
+            state: 'NY',
+            postalCode: '10001',
+            country: 'US',
+          },
+        },
+      }, res);
+
+      expect(stripe.tax.calculations.create).toHaveBeenCalledWith({
+        currency: 'usd',
+        customer_details: {
+          address: {
+            line1: '123 Main St',
+            line2: undefined,
+            city: 'New York',
+            state: 'NY',
+            postal_code: '10001',
+            country: 'US',
+          },
+          address_source: 'billing',
+        },
+        line_items: [{
+          amount: 214,
+          reference: 'docsndocs_usage',
+          tax_behavior: 'exclusive',
+        }],
+      });
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        calculationId: 'taxcalc_123',
+        taxAmountCents: 19,
+        totalAmountCents: 233,
+        taxAmount: 0.19,
+        totalAmount: 2.33,
+      });
+    });
+
+    it('rejects invalid tax estimate inputs before calling Stripe', async () => {
+      const stripe = {
+        tax: {
+          calculations: {
+            create: jest.fn(),
+          },
+        },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query.mockResolvedValueOnce([[{
+        userid: 123,
+        email: 'paid@example.com',
+        stripe_customer_id: 'cus_123',
+      }]]);
+      const res = mockResponse();
+
+      await controller.estimateTax({
+        user: { email: 'paid@example.com' },
+        body: {
+          amountCents: 0,
+          billingAddress: { postalCode: '', country: 'US' },
+        },
+      }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'amountCents must be greater than zero' });
+      expect(stripe.tax.calculations.create).not.toHaveBeenCalled();
+    });
+  });
 });

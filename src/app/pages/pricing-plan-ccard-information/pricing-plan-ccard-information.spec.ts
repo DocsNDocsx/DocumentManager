@@ -62,6 +62,14 @@ describe('PricingPlanCcardInformationComponent', () => {
         subscriptionId: 'sub_123',
         status: 'active',
       })),
+      estimateTax: vi.fn().mockReturnValue(of({
+        success: true,
+        taxAmount: 0.19,
+        totalAmount: 2.33,
+        taxAmountCents: 19,
+        totalAmountCents: 233,
+        calculationId: 'taxcalc_123',
+      })),
     };
     route = routeMock({
       type: 'team',
@@ -199,6 +207,38 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     expect(component.appliedVoucherCode()).toBe('');
     expect(component.voucherError()).toBe('Voucher code is not valid.');
+  });
+
+  it('updates sales tax and total after billing address changes', async () => {
+    vi.useFakeTimers();
+    try {
+      component.ngOnInit();
+      await fixture.whenStable();
+
+      component.updateBillingAddress('address1', '123 Main St');
+      component.updateBillingAddress('city', 'New York');
+      component.updateBillingAddress('state', 'NY');
+      component.updateBillingAddress('zip', '10001');
+      component.updateBillingAddress('country', 'US');
+      vi.advanceTimersByTime(500);
+      await fixture.whenStable();
+
+      expect(stripeService.estimateTax).toHaveBeenCalledWith({
+        amountCents: 2808,
+        billingAddress: {
+          line1: '123 Main St',
+          line2: undefined,
+          city: 'New York',
+          state: 'NY',
+          postalCode: '10001',
+          country: 'US',
+        },
+      });
+      expect(component.estimatedSalesTax()).toBe(0.19);
+      expect(component.total()).toBeCloseTo(28.27);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows payment form loading error when Stripe objects are missing', async () => {

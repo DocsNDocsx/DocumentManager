@@ -107,6 +107,46 @@ describe('StripeService', () => {
     });
   });
 
+  it('estimates tax through the backend', () => {
+    let taxAmount: number | undefined;
+
+    service.estimateTax({
+      amountCents: 214,
+      billingAddress: {
+        line1: '123 Main St',
+        city: 'New York',
+        state: 'NY',
+        postalCode: '10001',
+        country: 'US',
+      },
+    }).subscribe(res => (taxAmount = res.taxAmount));
+
+    const req = http.expectOne(`${environment.apiUrl}/stripe/tax-estimate`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      amountCents: 214,
+      billingAddress: {
+        line1: '123 Main St',
+        city: 'New York',
+        state: 'NY',
+        postalCode: '10001',
+        country: 'US',
+      },
+    });
+
+    req.flush({
+      success: true,
+      taxAmount: 0.19,
+      totalAmount: 2.33,
+      taxAmountCents: 19,
+      totalAmountCents: 233,
+      calculationId: 'taxcalc_123',
+    });
+
+    expect(taxAmount).toBe(0.19);
+    expect(logger.debug).toHaveBeenCalledWith('Tax estimate created');
+  });
+
   it('logs setup-intent and subscription errors', () => {
     service.createSetupIntent({ userid: '123', email: 'a@b.com', name: 'A B' }).subscribe({ error: () => {} });
     http.expectOne(`${environment.apiUrl}/stripe/setup-intent`)

@@ -256,6 +256,14 @@
   color: var(--text-dark);
 }
 
+.summary-note {
+  padding: 0.45rem 0 0.7rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-light);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .summary-item.discount .summary-item-value {
   color: #047857;
 }

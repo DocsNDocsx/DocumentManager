@@ -8,6 +8,8 @@ import {
   CreateSetupIntentResponse,
   CreateSubscriptionRequest,
   CreateSubscriptionResponse,
+  EstimateTaxRequest,
+  EstimateTaxResponse,
 } from '../models/stripe.models';
 import { LoggingService } from './logging.service';
 
@@ -67,6 +69,22 @@ export class StripeService {
               status: res.status,
             }),
           error: err => this.logger.error('Failed to create subscription', err),
+        }),
+      );
+  }
+
+  estimateTax(data: EstimateTaxRequest) {
+    this.logger.debug('Estimating Stripe tax', {
+      amountCents: data.amountCents,
+      country: data.billingAddress.country,
+      postalCode: data.billingAddress.postalCode,
+    });
+    return this.http
+      .post<EstimateTaxResponse>(`${environment.apiUrl}/stripe/tax-estimate`, data)
+      .pipe(
+        tap({
+          next: () => this.logger.debug('Tax estimate created'),
+          error: err => this.logger.error('Failed to estimate tax', err),
         }),
       );
   }

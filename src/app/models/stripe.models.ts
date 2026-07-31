@@ -45,3 +45,24 @@ export interface CreateSubscriptionResponse {
   status: string;
   nextPaymentAt: string | null;
 }
+
+export interface EstimateTaxRequest {
+  amountCents: number;
+  billingAddress: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode: string;
+    country: string;
+  };
+}
+
+export interface EstimateTaxResponse {
+  success: boolean;
+  taxAmount: number;
+  totalAmount: number;
+  taxAmountCents: number;
+  totalAmountCents: number;
+  calculationId: string;
+}
