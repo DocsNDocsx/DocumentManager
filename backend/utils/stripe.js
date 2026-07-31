@@ -9,11 +9,12 @@ const stripe = secretKey ? new Stripe(secretKey) : null;
 // ─────────────────────────────────────────────────────────────────
 // Server-side pricing — the source of truth. The client sends a
 // monthlyEstimate but it is informational only and never trusted.
-// Mirrors src/app/pages/pricing-plan/pricing-plan.ts (RATE) and the
-// 8% tax applied on the card page (pricing-plan-ccard-information.ts).
+// Mirrors src/app/pages/pricing-plan/pricing-plan.ts (RATE). Sales tax is
+// calculated by Stripe Tax from the customer's billing address.
 // ─────────────────────────────────────────────────────────────────
 const RATE = 0.09; // $ per project · collaborator · day
-const TAX_RATE = 0.08;
+const STRIPE_CARD_PERCENT_FEE = 0.029;
+const STRIPE_CARD_FIXED_FEE_CENTS = 30;
 const VOUCHERS = {
   WELCOME10: { percentOff: 10, label: 'Welcome voucher' },
   LAUNCH25: { percentOff: 25, label: 'Launch voucher' },
@@ -42,6 +43,11 @@ function computeDiscountCents(amountCents, voucherCode) {
   return Math.round(amountCents * (voucher.percentOff / 100));
 }
 
+function computeStripeProcessingFeeCents(amountCents) {
+  if (!Number.isFinite(Number(amountCents)) || Number(amountCents) <= 0) return 0;
+  return Math.round(Number(amountCents) * STRIPE_CARD_PERCENT_FEE) + STRIPE_CARD_FIXED_FEE_CENTS;
+}
+
 /** Recurring monthly charge in cents, computed from usage. */
 function computeMonthlyAmountCents({ projects, collaborators, documents, days, voucherCode }) {
   const base =
@@ -50,9 +56,9 @@ function computeMonthlyAmountCents({ projects, collaborators, documents, days, v
     toUsageNumber(documents) *
     RATE *
     toUsageNumber(days, 20);
-  const withTax = base * (1 + TAX_RATE);
-  const amountCents = Math.max(0, Math.round(withTax * 100));
-  return Math.max(0, amountCents - computeDiscountCents(amountCents, voucherCode));
+  const amountCents = Math.max(0, Math.round(base * 100));
+  const discountedAmountCents = Math.max(0, amountCents - computeDiscountCents(amountCents, voucherCode));
+  return discountedAmountCents + computeStripeProcessingFeeCents(discountedAmountCents);
 }
 
 // A single Stripe Product backs every usage subscription (the variable price is
@@ -70,9 +76,11 @@ module.exports = {
   stripe,
   computeMonthlyAmountCents,
   computeDiscountCents,
+  computeStripeProcessingFeeCents,
   getVoucher,
   normalizeVoucherCode,
   getProductId,
   RATE,
-  TAX_RATE,
+  STRIPE_CARD_PERCENT_FEE,
+  STRIPE_CARD_FIXED_FEE_CENTS,
 };

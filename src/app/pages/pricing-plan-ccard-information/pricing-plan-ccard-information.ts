@@ -21,7 +21,8 @@ import { AuthService } from '../../services/auth.service';
 import { StripeService } from '../../services/stripe.service';
 import { environment } from '../../../environments/environment';
 
-const TAX_RATE = 0.08;
+const STRIPE_CARD_PERCENT_FEE = 0.029;
+const STRIPE_CARD_FIXED_FEE = 0.30;
 const VOUCHERS: Record<string, { percentOff: number; label: string }> = {
   WELCOME10: { percentOff: 10, label: 'Welcome voucher' },
   LAUNCH25: { percentOff: 25, label: 'Launch voucher' },
@@ -57,14 +58,19 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   voucherError = signal('');
 
   subtotal  = computed(() => this.monthlyBase());
-  tax       = computed(() => Math.round(this.subtotal() * TAX_RATE * 100) / 100);
-  grossTotal = computed(() => this.subtotal() + this.tax());
+  grossTotal = computed(() => this.subtotal());
   voucherDiscount = computed(() => {
     const voucher = VOUCHERS[this.appliedVoucherCode()];
     if (!voucher) return 0;
     return Math.round(this.grossTotal() * voucher.percentOff) / 100;
   });
-  total = computed(() => Math.max(0, this.grossTotal() - this.voucherDiscount()));
+  subtotalAfterDiscount = computed(() => Math.max(0, this.grossTotal() - this.voucherDiscount()));
+  stripeProcessingFee = computed(() => {
+    const amount = this.subtotalAfterDiscount();
+    if (amount <= 0) return 0;
+    return Math.round((amount * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE) * 100) / 100;
+  });
+  total = computed(() => this.subtotalAfterDiscount() + this.stripeProcessingFee());
   appliedVoucherLabel = computed(() => {
     const voucher = VOUCHERS[this.appliedVoucherCode()];
     return voucher ? `${voucher.label} (${voucher.percentOff}% off)` : '';
@@ -336,6 +342,14 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         projectId: this.activationProjectId() || null,
         monthlyEstimate: this.total(),
         voucherCode: this.appliedVoucherCode() || null,
+        billingAddress: {
+          line1: this.address1(),
+          line2: this.address2() || undefined,
+          city: this.city(),
+          state: this.state(),
+          postalCode: this.zip(),
+          country: this.country(),
+        },
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

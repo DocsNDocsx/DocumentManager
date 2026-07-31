@@ -88,6 +88,7 @@ exports.createSubscription = async (req, res) => {
       days = 20,
       voucherCode,
       projectId,
+      billingAddress = {},
     } = req.body ?? {};
     if (!paymentMethodId) {
       return res.status(400).json({ success: false, message: 'paymentMethodId is required' });
@@ -107,9 +108,20 @@ exports.createSubscription = async (req, res) => {
     });
 
     // Make the saved card the customer's default for invoices.
-    await stripe.customers.update(customerId, {
+    const customerUpdate = {
       invoice_settings: { default_payment_method: paymentMethodId },
-    });
+    };
+    if (billingAddress?.postalCode && billingAddress?.country) {
+      customerUpdate.address = {
+        line1: billingAddress.line1 || undefined,
+        line2: billingAddress.line2 || undefined,
+        city: billingAddress.city || undefined,
+        state: billingAddress.state || undefined,
+        postal_code: billingAddress.postalCode,
+        country: billingAddress.country,
+      };
+    }
+    await stripe.customers.update(customerId, customerUpdate);
 
     const product = await getProductId();
 
@@ -127,6 +139,7 @@ exports.createSubscription = async (req, res) => {
             },
           },
         ],
+        automatic_tax: { enabled: true },
         metadata: {
           userid: String(user.userid),
           type: String(type),

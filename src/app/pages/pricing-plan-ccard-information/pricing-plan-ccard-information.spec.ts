@@ -178,8 +178,9 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(component.voucherCode()).toBe('WELCOME10');
     expect(component.appliedVoucherCode()).toBe('WELCOME10');
     expect(component.voucherError()).toBe('');
-    expect(component.voucherDiscount()).toBe(2.92);
-    expect(component.total()).toBeCloseTo(26.24);
+    expect(component.voucherDiscount()).toBe(2.7);
+    expect(component.stripeProcessingFee()).toBe(1);
+    expect(component.total()).toBeCloseTo(25.30);
     expect(component.appliedVoucherLabel()).toBe('Welcome voucher (10% off)');
 
     component.clearVoucher();
@@ -252,8 +253,16 @@ describe('PricingPlanCcardInformationComponent', () => {
       documents: 5,
       days: 20,
       projectId: 'team-project-1',
-      monthlyEstimate: 21.87,
+      monthlyEstimate: 21.14,
       voucherCode: 'LAUNCH25',
+      billingAddress: {
+        line1: '123 Main St',
+        line2: undefined,
+        city: 'New York',
+        state: 'NY',
+        postalCode: '10001',
+        country: 'US',
+      },
     }));
     const activationReq = http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1`);
     expect(activationReq.request.method).toBe('PATCH');
@@ -273,7 +282,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-confirm'], {
       queryParams: expect.objectContaining({
         type: 'team',
-        total: '21.87',
+        total: '21.14',
         voucherCode: 'LAUNCH25',
         projectId: 'team-project-1',
         name: 'Mridul Mishra',

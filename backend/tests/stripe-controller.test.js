@@ -202,6 +202,13 @@ describe('stripecontroller', () => {
           days: 20,
           projectId: 'project-1',
           voucherCode: 'welcome10',
+          billingAddress: {
+            line1: '123 Main St',
+            city: 'New York',
+            state: 'NY',
+            postalCode: '10001',
+            country: 'US',
+          },
         },
       }, res);
 
@@ -214,11 +221,20 @@ describe('stripecontroller', () => {
       });
       expect(stripe.customers.update).toHaveBeenCalledWith('cus_123', {
         invoice_settings: { default_payment_method: 'pm_123' },
+        address: {
+          line1: '123 Main St',
+          line2: undefined,
+          city: 'New York',
+          state: 'NY',
+          postal_code: '10001',
+          country: 'US',
+        },
       });
       expect(stripe.subscriptions.create).toHaveBeenCalledWith(
         expect.objectContaining({
           customer: 'cus_123',
           default_payment_method: 'pm_123',
+          automatic_tax: { enabled: true },
           items: [expect.objectContaining({
             price_data: expect.objectContaining({
               currency: 'usd',

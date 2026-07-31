@@ -28,6 +28,15 @@ export interface CreateSubscriptionRequest {
   monthlyEstimate: number;
   /** Optional server-validated discount voucher code. */
   voucherCode?: string | null;
+  /** Billing address sent to Stripe so automatic tax can calculate by ZIP/address. */
+  billingAddress?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
 }
 
 export interface CreateSubscriptionResponse {

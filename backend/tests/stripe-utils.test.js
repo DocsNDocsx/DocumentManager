@@ -1,22 +1,25 @@
 const {
   computeMonthlyAmountCents,
   computeDiscountCents,
+  computeStripeProcessingFeeCents,
   getVoucher,
   normalizeVoucherCode,
   RATE,
-  TAX_RATE,
+  STRIPE_CARD_PERCENT_FEE,
+  STRIPE_CARD_FIXED_FEE_CENTS,
 } = require('../utils/stripe');
 
 describe('Stripe pricing utilities', () => {
-  it('calculates usage price with tax in cents', () => {
+  it('calculates usage price plus processing fee in cents', () => {
     const cents = computeMonthlyAmountCents({
       projects: 2,
       collaborators: 3,
       documents: 4,
       days: 10,
     });
+    const usageCents = Math.round(2 * 3 * 4 * 10 * RATE * 100);
 
-    expect(cents).toBe(Math.round(2 * 3 * 4 * 10 * RATE * (1 + TAX_RATE) * 100));
+    expect(cents).toBe(usageCents + computeStripeProcessingFeeCents(usageCents));
   });
 
   it('floors decimal usage inputs', () => {
@@ -26,8 +29,9 @@ describe('Stripe pricing utilities', () => {
       documents: 4.2,
       days: 10.8,
     });
+    const usageCents = Math.round(2 * 3 * 4 * 10 * RATE * 100);
 
-    expect(cents).toBe(Math.round(2 * 3 * 4 * 10 * RATE * (1 + TAX_RATE) * 100));
+    expect(cents).toBe(usageCents + computeStripeProcessingFeeCents(usageCents));
   });
 
   it('uses minimum usage fallbacks for invalid values', () => {
@@ -37,8 +41,16 @@ describe('Stripe pricing utilities', () => {
       documents: -4,
       days: undefined,
     });
+    const usageCents = Math.round(1 * 1 * 1 * 20 * RATE * 100);
 
-    expect(cents).toBe(Math.round(1 * 1 * 1 * 20 * RATE * (1 + TAX_RATE) * 100));
+    expect(cents).toBe(usageCents + computeStripeProcessingFeeCents(usageCents));
+  });
+
+  it('calculates the Stripe domestic card processing fee', () => {
+    expect(computeStripeProcessingFeeCents(972)).toBe(
+      Math.round(972 * STRIPE_CARD_PERCENT_FEE) + STRIPE_CARD_FIXED_FEE_CENTS
+    );
+    expect(computeStripeProcessingFeeCents(0)).toBe(0);
   });
 
   it('charges per document as part of the usage multiplier', () => {
@@ -55,8 +67,8 @@ describe('Stripe pricing utilities', () => {
       days: 20,
     });
 
-    expect(oneDocument).toBe(194);
-    expect(fiveDocuments).toBe(972);
+    expect(oneDocument).toBe(215);
+    expect(fiveDocuments).toBe(956);
   });
 
   it('uses the actual duration and does not cap pricing at 31 days', () => {
@@ -67,7 +79,7 @@ describe('Stripe pricing utilities', () => {
       days: 90,
     });
 
-    expect(cents).toBe(4374);
+    expect(cents).toBe(4197);
   });
 
   it('normalizes and resolves supported voucher codes', () => {
@@ -95,8 +107,11 @@ describe('Stripe pricing utilities', () => {
       voucherCode: 'WELCOME10',
     });
 
-    expect(fullPrice).toBe(972);
-    expect(computeDiscountCents(fullPrice, 'WELCOME10')).toBe(97);
-    expect(discounted).toBe(875);
+    const fullPriceBeforeFee = 900;
+    const discountedBeforeFee = fullPriceBeforeFee - computeDiscountCents(fullPriceBeforeFee, 'WELCOME10');
+
+    expect(fullPrice).toBe(956);
+    expect(computeDiscountCents(fullPriceBeforeFee, 'WELCOME10')).toBe(90);
+    expect(discounted).toBe(discountedBeforeFee + computeStripeProcessingFeeCents(discountedBeforeFee));
   });
 });
