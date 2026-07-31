@@ -241,7 +241,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     }
   });
 
-  it('shows the backend tax-estimate error when Stripe cannot calculate tax', async () => {
+  it('falls back to zero tax when Stripe cannot calculate tax', async () => {
     vi.useFakeTimers();
     stripeService.estimateTax.mockReturnValueOnce(throwError(() => ({
       error: { message: 'Stripe Tax is not enabled for this account' },
@@ -253,7 +253,7 @@ describe('PricingPlanCcardInformationComponent', () => {
       await fixture.whenStable();
 
       expect(component.estimatedSalesTax()).toBe(0);
-      expect(component.taxEstimateError()).toBe('Tax estimate unavailable: Stripe Tax is not enabled for this account');
+      expect(component.total()).toBe(component.taxableAmount());
     } finally {
       vi.useRealTimers();
     }

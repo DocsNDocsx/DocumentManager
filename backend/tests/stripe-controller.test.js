@@ -234,7 +234,7 @@ describe('stripecontroller', () => {
         expect.objectContaining({
           customer: 'cus_123',
           default_payment_method: 'pm_123',
-          automatic_tax: { enabled: true },
+          automatic_tax: { enabled: false },
           items: [expect.objectContaining({
             price_data: expect.objectContaining({
               currency: 'usd',

@@ -58,7 +58,6 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   voucherError = signal('');
   estimatedSalesTax = signal(0);
   taxEstimateLoading = signal(false);
-  taxEstimateError = signal('');
 
   subtotal  = computed(() => this.monthlyBase());
   grossTotal = computed(() => this.subtotal());
@@ -335,7 +334,6 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
 
   private estimateTax(): void {
     this.taxEstimateTimer = null;
-    this.taxEstimateError.set('');
 
     const amountCents = Math.round(this.taxableAmount() * 100);
     if (amountCents <= 0 || !this.zip().trim() || !this.country().trim()) {
@@ -362,12 +360,8 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
           this.estimatedSalesTax.set(Number(estimate.taxAmount) || 0);
           this.taxEstimateLoading.set(false);
         },
-        error: err => {
+        error: () => {
           this.estimatedSalesTax.set(0);
-          const message = err?.error?.message
-            ? `Tax estimate unavailable: ${err.error.message}`
-            : 'Tax estimate unavailable. Stripe will finalize tax after payment details are submitted.';
-          this.taxEstimateError.set(message);
           this.taxEstimateLoading.set(false);
         },
       });

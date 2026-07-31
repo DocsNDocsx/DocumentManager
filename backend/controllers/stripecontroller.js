@@ -199,7 +199,7 @@ exports.createSubscription = async (req, res) => {
             },
           },
         ],
-        automatic_tax: { enabled: true },
+        automatic_tax: { enabled: false },
         metadata: {
           userid: String(user.userid),
           type: String(type),

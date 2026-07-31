@@ -167,16 +167,11 @@
         <span class="summary-item-value">
           @if (taxEstimateLoading()) {
             Calculating...
-          } @else if (estimatedSalesTax() > 0) {
-            ${{ estimatedSalesTax().toFixed(2) }}
           } @else {
-            Calculated by ZIP
+            ${{ estimatedSalesTax().toFixed(2) }}
           }
         </span>
       </div>
-      @if (taxEstimateError()) {
-        <div class="summary-note" role="status">{{ taxEstimateError() }}</div>
-      }
       <div class="voucher-box">
         <label class="voucher-label" for="voucherCode">Voucher code</label>
         <div class="voucher-row">
