@@ -85,6 +85,7 @@ exports.estimateTax = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Billing ZIP/postal code and country are required' });
     }
 
+    const product = await getProductId();
     const calculation = await stripe.tax.calculations.create({
       currency: 'usd',
       customer_details: {
@@ -101,6 +102,7 @@ exports.estimateTax = async (req, res) => {
       line_items: [
         {
           amount: Math.round(amountCents),
+          product,
           reference: 'docsndocs_usage',
           tax_behavior: 'exclusive',
         },
@@ -116,8 +118,9 @@ exports.estimateTax = async (req, res) => {
       totalAmount: (calculation.amount_total ?? amountCents) / 100,
     });
   } catch (err) {
-    console.error('Tax estimate error:', err.message);
-    res.status(500).json({ success: false, message: 'Could not estimate tax' });
+    const message = err?.raw?.message || err?.message || 'Could not estimate tax';
+    console.error('Tax estimate error:', message);
+    res.status(err?.statusCode || 500).json({ success: false, message });
   }
 };
 

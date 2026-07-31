@@ -362,9 +362,12 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
           this.estimatedSalesTax.set(Number(estimate.taxAmount) || 0);
           this.taxEstimateLoading.set(false);
         },
-        error: () => {
+        error: err => {
           this.estimatedSalesTax.set(0);
-          this.taxEstimateError.set('Tax will be finalized by Stripe after payment details are submitted.');
+          const message = err?.error?.message
+            ? `Tax estimate unavailable: ${err.error.message}`
+            : 'Tax estimate unavailable. Stripe will finalize tax after payment details are submitted.';
+          this.taxEstimateError.set(message);
           this.taxEstimateLoading.set(false);
         },
       });

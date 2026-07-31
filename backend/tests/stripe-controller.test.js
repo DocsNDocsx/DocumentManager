@@ -410,6 +410,7 @@ describe('stripecontroller', () => {
         },
         line_items: [{
           amount: 214,
+          product: 'prod_test',
           reference: 'docsndocs_usage',
           tax_behavior: 'exclusive',
         }],

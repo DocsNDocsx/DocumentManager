@@ -241,6 +241,24 @@ describe('PricingPlanCcardInformationComponent', () => {
     }
   });
 
+  it('shows the backend tax-estimate error when Stripe cannot calculate tax', async () => {
+    vi.useFakeTimers();
+    stripeService.estimateTax.mockReturnValueOnce(throwError(() => ({
+      error: { message: 'Stripe Tax is not enabled for this account' },
+    })));
+
+    try {
+      component.updateBillingAddress('zip', '08820');
+      vi.advanceTimersByTime(500);
+      await fixture.whenStable();
+
+      expect(component.estimatedSalesTax()).toBe(0);
+      expect(component.taxEstimateError()).toBe('Tax estimate unavailable: Stripe Tax is not enabled for this account');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('shows payment form loading error when Stripe objects are missing', async () => {
     (component as any).stripe = null;
     (component as any).paymentElement = null;
