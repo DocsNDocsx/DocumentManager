@@ -22,9 +22,11 @@ function fileList(files: File[]): FileList {
 
 describe('LeftMenuNewSoloProjectPrivateDetailsComponent', () => {
   let component: LeftMenuNewSoloProjectPrivateDetailsComponent;
+  let fixture: ComponentFixture<LeftMenuNewSoloProjectPrivateDetailsComponent>;
   let wizard: any;
   let router: any;
   let uploader: any;
+  let routeProjectId: string | null;
 
   beforeEach(async () => {
     wizard = {
@@ -41,7 +43,9 @@ describe('LeftMenuNewSoloProjectPrivateDetailsComponent', () => {
       loadDraft: vi.fn(() => of({})),
       saveDetails: vi.fn(() => of({})),
       saveDraft: vi.fn(() => of({})),
+      reset: vi.fn(() => wizard.project.set(null)),
     };
+    routeProjectId = 'project-1';
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
     uploader = {
       upload: vi.fn(() => of({
@@ -58,14 +62,27 @@ describe('LeftMenuNewSoloProjectPrivateDetailsComponent', () => {
         { provide: ProjectWizardService, useValue: wizard },
         { provide: ProjectAttachmentUploadService, useValue: uploader },
         { provide: Router, useValue: router },
-        { provide: ActivatedRoute, useValue: { parent: { snapshot: { paramMap: { get: () => null } } } } },
+        { provide: ActivatedRoute, useValue: { parent: { snapshot: { paramMap: { get: () => routeProjectId } } } } },
         { provide: AuthService, useValue: { currentUserId: signal('123'), currentUserFirstname: signal(''), currentUserLastname: signal(''), currentUserEmail: signal(''), currentUserAvatar: signal('') } },
       ],
     }).compileComponents();
 
-    const fixture = TestBed.createComponent(LeftMenuNewSoloProjectPrivateDetailsComponent);
+    createComponent();
+  });
+
+  function createComponent(): void {
+    fixture = TestBed.createComponent(LeftMenuNewSoloProjectPrivateDetailsComponent);
     component = fixture.componentInstance;
     component.ngOnInit();
+  }
+
+  it('resets stale wizard state on a new private project route', () => {
+    routeProjectId = null;
+    createComponent();
+
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(component.projectName()).toBe('');
+    expect(component.projectDeadline()).toBe('');
   });
 
   it('populates existing draft details and normalizes the deadline display', () => {

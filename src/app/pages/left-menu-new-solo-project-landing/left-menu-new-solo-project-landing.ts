@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
+import { ProjectWizardService } from '../../services/project-wizard.service';
 
 @Component({
   selector: 'app-left-menu-new-solo-project-landing',
@@ -13,9 +14,14 @@ import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sideb
     '(document:click)': 'closeDropdown()',
   },
 })
-export class LeftMenuNewSoloProjectLandingComponent {
+export class LeftMenuNewSoloProjectLandingComponent implements OnInit {
+  private wizardService = inject(ProjectWizardService);
+
   dropdownOpen = signal(false);
 
+  ngOnInit(): void {
+    this.wizardService.reset();
+  }
 
   toggleDropdown(event: Event): void {
     event.stopPropagation();

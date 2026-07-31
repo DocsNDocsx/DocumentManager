@@ -66,6 +66,8 @@ export class LeftMenuNewSoloProjectPrivateDetailsComponent implements OnInit, On
     const id = this.route.parent?.snapshot.paramMap.get('projectId') ?? null;
     if (id && this.wizardService.projectId() !== id) {
       this.wizardService.loadDraft(id).subscribe(() => this.populateForm());
+    } else if (!id) {
+      this.wizardService.reset();
     } else {
       this.populateForm();
     }

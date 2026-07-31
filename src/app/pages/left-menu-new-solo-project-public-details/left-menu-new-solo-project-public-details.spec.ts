@@ -21,6 +21,7 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
       project: signal<any>(null),
       savePublicDetails: vi.fn(() => of({ id: 'new-project' })),
       loadDraft: vi.fn(() => of({})),
+      reset: vi.fn(() => wizard.project.set(null)),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
 
@@ -38,6 +39,13 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
     const fixture = TestBed.createComponent(LeftMenuNewSoloProjectPublicDetailsComponent);
     component = fixture.componentInstance;
     component.ngOnInit();
+  });
+
+  it('resets stale wizard state on a new public project route', () => {
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(component.projectName()).toBe('');
+    expect(component.projectDeadline()).toBe('');
+    expect(component.expectedCollaborators()).toBe('');
   });
 
   it('requires name, deadline, and positive expected collaborators', () => {
