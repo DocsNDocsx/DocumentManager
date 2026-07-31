@@ -7,7 +7,7 @@ const RATE = 0.09;
 const DEFAULT_COLLABORATORS = 1;
 const DEFAULT_DOCUMENTS = 1;
 
-type BillingProject = Pick<Project | TeamProjectDraft, 'deadline' | 'documents' | 'expectedCollaborators'>;
+type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'>;
 
 @Injectable({ providedIn: 'root' })
 export class BillingEstimateService {
@@ -38,6 +38,7 @@ export class BillingEstimateService {
     return {
       subscriptionRequired: '1',
       type,
+      projectId: project.id,
       projects,
       collaborators,
       documents,

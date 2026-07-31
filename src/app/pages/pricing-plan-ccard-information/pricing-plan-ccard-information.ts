@@ -11,11 +11,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpClient } from '@angular/common/http';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import type { Stripe, StripeElements, StripePaymentElement } from '@stripe/stripe-js';
+import { Observable, of } from 'rxjs';
 import { LogoComponent } from '../../shared/logo/logo';
 import { AuthService } from '../../services/auth.service';
 import { StripeService } from '../../services/stripe.service';
+import { environment } from '../../../environments/environment';
 
 const TAX_RATE = 0.08;
 const VOUCHERS: Record<string, { percentOff: number; label: string }> = {
@@ -36,6 +39,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   private destroyRef = inject(DestroyRef);
   private auth = inject(AuthService);
   private stripeService = inject(StripeService);
+  private http = inject(HttpClient);
 
   /** Host element where the Stripe Payment Element iframe is mounted. */
   private paymentElementRef = viewChild<ElementRef<HTMLDivElement>>('paymentElement');
@@ -46,6 +50,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   documents     = signal(1);
   days          = signal(20);
   monthlyBase   = signal(0);
+  activationProjectId = signal('');
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
@@ -97,6 +102,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.documents.set(+params['documents'] || 1);
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
+        this.activationProjectId.set(String(params['projectId'] || ''));
         const voucherCode = this.normalizeVoucherCode(params['voucherCode']);
         if (voucherCode && VOUCHERS[voucherCode]) {
           this.voucherCode.set(voucherCode);
@@ -192,6 +198,13 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     }
 
     this.processing.set(true);
+
+    const submitResult = await this.elements.submit();
+    if (submitResult.error) {
+      this.validationError.set(submitResult.error.message ?? 'Please check your payment details and try again.');
+      this.processing.set(false);
+      return;
+    }
 
     const { error, setupIntent } = await this.stripe.confirmSetup({
       elements: this.elements,
@@ -295,25 +308,52 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.processing.set(false);
-          this.router.navigate(['/pricing-plan-confirm'], {
-            queryParams: {
-              type: this.projectType(),
-              projects: this.projects(),
-              collaborators: this.collaborators(),
-              documents: this.documents(),
-              days: this.days(),
-              total: this.total().toFixed(2),
-              voucherCode: this.appliedVoucherCode() || null,
-              name: `${this.firstName()} ${this.lastName()}`,
-            },
-          });
+          this.activateProjectAfterSubscription()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: () => this.navigateToConfirmation(),
+              error: () => {
+                this.validationError.set('Your subscription was created, but we could not activate the project. Please try activating it again from your projects page.');
+                this.processing.set(false);
+              },
+            });
         },
         error: () => {
           this.validationError.set('Your card was saved but we could not start your subscription. Please contact support.');
           this.processing.set(false);
         },
       });
+  }
+
+  private activateProjectAfterSubscription(): Observable<unknown> {
+    const projectId = this.activationProjectId();
+    if (!projectId) return of(null);
+
+    if (this.projectType() === 'team') {
+      return this.http.patch(`${environment.apiUrl}/teams/projects/${projectId}`, {
+        status: 'active',
+        completedStep: 5,
+      });
+    }
+
+    return this.http.patch(`${environment.apiUrl}/projects/${projectId}/activate`, {});
+  }
+
+  private navigateToConfirmation(): void {
+    this.processing.set(false);
+    this.router.navigate(['/pricing-plan-confirm'], {
+      queryParams: {
+        type: this.projectType(),
+        projects: this.projects(),
+        collaborators: this.collaborators(),
+        documents: this.documents(),
+        days: this.days(),
+        total: this.total().toFixed(2),
+        voucherCode: this.appliedVoucherCode() || null,
+        projectId: this.activationProjectId() || null,
+        name: `${this.firstName()} ${this.lastName()}`,
+      },
+    });
   }
 
   /** Absolute URL Stripe returns to after off-site authentication, preserving the order context. */
@@ -328,6 +368,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       monthly: String(this.monthlyBase()),
       customerId: this.customerId,
     });
+    if (this.activationProjectId()) params.set('projectId', this.activationProjectId());
     if (this.appliedVoucherCode()) params.set('voucherCode', this.appliedVoucherCode());
     return `${base}?${params.toString()}`;
   }

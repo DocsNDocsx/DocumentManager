@@ -21,6 +21,7 @@ describe('BillingEstimateService', () => {
 
   it('builds solo activation query from actual deadline days without a monthly cap', () => {
     const query = service.buildSoloActivationQuery({
+      id: 'solo-project-1',
       deadline: '2026-09-15',
       documents: [{ name: 'Resume' }],
       expectedCollaborators: 3,
@@ -29,6 +30,7 @@ describe('BillingEstimateService', () => {
     expect(query).toEqual({
       subscriptionRequired: '1',
       type: 'solo',
+      projectId: 'solo-project-1',
       projects: 1,
       collaborators: 3,
       documents: 1,
@@ -39,6 +41,7 @@ describe('BillingEstimateService', () => {
 
   it('builds team activation query using explicit collaborator count over project estimate', () => {
     const query = service.buildTeamActivationQuery({
+      id: 'team-project-1',
       deadline: '2026-08-04',
       documents: [{ name: 'Resume' }, { name: 'Transcript' }],
       expectedCollaborators: 10,
@@ -46,6 +49,7 @@ describe('BillingEstimateService', () => {
 
     expect(query).toEqual(expect.objectContaining({
       type: 'team',
+      projectId: 'team-project-1',
       collaborators: 4,
       documents: 2,
       days: 5,
@@ -55,11 +59,13 @@ describe('BillingEstimateService', () => {
 
   it('uses minimum one active day when deadline is today or already passed', () => {
     const today = service.buildSoloActivationQuery({
+      id: 'today-project',
       deadline: '2026-07-30',
       documents: [{ name: 'Resume' }],
       expectedCollaborators: 1,
     } as any);
     const past = service.buildSoloActivationQuery({
+      id: 'past-project',
       deadline: '2026-07-01',
       documents: [{ name: 'Resume' }],
       expectedCollaborators: 1,
@@ -71,12 +77,13 @@ describe('BillingEstimateService', () => {
   });
 
   it('returns null when deadline is missing or invalid', () => {
-    expect(service.buildSoloActivationQuery({ deadline: '', documents: [], expectedCollaborators: 1 } as any)).toBeNull();
-    expect(service.buildSoloActivationQuery({ deadline: 'not-a-date', documents: [], expectedCollaborators: 1 } as any)).toBeNull();
+    expect(service.buildSoloActivationQuery({ id: 'missing-deadline', deadline: '', documents: [], expectedCollaborators: 1 } as any)).toBeNull();
+    expect(service.buildSoloActivationQuery({ id: 'invalid-deadline', deadline: 'not-a-date', documents: [], expectedCollaborators: 1 } as any)).toBeNull();
   });
 
   it('falls back to one collaborator and one document for invalid usage counts', () => {
     const query = service.buildSoloActivationQuery({
+      id: 'fallback-project',
       deadline: '2026-07-31',
       documents: [],
       expectedCollaborators: 0,

@@ -1,11 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 
 import { PricingPlanCcardInformationComponent } from './pricing-plan-ccard-information';
 import { AuthService } from '../../services/auth.service';
 import { StripeService } from '../../services/stripe.service';
+import { environment } from '../../../environments/environment';
 
 function routeMock(query: Record<string, string> = {}) {
   const queryParams$ = new BehaviorSubject<Record<string, string>>(query);
@@ -28,6 +31,7 @@ describe('PricingPlanCcardInformationComponent', () => {
   let stripe: any;
   let paymentElement: any;
   let route: ReturnType<typeof routeMock>;
+  let http: HttpTestingController;
 
   beforeEach(async () => {
     paymentElement = {
@@ -38,6 +42,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     };
     const elements = {
       create: vi.fn(() => paymentElement),
+      submit: vi.fn().mockResolvedValue({}),
     };
     stripe = {
       elements: vi.fn(() => elements),
@@ -64,11 +69,14 @@ describe('PricingPlanCcardInformationComponent', () => {
       documents: '5',
       days: '20',
       monthly: '27.00',
+      projectId: 'team-project-1',
     });
 
     await TestBed.configureTestingModule({
       imports: [PricingPlanCcardInformationComponent, RouterModule.forRoot([])],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: route },
         {
           provide: AuthService,
@@ -86,8 +94,13 @@ describe('PricingPlanCcardInformationComponent', () => {
     fixture = TestBed.createComponent(PricingPlanCcardInformationComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
+    http = TestBed.inject(HttpTestingController);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
     await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    http.verify();
   });
 
   it('reads query params, pre-fills user details, and initializes setup intent', async () => {
@@ -99,6 +112,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(component.documents()).toBe(5);
     expect(component.days()).toBe(20);
     expect(component.monthlyBase()).toBe(27);
+    expect(component.activationProjectId()).toBe('team-project-1');
     expect(component.firstName()).toBe('Mridul');
     expect(component.lastName()).toBe('Mishra');
     expect(component.email()).toBe('mridul@example.com');
@@ -206,7 +220,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.ngOnInit();
     await fixture.whenStable();
     (component as any).stripe = stripe;
-    (component as any).elements = {};
+    (component as any).elements = stripe.elements();
     (component as any).clientSecret = 'seti_secret';
     (component as any).customerId = 'cus_123';
     component.firstName.set('Mridul');
@@ -224,6 +238,7 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     await component.submitPayment();
 
+    expect((component as any).elements.submit).toHaveBeenCalled();
     expect(stripeService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({
       userid: '123',
       customerId: 'cus_123',
@@ -235,20 +250,51 @@ describe('PricingPlanCcardInformationComponent', () => {
       monthlyEstimate: 21.87,
       voucherCode: 'LAUNCH25',
     }));
+    const activationReq = http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1`);
+    expect(activationReq.request.method).toBe('PATCH');
+    expect(activationReq.request.body).toEqual({ status: 'active', completedStep: 5 });
+    activationReq.flush({ success: true, project: { id: 'team-project-1', status: 'active' } });
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-confirm'], {
       queryParams: expect.objectContaining({
         type: 'team',
         total: '21.87',
         voucherCode: 'LAUNCH25',
+        projectId: 'team-project-1',
         name: 'Mridul Mishra',
       }),
     });
     expect(component.processing()).toBe(false);
   });
 
+  it('shows an activation error if subscription succeeds but project activation fails', async () => {
+    (component as any).stripe = stripe;
+    (component as any).elements = stripe.elements();
+    (component as any).clientSecret = 'seti_secret';
+    (component as any).customerId = 'cus_123';
+    component.firstName.set('Mridul');
+    component.lastName.set('Mishra');
+    component.email.set('mridul@example.com');
+    component.address1.set('123 Main St');
+    component.city.set('New York');
+    component.state.set('NY');
+    component.zip.set('10001');
+    stripe.confirmSetup.mockResolvedValueOnce({
+      setupIntent: { status: 'succeeded', payment_method: 'pm_123' },
+    });
+
+    await component.submitPayment();
+
+    const activationReq = http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1`);
+    activationReq.flush({ success: false }, { status: 500, statusText: 'Server Error' });
+
+    expect(component.validationError()).toBe('Your subscription was created, but we could not activate the project. Please try activating it again from your projects page.');
+    expect(router.navigate).not.toHaveBeenCalledWith(['/pricing-plan-confirm'], expect.anything());
+    expect(component.processing()).toBe(false);
+  });
+
   it('shows Stripe confirmSetup errors', async () => {
     (component as any).stripe = stripe;
-    (component as any).elements = {};
+    (component as any).elements = stripe.elements();
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -261,14 +307,37 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     await component.submitPayment();
 
+    expect((component as any).elements.submit).toHaveBeenCalled();
     expect(component.validationError()).toBe('Card declined');
+    expect(component.processing()).toBe(false);
+  });
+
+  it('shows Payment Element submit validation errors before confirming setup', async () => {
+    const elements = stripe.elements();
+    elements.submit.mockResolvedValueOnce({ error: { message: 'Select a payment method' } });
+    (component as any).stripe = stripe;
+    (component as any).elements = elements;
+    (component as any).clientSecret = 'seti_secret';
+    component.firstName.set('Mridul');
+    component.lastName.set('Mishra');
+    component.email.set('mridul@example.com');
+    component.address1.set('123 Main St');
+    component.city.set('New York');
+    component.state.set('NY');
+    component.zip.set('10001');
+
+    await component.submitPayment();
+
+    expect(elements.submit).toHaveBeenCalled();
+    expect(stripe.confirmSetup).not.toHaveBeenCalled();
+    expect(component.validationError()).toBe('Select a payment method');
     expect(component.processing()).toBe(false);
   });
 
   it('shows subscription creation errors after card setup', async () => {
     stripeService.createSubscription.mockReturnValueOnce(throwError(() => ({ status: 500 })));
     (component as any).stripe = stripe;
-    (component as any).elements = {};
+    (component as any).elements = stripe.elements();
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
