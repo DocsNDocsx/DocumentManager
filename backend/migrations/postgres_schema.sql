@@ -313,6 +313,7 @@ CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   userid                 BIGINT        NOT NULL REFERENCES users (userid) ON DELETE CASCADE,
   stripe_customer_id     VARCHAR(255)  NOT NULL,
   stripe_subscription_id VARCHAR(255)  NOT NULL UNIQUE,
+  project_id             VARCHAR(255),
   type                   VARCHAR(20)   NOT NULL DEFAULT 'solo',
   projects               INT           NOT NULL DEFAULT 0,
   collaborators          INT           NOT NULL DEFAULT 0,
@@ -329,7 +330,11 @@ CREATE TABLE IF NOT EXISTS stripe_subscriptions (
 ALTER TABLE stripe_subscriptions
   ADD COLUMN IF NOT EXISTS documents INT NOT NULL DEFAULT 0;
 
+ALTER TABLE stripe_subscriptions
+  ADD COLUMN IF NOT EXISTS project_id VARCHAR(255);
+
 CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_userid ON stripe_subscriptions (userid);
+CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_project_id ON stripe_subscriptions (project_id);
 
 CREATE OR REPLACE TRIGGER trg_stripe_subscriptions_updated_at
   BEFORE UPDATE ON stripe_subscriptions

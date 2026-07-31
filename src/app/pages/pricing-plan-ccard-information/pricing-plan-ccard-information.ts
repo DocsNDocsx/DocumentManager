@@ -324,6 +324,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         collaborators: this.collaborators(),
         documents: this.documents(),
         days: this.days(),
+        projectId: this.activationProjectId() || null,
         monthlyEstimate: this.total(),
         voucherCode: this.appliedVoucherCode() || null,
       })

@@ -248,6 +248,7 @@ describe('PricingPlanCcardInformationComponent', () => {
       collaborators: 3,
       documents: 5,
       days: 20,
+      projectId: 'team-project-1',
       monthlyEstimate: 21.87,
       voucherCode: 'LAUNCH25',
     }));

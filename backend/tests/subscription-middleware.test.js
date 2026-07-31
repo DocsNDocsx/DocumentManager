@@ -39,28 +39,27 @@ describe('requireActiveSubscription', () => {
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Unauthorized' });
   });
 
-  it('allows users marked subscribed on the users table', async () => {
+  it('rejects users marked subscribed when this project has not been paid', async () => {
     pool.query
       .mockResolvedValueOnce([[{ userid: 123 }]])
-      .mockResolvedValueOnce([[{ issubscribed: 'true' }]]);
+      .mockResolvedValueOnce([[]]);
     const res = mockResponse();
     const next = jest.fn();
 
-    await requireActiveSubscription({ user: { email: 'paid@example.com' } }, res, next);
+    await requireActiveSubscription({ user: { email: 'paid@example.com' }, params: { id: 'project-2' } }, res, next);
 
-    expect(next).toHaveBeenCalledTimes(1);
-    expect(res.status).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(402);
   });
 
-  it('allows active Stripe subscriptions', async () => {
+  it('allows active Stripe subscriptions linked to the project being activated', async () => {
     pool.query
       .mockResolvedValueOnce([[{ userid: 123 }]])
-      .mockResolvedValueOnce([[{ issubscribed: 'false' }]])
       .mockResolvedValueOnce([[{ id: 'sub-row' }]]);
     const res = mockResponse();
     const next = jest.fn();
 
-    await requireActiveSubscription({ user: { email: 'stripe@example.com' } }, res, next);
+    await requireActiveSubscription({ user: { email: 'stripe@example.com' }, params: { id: 'project-1' } }, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
   });
@@ -68,17 +67,16 @@ describe('requireActiveSubscription', () => {
   it('returns 402 when no active subscription exists', async () => {
     pool.query
       .mockResolvedValueOnce([[{ userid: 123 }]])
-      .mockResolvedValueOnce([[{ issubscribed: 'false' }]])
       .mockResolvedValueOnce([[]]);
     const res = mockResponse();
 
-    await requireActiveSubscription({ user: { email: 'free@example.com' } }, res, jest.fn());
+    await requireActiveSubscription({ user: { email: 'free@example.com' }, params: { id: 'project-1' } }, res, jest.fn());
 
     expect(res.status).toHaveBeenCalledWith(402);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
       code: 'SUBSCRIPTION_REQUIRED',
-      message: 'Please subscribe before activating a project.',
+      message: 'Please complete payment before activating this project.',
     });
   });
 

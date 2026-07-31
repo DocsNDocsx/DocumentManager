@@ -200,6 +200,7 @@ describe('stripecontroller', () => {
           collaborators: 2,
           documents: 3,
           days: 20,
+          projectId: 'project-1',
           voucherCode: 'welcome10',
         },
       }, res);
@@ -227,9 +228,10 @@ describe('stripecontroller', () => {
             }),
           })],
         }),
-        { idempotencyKey: 'sub_123_pm_123' },
+        { idempotencyKey: 'sub_123_project-1_pm_123' },
       );
       expect(stripe.subscriptions.create.mock.calls[0][0].metadata).toEqual(expect.objectContaining({
+        projectId: 'project-1',
         voucherCode: 'WELCOME10',
       }));
       expect(pool.query).toHaveBeenLastCalledWith(
@@ -237,6 +239,7 @@ describe('stripecontroller', () => {
         [123],
       );
       expect(pool.query.mock.calls[1][0]).toContain('ON DUPLICATE KEY UPDATE');
+      expect(pool.query.mock.calls[1][1]).toEqual(expect.arrayContaining(['project-1']));
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
         subscriptionId: 'sub_123',
@@ -321,6 +324,7 @@ describe('stripecontroller', () => {
             price_data: expect.objectContaining({ unit_amount: 194 }),
           })],
           metadata: expect.objectContaining({
+            projectId: '',
             type: 'solo',
             projects: '1',
             collaborators: '1',
@@ -328,7 +332,7 @@ describe('stripecontroller', () => {
             days: '20',
           }),
         }),
-        { idempotencyKey: 'sub_123_pm_defaults' },
+        { idempotencyKey: 'sub_123_general_pm_defaults' },
       );
       expect(res.json).toHaveBeenCalledWith({
         success: true,

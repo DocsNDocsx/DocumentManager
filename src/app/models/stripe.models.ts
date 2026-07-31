@@ -22,6 +22,8 @@ export interface CreateSubscriptionRequest {
   collaborators: number;
   documents: number;
   days: number;
+  /** Project being activated by this payment. */
+  projectId?: string | null;
   /** Estimated monthly total shown to the user (informational; server is source of truth). */
   monthlyEstimate: number;
   /** Optional server-validated discount voucher code. */

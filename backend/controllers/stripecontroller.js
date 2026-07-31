@@ -87,6 +87,7 @@ exports.createSubscription = async (req, res) => {
       documents = 1,
       days = 20,
       voucherCode,
+      projectId,
     } = req.body ?? {};
     if (!paymentMethodId) {
       return res.status(400).json({ success: false, message: 'paymentMethodId is required' });
@@ -133,12 +134,13 @@ exports.createSubscription = async (req, res) => {
           collaborators: String(collaborators),
           documents: String(documents),
           days: String(days),
+          projectId: String(projectId || ''),
           voucherCode: normalizedVoucherCode,
         },
         expand: ['latest_invoice.payment_intent'],
       },
       // Guards against duplicate subscriptions if the client retries / returns from 3-D Secure.
-      { idempotencyKey: `sub_${user.userid}_${paymentMethodId}` }
+      { idempotencyKey: `sub_${user.userid}_${projectId || 'general'}_${paymentMethodId}` }
     );
 
     const periodEnd = subscription.current_period_end
@@ -147,20 +149,22 @@ exports.createSubscription = async (req, res) => {
 
     const upsertSubscriptionSql = isMySQL
       ? `INSERT INTO stripe_subscriptions
-           (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (userid, stripe_customer_id, stripe_subscription_id, project_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
            status = VALUES(status),
            amount = VALUES(amount),
+           project_id = VALUES(project_id),
            documents = VALUES(documents),
            current_period_end = VALUES(current_period_end),
            updated_at = CURRENT_TIMESTAMP`
       : `INSERT INTO stripe_subscriptions
-           (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (userid, stripe_customer_id, stripe_subscription_id, project_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (stripe_subscription_id) DO UPDATE SET
            status = EXCLUDED.status,
            amount = EXCLUDED.amount,
+           project_id = EXCLUDED.project_id,
            documents = EXCLUDED.documents,
            current_period_end = EXCLUDED.current_period_end,
            updated_at = CURRENT_TIMESTAMP`;
@@ -168,7 +172,7 @@ exports.createSubscription = async (req, res) => {
     await pool.query(
       upsertSubscriptionSql,
       [
-        user.userid, customerId, subscription.id, type, projects, collaborators, documents, days,
+        user.userid, customerId, subscription.id, projectId || null, type, projects, collaborators, documents, days,
         (unitAmount / 100).toFixed(2), 'usd', subscription.status, periodEnd,
       ]
     );
