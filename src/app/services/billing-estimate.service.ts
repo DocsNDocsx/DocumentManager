@@ -6,6 +6,7 @@ import { TeamProjectDraft } from '../models/team.models';
 const RATE = 0.09;
 const DEFAULT_COLLABORATORS = 1;
 const DEFAULT_DOCUMENTS = 1;
+const BILLING_TIME_ZONE = 'America/New_York';
 
 type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'>;
 
@@ -55,22 +56,48 @@ export class BillingEstimateService {
   private activeDays(deadline: string | null | undefined): number | null {
     if (!deadline) return null;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.datePartsToUtcDay(this.getEasternDateParts(new Date(Date.now())));
 
-    const dueDate = this.parseDeadline(deadline);
-    if (Number.isNaN(dueDate.getTime())) return null;
-    dueDate.setHours(0, 0, 0, 0);
+    const dueDate = this.parseDeadlineToUtcDay(deadline);
+    if (dueDate === null) return null;
 
-    const daysUntilDeadline = Math.ceil((dueDate.getTime() - today.getTime()) / 86_400_000);
+    const daysUntilDeadline = Math.ceil((dueDate - today) / 86_400_000);
     return Math.max(daysUntilDeadline, 1);
   }
 
-  private parseDeadline(deadline: string): Date {
-    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(deadline);
-    if (!dateOnly) return new Date(deadline);
+  private parseDeadlineToUtcDay(deadline: string): number | null {
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(deadline);
+    if (dateOnly) {
+      const [, year, month, day] = dateOnly;
+      return this.datePartsToUtcDay({
+        year: Number(year),
+        month: Number(month),
+        day: Number(day),
+      });
+    }
 
-    const [, year, month, day] = dateOnly;
-    return new Date(Number(year), Number(month) - 1, Number(day));
+    const parsed = new Date(deadline);
+    if (Number.isNaN(parsed.getTime())) return null;
+
+    return this.datePartsToUtcDay(this.getEasternDateParts(parsed));
+  }
+
+  private getEasternDateParts(date: Date): { year: number; month: number; day: number } {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: BILLING_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+
+    return {
+      year: Number(parts.find(part => part.type === 'year')?.value),
+      month: Number(parts.find(part => part.type === 'month')?.value),
+      day: Number(parts.find(part => part.type === 'day')?.value),
+    };
+  }
+
+  private datePartsToUtcDay(parts: { year: number; month: number; day: number }): number {
+    return Date.UTC(parts.year, parts.month - 1, parts.day);
   }
 }

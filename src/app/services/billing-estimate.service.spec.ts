@@ -57,6 +57,27 @@ describe('BillingEstimateService', () => {
     }));
   });
 
+  it('calculates the activation price from projects, collaborators, documents, duration, and rate', () => {
+    const query = service.buildSoloActivationQuery({
+      id: 'priced-project',
+      deadline: '2026-08-03',
+      documents: [
+        { name: 'Resume' },
+        { name: 'Transcript' },
+        { name: 'Cover Letter' },
+      ],
+      expectedCollaborators: 5,
+    } as any);
+
+    expect(query).toEqual(expect.objectContaining({
+      projects: 1,
+      collaborators: 5,
+      documents: 3,
+      days: 4,
+      monthly: '5.40',
+    }));
+  });
+
   it('uses minimum one active day when deadline is today or already passed', () => {
     const today = service.buildSoloActivationQuery({
       id: 'today-project',
@@ -74,6 +95,20 @@ describe('BillingEstimateService', () => {
     expect(today?.['days']).toBe(1);
     expect(past?.['days']).toBe(1);
     expect(today?.['monthly']).toBe('0.09');
+  });
+
+  it('uses Eastern Time when calculating active days', () => {
+    vi.setSystemTime(new Date('2026-07-31T03:30:00Z'));
+    nowSpy.mockReturnValue(new Date('2026-07-31T03:30:00Z').getTime());
+
+    const query = service.buildSoloActivationQuery({
+      id: 'eastern-boundary-project',
+      deadline: '2026-08-01',
+      documents: [{ name: 'Resume' }],
+      expectedCollaborators: 1,
+    } as any);
+
+    expect(query?.['days']).toBe(2);
   });
 
   it('returns null when deadline is missing or invalid', () => {
