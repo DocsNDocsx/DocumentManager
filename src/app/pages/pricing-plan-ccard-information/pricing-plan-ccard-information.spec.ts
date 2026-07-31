@@ -36,6 +36,7 @@ describe('PricingPlanCcardInformationComponent', () => {
   beforeEach(async () => {
     paymentElement = {
       mount: vi.fn(),
+      destroy: vi.fn(),
       on: vi.fn((event: string, cb: () => void) => {
         if (event === 'ready') cb();
       }),

@@ -4,6 +4,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -33,7 +34,7 @@ const VOUCHERS: Record<string, { percentOff: number; label: string }> = {
   styleUrl: './pricing-plan-ccard-information.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PricingPlanCcardInformationComponent implements OnInit, AfterViewInit {
+export class PricingPlanCcardInformationComponent implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
@@ -130,6 +131,10 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     this.mountPaymentElement();
   }
 
+  ngOnDestroy(): void {
+    this.teardownPaymentElement();
+  }
+
   /** Loads Stripe.js and requests a SetupIntent so the card can be collected and saved. */
   private async initStripe(): Promise<void> {
     this.stripe = await this.stripeService.getStripe();
@@ -176,6 +181,13 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     if (!host) return;
     this.paymentElement.mount(host);
     this.paymentElement.on('ready', () => this.stripeReady.set(true));
+  }
+
+  private teardownPaymentElement(): void {
+    this.paymentElement?.destroy();
+    this.paymentElement = null;
+    this.elements = null;
+    this.stripeReady.set(false);
   }
 
   async submitPayment(): Promise<void> {
@@ -351,6 +363,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
 
   private navigateToConfirmation(): void {
     this.processing.set(false);
+    this.teardownPaymentElement();
     this.router.navigate(['/pricing-plan-confirm'], {
       queryParams: {
         type: this.projectType(),
