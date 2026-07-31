@@ -326,6 +326,9 @@ CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   updated_at             TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE stripe_subscriptions
+  ADD COLUMN IF NOT EXISTS documents INT NOT NULL DEFAULT 0;
+
 CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_userid ON stripe_subscriptions (userid);
 
 CREATE OR REPLACE TRIGGER trg_stripe_subscriptions_updated_at
