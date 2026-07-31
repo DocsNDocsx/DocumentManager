@@ -184,7 +184,18 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   }
 
   private teardownPaymentElement(): void {
-    this.paymentElement?.destroy();
+    const host = this.paymentElementRef()?.nativeElement;
+    try {
+      this.paymentElement?.unmount();
+    } catch {
+      // Stripe may already have detached the iframe during navigation.
+    }
+    try {
+      this.paymentElement?.destroy();
+    } catch {
+      // Destruction is best-effort cleanup after payment completion.
+    }
+    host?.replaceChildren();
     this.paymentElement = null;
     this.elements = null;
     this.stripeReady.set(false);
