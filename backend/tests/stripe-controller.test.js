@@ -236,6 +236,7 @@ describe('stripecontroller', () => {
         "UPDATE users SET issubscribed = 'true' WHERE userid = ?",
         [123],
       );
+      expect(pool.query.mock.calls[1][0]).toContain('ON DUPLICATE KEY UPDATE');
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
         subscriptionId: 'sub_123',

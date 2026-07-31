@@ -1,6 +1,8 @@
 const pool = require('../utils/sql');
 const { stripe, computeMonthlyAmountCents, getProductId, getVoucher, normalizeVoucherCode } = require('../utils/stripe');
 
+const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
+
 // The JWT only carries the user's email, so we resolve the authoritative user
 // (and userid) from it here rather than trusting any id sent in the request body.
 async function getUserFromToken(req) {
@@ -143,16 +145,28 @@ exports.createSubscription = async (req, res) => {
       ? new Date(subscription.current_period_end * 1000).toISOString()
       : null;
 
+    const upsertSubscriptionSql = isMySQL
+      ? `INSERT INTO stripe_subscriptions
+           (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           status = VALUES(status),
+           amount = VALUES(amount),
+           documents = VALUES(documents),
+           current_period_end = VALUES(current_period_end),
+           updated_at = CURRENT_TIMESTAMP`
+      : `INSERT INTO stripe_subscriptions
+           (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+           status = EXCLUDED.status,
+           amount = EXCLUDED.amount,
+           documents = EXCLUDED.documents,
+           current_period_end = EXCLUDED.current_period_end,
+           updated_at = CURRENT_TIMESTAMP`;
+
     await pool.query(
-      `INSERT INTO stripe_subscriptions
-         (userid, stripe_customer_id, stripe_subscription_id, type, projects, collaborators, documents, days, amount, currency, status, current_period_end)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (stripe_subscription_id) DO UPDATE SET
-         status = EXCLUDED.status,
-         amount = EXCLUDED.amount,
-         documents = EXCLUDED.documents,
-         current_period_end = EXCLUDED.current_period_end,
-         updated_at = CURRENT_TIMESTAMP`,
+      upsertSubscriptionSql,
       [
         user.userid, customerId, subscription.id, type, projects, collaborators, documents, days,
         (unitAmount / 100).toFixed(2), 'usd', subscription.status, periodEnd,
@@ -169,7 +183,18 @@ exports.createSubscription = async (req, res) => {
       voucherCode: normalizedVoucherCode || null,
     });
   } catch (err) {
-    console.error('Create subscription error:', err.message);
-    res.status(500).json({ success: false, message: 'Could not create subscription' });
+    console.error('Create subscription error:', {
+      message: err.message,
+      type: err.type,
+      code: err.code,
+      statusCode: err.statusCode,
+    });
+
+    const isStripeError = Boolean(err.type || err.rawType || err.statusCode);
+    res.status(isStripeError ? 400 : 500).json({
+      success: false,
+      message: isStripeError ? err.message : 'Could not create subscription',
+      code: err.code || null,
+    });
   }
 };
