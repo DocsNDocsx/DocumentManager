@@ -222,7 +222,8 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.ngOnInit();
     await fixture.whenStable();
     (component as any).stripe = stripe;
-    (component as any).elements = stripe.elements();
+    const elements = stripe.elements();
+    (component as any).elements = elements;
     (component as any).clientSecret = 'seti_secret';
     (component as any).customerId = 'cus_123';
     component.firstName.set('Mridul');
@@ -240,7 +241,9 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     await component.submitPayment();
 
-    expect((component as any).elements.submit).toHaveBeenCalled();
+    expect(elements.submit).toHaveBeenCalled();
+    expect(paymentElement.unmount).toHaveBeenCalled();
+    expect(paymentElement.destroy).toHaveBeenCalled();
     expect(stripeService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({
       userid: '123',
       customerId: 'cus_123',
@@ -296,6 +299,8 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     await component.submitPayment();
 
+    expect(paymentElement.unmount).toHaveBeenCalled();
+    expect(paymentElement.destroy).toHaveBeenCalled();
     const activationReq = http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1`);
     activationReq.flush({ success: false }, { status: 500, statusText: 'Server Error' });
 
@@ -306,7 +311,8 @@ describe('PricingPlanCcardInformationComponent', () => {
 
   it('shows Stripe confirmSetup errors', async () => {
     (component as any).stripe = stripe;
-    (component as any).elements = stripe.elements();
+    const elements = stripe.elements();
+    (component as any).elements = elements;
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
@@ -319,7 +325,7 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     await component.submitPayment();
 
-    expect((component as any).elements.submit).toHaveBeenCalled();
+    expect(elements.submit).toHaveBeenCalled();
     expect(component.validationError()).toBe('Card declined');
     expect(component.processing()).toBe(false);
   });
@@ -368,7 +374,8 @@ describe('PricingPlanCcardInformationComponent', () => {
   it('shows subscription creation errors after card setup', async () => {
     stripeService.createSubscription.mockReturnValueOnce(throwError(() => ({ status: 500 })));
     (component as any).stripe = stripe;
-    (component as any).elements = stripe.elements();
+    const elements = stripe.elements();
+    (component as any).elements = elements;
     (component as any).clientSecret = 'seti_secret';
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');

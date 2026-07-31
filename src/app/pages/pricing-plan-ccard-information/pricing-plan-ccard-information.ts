@@ -270,6 +270,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     }
 
     if (setupIntent?.status === 'succeeded' && typeof setupIntent.payment_method === 'string') {
+      this.teardownPaymentElement();
       this.createSubscriptionAndContinue(setupIntent.payment_method);
     }
     // Otherwise Stripe has redirected the browser for additional authentication;
@@ -314,6 +315,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     const { setupIntent } = await this.stripe.retrieveSetupIntent(clientSecret);
     if (setupIntent?.status === 'succeeded' && typeof setupIntent.payment_method === 'string') {
       this.customerId = this.route.snapshot.queryParamMap.get('customerId') ?? '';
+      this.teardownPaymentElement();
       this.createSubscriptionAndContinue(setupIntent.payment_method);
     } else {
       this.validationError.set('Card setup was not completed. Please try again.');
