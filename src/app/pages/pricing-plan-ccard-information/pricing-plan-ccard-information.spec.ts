@@ -254,6 +254,15 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(activationReq.request.method).toBe('PATCH');
     expect(activationReq.request.body).toEqual({ status: 'active', completedStep: 5 });
     activationReq.flush({ success: true, project: { id: 'team-project-1', status: 'active' } });
+    expect(stripe.confirmSetup).toHaveBeenCalledWith(expect.objectContaining({
+      confirmParams: expect.objectContaining({
+        payment_method_data: expect.objectContaining({
+          billing_details: expect.objectContaining({
+            phone: '',
+          }),
+        }),
+      }),
+    }));
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-confirm'], {
       queryParams: expect.objectContaining({
         type: 'team',
@@ -309,6 +318,25 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     expect((component as any).elements.submit).toHaveBeenCalled();
     expect(component.validationError()).toBe('Card declined');
+    expect(component.processing()).toBe(false);
+  });
+
+  it('shows thrown Stripe integration errors instead of leaving an unhandled promise', async () => {
+    (component as any).stripe = stripe;
+    (component as any).elements = stripe.elements();
+    (component as any).clientSecret = 'seti_secret';
+    component.firstName.set('Mridul');
+    component.lastName.set('Mishra');
+    component.email.set('mridul@example.com');
+    component.address1.set('123 Main St');
+    component.city.set('New York');
+    component.state.set('NY');
+    component.zip.set('10001');
+    stripe.confirmSetup.mockRejectedValueOnce(new Error('Missing billing phone'));
+
+    await component.submitPayment();
+
+    expect(component.validationError()).toBe('Missing billing phone');
     expect(component.processing()).toBe(false);
   });
 

@@ -206,29 +206,39 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       return;
     }
 
-    const { error, setupIntent } = await this.stripe.confirmSetup({
-      elements: this.elements,
-      clientSecret: this.clientSecret,
-      confirmParams: {
-        return_url: this.buildReturnUrl(),
-        payment_method_data: {
-          billing_details: {
-            name: `${this.firstName()} ${this.lastName()}`.trim(),
-            email: this.email(),
-            address: {
-              line1: this.address1(),
-              line2: this.address2() || undefined,
-              city: this.city(),
-              state: this.state(),
-              postal_code: this.zip(),
-              country: this.country(),
+    let confirmResult: any;
+    try {
+      confirmResult = await this.stripe.confirmSetup({
+        elements: this.elements,
+        clientSecret: this.clientSecret,
+        confirmParams: {
+          return_url: this.buildReturnUrl(),
+          payment_method_data: {
+            billing_details: {
+              name: `${this.firstName()} ${this.lastName()}`.trim(),
+              email: this.email(),
+              phone: '',
+              address: {
+                line1: this.address1(),
+                line2: this.address2() || undefined,
+                city: this.city(),
+                state: this.state(),
+                postal_code: this.zip(),
+                country: this.country(),
+              },
             },
           },
         },
-      },
-      // Avoid a full-page redirect unless the bank requires it (e.g. 3-D Secure).
-      redirect: 'if_required',
-    });
+        // Avoid a full-page redirect unless the bank requires it (e.g. 3-D Secure).
+        redirect: 'if_required',
+      });
+    } catch (err: any) {
+      this.validationError.set(err?.message ?? 'We could not confirm your card. Please check the details and try again.');
+      this.processing.set(false);
+      return;
+    }
+
+    const { error, setupIntent } = confirmResult;
 
     if (error) {
       this.validationError.set(error.message ?? 'We could not confirm your card. Please check the details and try again.');
