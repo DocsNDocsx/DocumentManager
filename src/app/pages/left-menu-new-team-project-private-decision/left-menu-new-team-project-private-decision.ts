@@ -94,6 +94,21 @@ export class LeftMenuNewTeamProjectPrivateDecisionComponent implements OnInit {
     this.router.navigate(['/top-menu-team-projects']);
   }
 
+  closeProject(): void {
+    this.wizardService.markComplete().subscribe({
+      next: () => {
+        this.toastMsg.set('Project closed');
+        this.toastVisible.set(true);
+        this.wizardService.reset();
+        this.router.navigate(['/top-menu-team-projects']);
+      },
+      error: () => {
+        this.toastMsg.set('Failed to close project - please try again');
+        this.toastVisible.set(true);
+      },
+    });
+  }
+
   private showSubscribePrompt(): void {
     this.toastMsg.set('Please subscribe before activating a project');
     this.toastVisible.set(true);

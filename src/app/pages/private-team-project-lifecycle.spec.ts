@@ -192,6 +192,37 @@ describe('Private Team Project - Full Lifecycle', () => {
 
       expect(activated?.status).toBe('active');
     });
+
+    it('keeps an active private team project active when editing details', () => {
+      wizardService.project.set(makeDraft({ status: 'active', completedStep: 5, projectCode: null }));
+
+      let updated: TeamProjectDraft | undefined;
+      wizardService.saveDetails({
+        teamId: TEAM_ID,
+        name: '2026 Team Private Research Program - Updated',
+        description: 'Updated private team project details.',
+        deadline: '2027-01-15',
+        type: 'private',
+        supportStaff: makeDraft().supportStaff,
+      }).subscribe(p => (updated = p));
+
+      const req = http.expectOne(`${environment.apiUrl}/teams/projects/${PROJECT_ID}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body.status).toBeUndefined();
+      expect(req.request.body.completedStep).toBe(5);
+      req.flush({
+        success: true,
+        project: makeDraft({
+          name: '2026 Team Private Research Program - Updated',
+          status: 'active',
+          completedStep: 5,
+          projectCode: null,
+        }),
+      });
+
+      expect(updated?.status).toBe('active');
+      expect(wizardService.project()?.status).toBe('active');
+    });
   });
 
   describe('Phase 2 - 25 submissions (5 collaborators x 5 documents)', () => {

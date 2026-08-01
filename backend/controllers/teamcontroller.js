@@ -394,8 +394,16 @@ exports.updateTeamProject = async (req, res) => {
           ...collabRows,
         ];
 
+        if (project.supportStaff?.email) {
+          recipients.push({
+            ...project.supportStaff,
+            firstName: project.supportStaff.firstName,
+            lastName: project.supportStaff.lastName,
+          });
+        }
+
         await Promise.all(
-          recipients.map(c => {
+          recipients.filter(c => c.email).map(c => {
             const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Collaborator';
             const body = template
               .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')

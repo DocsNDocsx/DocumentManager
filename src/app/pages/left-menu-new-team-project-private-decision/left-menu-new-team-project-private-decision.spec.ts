@@ -30,6 +30,7 @@ describe('LeftMenuNewTeamProjectPrivateDecisionComponent', () => {
       }),
       isSaving: signal(false),
       activateProject: vi.fn(() => of({})),
+      markComplete: vi.fn(() => of({ status: 'completed' })),
       reset: vi.fn(),
     };
     billing = { buildTeamActivationQuery: vi.fn(() => ({ type: 'team', monthly: '10.00' })) };
@@ -102,6 +103,18 @@ describe('LeftMenuNewTeamProjectPrivateDecisionComponent', () => {
 
     component.finishEditing();
 
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
+  });
+
+  it('closes an active private team project without activating again', () => {
+    http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1/collaborators`).flush({ success: true, collaborators: [] });
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    component.closeProject();
+
+    expect(wizard.markComplete).toHaveBeenCalled();
     expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(wizard.reset).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);

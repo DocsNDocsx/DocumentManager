@@ -46,7 +46,7 @@ export class ProjectWizardService {
     const body = {
       userid: this.authService.currentUserId(),
       ...data,
-      completedStep: 1,
+      completedStep: this.stepProgress(1),
       type: 'private',
       status: this.project()?.status ?? 'draft',
     };
@@ -62,7 +62,7 @@ export class ProjectWizardService {
     return this.runSave(
       this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, {
         ...data,
-        completedStep: 2,
+        completedStep: this.stepProgress(2),
       }),
       'collaborators',
     );
@@ -72,7 +72,7 @@ export class ProjectWizardService {
     return this.runSave(
       this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, {
         ...data,
-        completedStep: 3,
+        completedStep: this.stepProgress(3),
       }),
       'documents',
     );
@@ -82,7 +82,7 @@ export class ProjectWizardService {
     return this.runSave(
       this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, {
         ...data,
-        completedStep: 4,
+        completedStep: this.stepProgress(4),
       }),
       'assignments',
     );
@@ -100,7 +100,7 @@ export class ProjectWizardService {
       userid: this.authService.currentUserId(),
       ...data,
       expectedCollaborators: parseInt(data.expectedCollaborators) || null,
-      completedStep: 1,
+      completedStep: this.stepProgress(1),
       type: 'public',
       status: this.project()?.status ?? 'draft',
     };
@@ -114,7 +114,7 @@ export class ProjectWizardService {
     return this.runSave(
       this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, {
         ...data,
-        completedStep: 2,
+        completedStep: this.stepProgress(2),
       }),
       'public documents',
     );
@@ -124,7 +124,7 @@ export class ProjectWizardService {
     return this.runSave(
       this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, {
         ...data,
-        completedStep: 5,
+        completedStep: this.stepProgress(5),
       }),
       'staff',
     );
@@ -201,5 +201,9 @@ export class ProjectWizardService {
         complete: () => observer.complete(),
       });
     });
+  }
+
+  private stepProgress(step: number): number {
+    return Math.max(this.project()?.completedStep ?? 0, step);
   }
 }

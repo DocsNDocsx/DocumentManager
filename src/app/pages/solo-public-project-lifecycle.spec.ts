@@ -181,6 +181,7 @@ describe('Solo Public Project — Full Lifecycle', () => {
       const req = http.expectOne(`${environment.apiUrl}/projects/${PROJECT_ID}`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body.status).toBe('active');
+      expect(req.request.body.completedStep).toBe(3);
 
       req.flush({
         success: true,

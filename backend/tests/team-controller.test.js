@@ -258,11 +258,11 @@ describe('teamcontroller', () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
-  it('activates a team project and sends owner plus collaborator notifications', async () => {
+  it.each(['public', 'private'])('activates a team %s project and sends owner, collaborator, and support staff notifications', async (type) => {
     pool.query
-      .mockResolvedValueOnce([[teamProjectRow({ status: 'draft', project_code: null })]])
+      .mockResolvedValueOnce([[teamProjectRow({ type, status: 'draft', project_code: null })]])
       .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([[teamProjectRow({ status: 'active', project_code: 'ABCD-2345' })]])
+      .mockResolvedValueOnce([[teamProjectRow({ type, status: 'active', project_code: 'ABCD-2345' })]])
       .mockResolvedValueOnce([[{ firstName: 'Ava', lastName: 'Ray', email: 'ava@example.com' }]])
       .mockResolvedValueOnce([[{ firstName: 'Owner', lastName: 'User', email: 'owner@example.com' }]]);
     sendEmail.mockResolvedValue(undefined);
@@ -288,6 +288,12 @@ describe('teamcontroller', () => {
       'DocsNDocs: Your team project "Team Intake" is now active',
       expect.stringContaining('Owner User'),
     );
+    expect(sendEmail).toHaveBeenCalledWith(
+      'support@example.com',
+      'DocsNDocs: "Team Intake" is now active - submit your documents',
+      expect.stringContaining('Support Staff'),
+    );
+    expect(sendEmail).toHaveBeenCalledTimes(3);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       project: expect.objectContaining({ status: 'active', projectCode: 'ABCD-2345' }),

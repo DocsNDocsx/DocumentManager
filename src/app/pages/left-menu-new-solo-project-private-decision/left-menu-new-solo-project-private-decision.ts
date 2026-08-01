@@ -126,6 +126,17 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
     this.router.navigate(['/top-menu-solo-projects']);
   }
 
+  closeProject(): void {
+    this.wizardService.closeProject().subscribe({
+      next: () => {
+        this.showToast('Project closed');
+        this.wizardService.reset();
+        this.router.navigate(['/top-menu-solo-projects']);
+      },
+      error: () => this.showToast('Failed to close project - please try again'),
+    });
+  }
+
   saveAsDraft(): void {
     this.logger.debug('Saving project as draft from decision step');
     this.showToast('Project saved as draft');

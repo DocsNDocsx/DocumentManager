@@ -25,6 +25,7 @@ describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
         documents: [{ name: 'Resume' }],
       }),
       activateProject: vi.fn(() => of({ projectCode: 'TEAM-PUB-1' })),
+      markComplete: vi.fn(() => of({ status: 'completed' })),
       reset: vi.fn(),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
@@ -82,6 +83,17 @@ describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
 
     component.finishEditing();
 
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
+  });
+
+  it('closes an active public team project without activating again', () => {
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    component.closeProject();
+
+    expect(wizard.markComplete).toHaveBeenCalled();
     expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(wizard.reset).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);

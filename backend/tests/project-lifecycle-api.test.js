@@ -417,6 +417,11 @@ describe('project lifecycle backend APIs', () => {
     expect(activateRes.json.mock.calls[0][0].project.status).toBe('active');
     expect(activateRes.json.mock.calls[0][0].project.projectCode).toEqual(type === 'public' ? expect.any(String) : null);
     expect(logActivity).toHaveBeenCalledWith('123', 'settings', 'Project "Solo Lifecycle" was activated', null, 'Solo Lifecycle');
+    expect(sendEmail).toHaveBeenCalledWith(
+      'support@example.com',
+      'DocsNDocs: "Solo Lifecycle" is now active',
+      expect.stringContaining('Support Staff'),
+    );
 
     const submitRes = mockResponse();
     await submissionController.createSubmission({
@@ -499,6 +504,11 @@ describe('project lifecycle backend APIs', () => {
 
     expect(activateRes.json.mock.calls[0][0].project.status).toBe('active');
     expect(activateRes.json.mock.calls[0][0].project.projectCode).toEqual(expect.any(String));
+    expect(sendEmail).toHaveBeenCalledWith(
+      'support@example.com',
+      'DocsNDocs: "Team Lifecycle" is now active - submit your documents',
+      expect.stringContaining('Support Staff'),
+    );
 
     const submitRes = mockResponse();
     await teamSubmissionController.createSubmission({

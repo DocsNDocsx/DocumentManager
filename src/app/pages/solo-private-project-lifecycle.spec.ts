@@ -171,6 +171,35 @@ describe('Solo Private Project - Full Lifecycle', () => {
       expect(activated?.status).toBe('active');
       expect(activated?.projectCode).toBeNull();
     });
+
+    it('keeps an active private project active when editing details', () => {
+      wizardService.project.set(makeProject({ status: 'active', completedStep: 6, projectCode: null }));
+
+      let updated: Project | undefined;
+      wizardService.saveDetails({
+        name: 'Updated Solo Private Research Program',
+        description: 'Updated private project details.',
+        deadline: '2027-01-15',
+        attachments: [],
+      }).subscribe(p => (updated = p));
+
+      const req = http.expectOne(`${environment.apiUrl}/projects/${PROJECT_ID}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body.status).toBe('active');
+      expect(req.request.body.completedStep).toBe(6);
+      req.flush({
+        success: true,
+        project: makeProject({
+          name: 'Updated Solo Private Research Program',
+          status: 'active',
+          completedStep: 6,
+          projectCode: null,
+        }),
+      });
+
+      expect(updated?.status).toBe('active');
+      expect(wizardService.project()?.status).toBe('active');
+    });
   });
 
   describe('Phase 2 - 25 submissions (5 collaborators x 5 documents)', () => {
@@ -238,6 +267,21 @@ describe('Solo Private Project - Full Lifecycle', () => {
       req.flush({ success: true, project: makeProject({ status: 'completed', completedStep: 6 }) });
 
       expect(finalProject?.status).toBe('completed');
+    });
+
+    it('closeProject sends PATCH with status=completed', () => {
+      wizardService.project.set(makeProject({ status: 'active', completedStep: 6, projectCode: null }));
+
+      let closed: Project | undefined;
+      wizardService.closeProject().subscribe(p => (closed = p));
+
+      const req = http.expectOne(`${environment.apiUrl}/projects/${PROJECT_ID}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body.status).toBe('completed');
+      req.flush({ success: true, project: makeProject({ status: 'completed', completedStep: 6 }) });
+
+      expect(closed?.status).toBe('completed');
+      expect(wizardService.project()?.status).toBe('completed');
     });
   });
 

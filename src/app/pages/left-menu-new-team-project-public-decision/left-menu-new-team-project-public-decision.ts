@@ -103,6 +103,21 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
     this.router.navigate(['/top-menu-team-projects']);
   }
 
+  closeProject(): void {
+    this.teamWizardService.markComplete().subscribe({
+      next: () => {
+        this.toastMsg.set('Project closed');
+        this.toastVisible.set(true);
+        this.teamWizardService.reset();
+        this.router.navigate(['/top-menu-team-projects']);
+      },
+      error: () => {
+        this.toastMsg.set('Failed to close project - please try again');
+        this.toastVisible.set(true);
+      },
+    });
+  }
+
   saveAsDraft(): void {
     this.teamWizardService.reset();
     this.router.navigate(['/top-menu-team-projects']);

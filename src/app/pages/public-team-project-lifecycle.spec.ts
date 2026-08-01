@@ -253,6 +253,37 @@ describe('Public Team Project — Full Lifecycle', () => {
       expect(wizardService.projectCode()).toBe(PROJECT_CODE);
     });
 
+    it('keeps an active public team project active when editing details', () => {
+      wizardService.project.set(makeDraft({ status: 'active', completedStep: 3, projectCode: PROJECT_CODE }));
+
+      let updated: TeamProjectDraft | undefined;
+      wizardService.saveDetails({
+        teamId: TEAM_ID,
+        name: '2026 Graduate Research Program - Updated',
+        description: 'Updated public application.',
+        deadline: '2027-01-15',
+        type: 'public',
+        expectedCollaborators: 5,
+      }).subscribe(p => (updated = p));
+
+      const req = http.expectOne(`${environment.apiUrl}/teams/projects/${PROJECT_ID}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body.status).toBeUndefined();
+      expect(req.request.body.completedStep).toBe(3);
+      req.flush({
+        success: true,
+        project: makeDraft({
+          name: '2026 Graduate Research Program - Updated',
+          status: 'active',
+          completedStep: 3,
+          projectCode: PROJECT_CODE,
+        }),
+      });
+
+      expect(updated?.status).toBe('active');
+      expect(wizardService.project()?.status).toBe('active');
+    });
+
     it('full wizard flow: details → documents → activate (sequential)', () => {
       const results: TeamProjectDraft[] = [];
 

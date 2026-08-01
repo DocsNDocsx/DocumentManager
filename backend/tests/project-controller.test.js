@@ -257,6 +257,43 @@ describe('projectcontroller', () => {
     });
   });
 
+  it('activates a private solo project and emails support staff without generating a project code', async () => {
+    const activeRow = projectRow({
+      status: 'active',
+      type: 'private',
+      completed_step: 6,
+      project_code: null,
+    });
+    pool.query
+      .mockResolvedValueOnce([[{
+        type: 'private',
+        ownerEmail: 'owner@example.com',
+        ownerFirstName: 'Owner',
+        ownerLastName: 'User',
+      }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[activeRow]]);
+    sendEmail.mockResolvedValue(undefined);
+    const res = mockResponse();
+
+    await projectController.activateProject({ params: { id: 'project-1' } }, res);
+
+    expect(pool.query).toHaveBeenNthCalledWith(
+      2,
+      "UPDATE projects SET status = 'active', completed_step = 6, project_code = ? WHERE id = ?",
+      [null, 'project-1'],
+    );
+    expect(sendEmail).toHaveBeenCalledWith(
+      'sam@example.com',
+      'DocsNDocs: "Research Intake" is now active',
+      expect.stringContaining('Sam Staff'),
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      project: expect.objectContaining({ status: 'active', projectCode: null }),
+    });
+  });
+
   it('returns 404 when activating or deleting a missing project', async () => {
     pool.query.mockResolvedValueOnce([[]]);
     const activateRes = mockResponse();

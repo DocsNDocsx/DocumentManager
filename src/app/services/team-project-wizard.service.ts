@@ -43,7 +43,7 @@ export class TeamProjectWizardService {
       userId: this.authService.currentUserId(),
       ...data,
       type: data.type ?? 'private',
-      completedStep: 1,
+      completedStep: this.stepProgress(1),
       supportStaff: data.supportStaff ?? null,
     };
 
@@ -84,7 +84,7 @@ export class TeamProjectWizardService {
     return this.runSave(
       this.http.patch<TeamProjectDraftApiResponse>(
         `${environment.apiUrl}/teams/projects/${id}`,
-        { completedStep: 4 },
+        { completedStep: this.stepProgress(4) },
       ),
       'assignments',
     );
@@ -97,7 +97,7 @@ export class TeamProjectWizardService {
     return this.runSave(
       this.http.patch<TeamProjectDraftApiResponse>(
         `${environment.apiUrl}/teams/projects/${id}`,
-        { status: 'active', completedStep: 5 },
+        { status: 'active', completedStep: this.stepProgress(5) },
       ),
       'activation',
     );
@@ -160,5 +160,9 @@ export class TeamProjectWizardService {
         complete: () => observer.complete(),
       });
     });
+  }
+
+  private stepProgress(step: number): number {
+    return Math.max(this.project()?.completedStep ?? 0, step);
   }
 }

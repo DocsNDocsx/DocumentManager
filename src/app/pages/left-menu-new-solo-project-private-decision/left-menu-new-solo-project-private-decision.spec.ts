@@ -28,6 +28,7 @@ describe('LeftMenuNewSoloProjectPrivateDecisionComponent', () => {
         staff: { firstName: 'Sam', lastName: 'Staff', email: 'sam@example.com', affiliation: 'Support' },
       }),
       activateProject: vi.fn(() => of({})),
+      closeProject: vi.fn(() => of({ status: 'completed' })),
       saveDraft: vi.fn(() => of({})),
       cancelProject: vi.fn(() => of({})),
       reset: vi.fn(),
@@ -84,6 +85,17 @@ describe('LeftMenuNewSoloProjectPrivateDecisionComponent', () => {
 
     component.finishEditing();
 
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);
+  });
+
+  it('closes an active private project without activating again', () => {
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    component.closeProject();
+
+    expect(wizard.closeProject).toHaveBeenCalled();
     expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(wizard.reset).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);
