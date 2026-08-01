@@ -133,7 +133,10 @@ export class CollaboratorViewComponent implements OnInit {
     // assignments keys are always strings in JSON (e.g. "0", "1") even though
     // collabIndex arrives as a number — String() ensures the lookup matches.
     const assignedIndices: number[] = project.assignments?.[String(collabIndex)] ?? [];
-    const slots: DocumentSlot[] = assignedIndices.map(docIdx => {
+    const documentIndices = project.type === 'public' && assignedIndices.length === 0
+      ? project.documents.map((_, index) => index)
+      : assignedIndices;
+    const slots: DocumentSlot[] = documentIndices.map(docIdx => {
       const pd = project.documents[docIdx];
       const sub = submissions.find(s => s.document_index === docIdx);
       return {

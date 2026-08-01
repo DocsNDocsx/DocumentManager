@@ -1,0 +1,88 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
+import { RouterModule } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { vi } from 'vitest';
+import { CollaboratorViewComponent } from './collaborator-view';
+import { LoggingService } from '../../services/logging.service';
+import { environment } from '../../../environments/environment';
+import { Project } from '../../models/project.models';
+
+describe('CollaboratorViewComponent', () => {
+  let fixture: ComponentFixture<CollaboratorViewComponent>;
+  let component: CollaboratorViewComponent;
+  let http: HttpTestingController;
+
+  const project: Project = {
+    id: 'project-1',
+    userId: 'owner-1',
+    name: 'Public Project',
+    description: null,
+    deadline: '2026-09-15',
+    attachments: [],
+    collaborators: [{ firstName: 'Join', lastName: 'User', email: 'join@example.com', affiliation: 'Org' }],
+    documents: [
+      { name: 'Resume', fileTypes: ['PDF'], maxSize: '5', sizeUnit: 'MB', templateName: '' },
+      { name: 'Transcript', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },
+    ],
+    assignments: {},
+    staff: null,
+    expectedCollaborators: 10,
+    projectCode: 'PRJ-ABCD-2345',
+    completedStep: 6,
+    status: 'active',
+    type: 'public',
+    createdAt: '2026-07-31T00:00:00.000Z',
+    updatedAt: '2026-07-31T00:00:00.000Z',
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [CollaboratorViewComponent, RouterModule.forRoot([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: {
+                get: (key: string) => key === 'projectId' ? 'project-1' : '0',
+              },
+            },
+          },
+        },
+        {
+          provide: LoggingService,
+          useValue: {
+            debug: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CollaboratorViewComponent);
+    component = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+  });
+
+  it('shows all document upload slots for public projects without assignments', () => {
+    fixture.detectChanges();
+
+    http.expectOne(`${environment.apiUrl}/projects/project-1`)
+      .flush({ success: true, project });
+    http.expectOne(`${environment.apiUrl}/projects/project-1/submissions?collabIndex=0`)
+      .flush({ success: true, submissions: [] });
+
+    expect(component.totalCount()).toBe(2);
+    expect(component.documents().map(d => d.title)).toEqual(['Resume', 'Transcript']);
+  });
+});
