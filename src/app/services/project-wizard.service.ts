@@ -48,7 +48,7 @@ export class ProjectWizardService {
       ...data,
       completedStep: 1,
       type: 'private',
-      status: 'draft',
+      status: this.project()?.status ?? 'draft',
     };
 
     const req$ = this.projectId()
@@ -102,7 +102,7 @@ export class ProjectWizardService {
       expectedCollaborators: parseInt(data.expectedCollaborators) || null,
       completedStep: 1,
       type: 'public',
-      status: 'draft',
+      status: this.project()?.status ?? 'draft',
     };
     const req$ = this.projectId()
       ? this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, body)
@@ -161,6 +161,14 @@ export class ProjectWizardService {
     return this.runSave(
       this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}/cancel`, {}),
       'cancellation',
+    );
+  }
+
+  closeProject(): Observable<Project> {
+    this.logger.info('Closing project', { projectId: this.projectId() });
+    return this.runSave(
+      this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, { status: 'completed' }),
+      'closure',
     );
   }
 

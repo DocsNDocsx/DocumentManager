@@ -175,7 +175,9 @@
         <button class="btn-action btn-cancel" type="button" (click)="onCancel()">
           <i class="fas fa-times" aria-hidden="true"></i> Cancel
         </button>
-        <button class="btn-action btn-draft" type="button" [disabled]="!isFormValid()">
+        <button class="btn-action btn-draft" type="button"
+          (click)="onSaveDraft()"
+          [disabled]="!isFormValid() || teamWizardService.isSaving() || isUploading()">
           <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
         </button>
       </div>

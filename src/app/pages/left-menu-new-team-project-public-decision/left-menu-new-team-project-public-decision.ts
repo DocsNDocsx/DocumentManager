@@ -103,9 +103,15 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
     this.router.navigate(['/top-menu-team-projects']);
   }
 
-  saveAsDraft(): void {}
+  saveAsDraft(): void {
+    this.teamWizardService.reset();
+    this.router.navigate(['/top-menu-team-projects']);
+  }
 
-  cancelProject(): void {}
+  cancelProject(): void {
+    this.teamWizardService.reset();
+    this.router.navigate(['/left-menu-new-team-project-landing']);
+  }
 
   goBack(): void {
     this.router.navigate(['/new-team-project/public/documents']);

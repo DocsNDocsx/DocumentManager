@@ -178,6 +178,25 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
     });
   }
 
+  onSaveDraft(): void {
+    if (!this.isFormValid() || this.teamWizardService.isSaving() || this.isUploading()) return;
+    this.teamWizardService.teamName.set(this.selectedTeamName());
+    this.teamWizardService.saveDetails({
+      teamId: this.selectedTeamId(),
+      name: this.projectName().trim(),
+      description: this.projectDescription().trim(),
+      deadline: this.projectDeadline(),
+      attachments: this.uploadedFiles(),
+    }).subscribe({
+      next: project => {
+        if (!this.route.parent?.snapshot.paramMap.get('projectId')) {
+          this.router.navigate(['/new-team-project/private', project.id, 'details'], { replaceUrl: true });
+        }
+      },
+      error: () => { /* error displayed via teamWizardService.saveError() */ },
+    });
+  }
+
   onCancel(): void {
     this.router.navigate(['/left-menu-new-team-project-landing']);
   }

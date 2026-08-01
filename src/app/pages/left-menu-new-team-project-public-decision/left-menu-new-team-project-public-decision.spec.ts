@@ -86,4 +86,18 @@ describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
     expect(wizard.reset).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
   });
+
+  it('saves decision as draft by returning to team projects', () => {
+    component.saveAsDraft();
+
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
+  });
+
+  it('cancels public team project setup back to team landing', () => {
+    component.cancelProject();
+
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/left-menu-new-team-project-landing']);
+  });
 });

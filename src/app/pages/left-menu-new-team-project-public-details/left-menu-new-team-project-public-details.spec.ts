@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
@@ -9,6 +9,7 @@ import { LeftMenuNewTeamProjectPublicDetailsComponent } from './left-menu-new-te
 import { TeamsService } from '../../services/teams.service';
 import { Team } from '../../models/team.models';
 import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
+import { environment } from '../../../environments/environment';
 
 const MOCK_TEAMS: Team[] = [
   {
@@ -53,6 +54,7 @@ function mockTeamsService(teams: Team[] = MOCK_TEAMS): Partial<TeamsService> {
 describe('LeftMenuNewTeamProjectPublicDetailsComponent', () => {
   let component: LeftMenuNewTeamProjectPublicDetailsComponent;
   let fixture: ComponentFixture<LeftMenuNewTeamProjectPublicDetailsComponent>;
+  let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -79,6 +81,7 @@ describe('LeftMenuNewTeamProjectPublicDetailsComponent', () => {
 
     fixture = TestBed.createComponent(LeftMenuNewTeamProjectPublicDetailsComponent);
     component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
     await fixture.whenStable();
   });
 
@@ -198,5 +201,57 @@ describe('LeftMenuNewTeamProjectPublicDetailsComponent', () => {
 
     component.closeDropdown();
     expect(component.dropdownOpen()).toBe(false);
+  });
+
+  it('saveAsDraft creates a new public team draft and redirects into the draft URL', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockImplementation(() => Promise.resolve(true));
+
+    component.selectedTeamId.set('team-001');
+    component.projectName.set('Team Public Draft');
+    component.projectDescription.set('Saved from details page');
+    component.projectDeadline.set('2027-12-31');
+    component.expectedCollaborators.set('7');
+
+    component.saveAsDraft();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/teams/projects`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(expect.objectContaining({
+      teamId: 'team-001',
+      name: 'Team Public Draft',
+      description: 'Saved from details page',
+      deadline: '2027-12-31',
+      type: 'public',
+      expectedCollaborators: 7,
+      completedStep: 1,
+    }));
+
+    req.flush({
+      success: true,
+      project: {
+        id: 'team-public-draft-1',
+        teamId: 'team-001',
+        name: 'Team Public Draft',
+        description: 'Saved from details page',
+        deadline: '2027-12-31',
+        status: 'draft',
+        type: 'public',
+        completedStep: 1,
+        expectedCollaborators: 7,
+        projectCode: null,
+        documents: [],
+        attachments: [],
+        supportStaff: null,
+        createdAt: '2026-08-01T00:00:00.000Z',
+        updatedAt: '2026-08-01T00:00:00.000Z',
+      },
+    });
+
+    expect(component.toastMsg()).toBe('Project saved as draft');
+    expect(navigateSpy).toHaveBeenCalledWith(
+      ['/new-team-project/public', 'team-public-draft-1', 'details'],
+      { replaceUrl: true },
+    );
   });
 });

@@ -1,0 +1,467 @@
+{
+  "name": "Solo Private Project - Backend API Lifecycle",
+  "description": "End-to-end API flow for creating, configuring, activating, submitting, reviewing, completing, and cleaning up a solo private project.",
+  "baseUrlVariable": "apiUrl",
+  "auth": {
+    "login": {
+      "method": "POST",
+      "path": "/auth/login",
+      "body": {
+        "emailVariable": "TEST_EMAIL",
+        "passwordVariable": "TEST_PASSWORD"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "token": "string",
+          "userid": "present"
+        }
+      },
+      "save": {
+        "token": "body.token",
+        "userId": "body.userid"
+      }
+    }
+  },
+  "project": {
+    "create": {
+      "method": "POST",
+      "path": "/projects",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "userid": "{{userId}}",
+        "name": "API Solo Private Lifecycle Project",
+        "description": "Created by API lifecycle test for solo private project coverage.",
+        "deadline": "2027-12-31",
+        "type": "private",
+        "collaborators": [],
+        "documents": [],
+        "assignments": {},
+        "attachments": [],
+        "staff": null
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "success": true,
+          "project.type": "private",
+          "project.status": "draft",
+          "project.completedStep": 1,
+          "project.projectCode": null
+        }
+      },
+      "save": {
+        "projectId": "body.project.id"
+      }
+    },
+    "collaborators": {
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "completedStep": 2,
+        "collaborators": [
+          {
+            "firstName": "Alice",
+            "lastName": "Tester",
+            "email": "alice.private-api@docsndocs.test",
+            "affiliation": "QA Department"
+          },
+          {
+            "firstName": "Bob",
+            "lastName": "Reviewer",
+            "email": "bob.private-api@docsndocs.test",
+            "affiliation": "Engineering"
+          }
+        ]
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "project.collaborators.length": 2,
+          "project.completedStep": 2
+        }
+      }
+    },
+    "documents": {
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "completedStep": 3,
+        "documents": [
+          {
+            "name": "Resume",
+            "fileTypes": [
+              "PDF"
+            ],
+            "maxSize": "10",
+            "sizeUnit": "MB",
+            "templateName": "",
+            "required": true
+          },
+          {
+            "name": "Cover Letter",
+            "fileTypes": [
+              "PDF",
+              "DOCX"
+            ],
+            "maxSize": "5",
+            "sizeUnit": "MB",
+            "templateName": "",
+            "required": true
+          },
+          {
+            "name": "Transcript",
+            "fileTypes": [
+              "PDF"
+            ],
+            "maxSize": "15",
+            "sizeUnit": "MB",
+            "templateName": "",
+            "required": true
+          }
+        ]
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "project.documents.length": 3,
+          "project.completedStep": 3
+        }
+      }
+    },
+    "assignments": {
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "completedStep": 4,
+        "assignments": {
+          "0": [
+            0,
+            1,
+            2
+          ],
+          "1": [
+            0,
+            1,
+            2
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "project.assignments.0.length": 3,
+          "project.assignments.1.length": 3,
+          "project.completedStep": 4
+        }
+      }
+    },
+    "supportStaff": {
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "completedStep": 5,
+        "staff": {
+          "firstName": "Diana",
+          "lastName": "Support",
+          "email": "diana.private-api@docsndocs.test",
+          "affiliation": "Graduate Admissions"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "project.staff.email": "diana.private-api@docsndocs.test",
+          "project.completedStep": 5
+        }
+      }
+    },
+    "paymentBeforeActivation": {
+      "note": "PATCH /projects/{{projectId}}/activate requires an active Stripe subscription linked to this project. In local integration tests, either seed stripe_subscriptions for {{projectId}} or complete /stripe/setup-intent and /stripe/subscription first.",
+      "subscriptionRequiredResponse": {
+        "method": "PATCH",
+        "path": "/projects/{{projectId}}/activate",
+        "headers": {
+          "Authorization": "Bearer {{token}}"
+        },
+        "expect": {
+          "status": 402,
+          "body": {
+            "success": false,
+            "message": "Subscription required"
+          }
+        }
+      },
+      "seedSubscriptionForLocalIntegration": {
+        "table": "stripe_subscriptions",
+        "values": {
+          "user_id": "{{userId}}",
+          "project_id": "{{projectId}}",
+          "project_type": "solo",
+          "status": "active",
+          "amount": 0.54,
+          "collaborators": 2,
+          "documents": 3,
+          "active_days": 1
+        }
+      }
+    },
+    "activate": {
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}/activate",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "project.status": "active",
+          "project.completedStep": 6,
+          "project.type": "private",
+          "project.projectCode": null
+        }
+      }
+    },
+    "getActivated": {
+      "method": "GET",
+      "path": "/projects/{{projectId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "project.status": "active",
+          "project.collaborators.length": 2,
+          "project.documents.length": 3,
+          "project.projectCode": null
+        }
+      }
+    }
+  },
+  "submissions": [
+    {
+      "name": "Alice uploads Resume",
+      "method": "POST",
+      "path": "/projects/{{projectId}}/submissions",
+      "contentType": "multipart/form-data",
+      "body": {
+        "collabIndex": 0,
+        "docIndex": 0,
+        "fileFixture": "files/sample-resume.pdf"
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "success": true,
+          "submission.status": "submitted",
+          "submission.collaborator_index": 0,
+          "submission.document_index": 0
+        }
+      },
+      "save": {
+        "aliceResumeSubmissionId": "body.submission.id"
+      }
+    },
+    {
+      "name": "Owner approves Alice Resume",
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}/submissions/{{aliceResumeSubmissionId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "status": "approved",
+        "feedback": "Accepted"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "submission.status": "approved"
+        }
+      }
+    },
+    {
+      "name": "Bob uploads Transcript",
+      "method": "POST",
+      "path": "/projects/{{projectId}}/submissions",
+      "contentType": "multipart/form-data",
+      "body": {
+        "collabIndex": 1,
+        "docIndex": 2,
+        "fileFixture": "files/sample-transcript.pdf"
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "success": true,
+          "submission.status": "submitted",
+          "submission.collaborator_index": 1,
+          "submission.document_index": 2
+        }
+      },
+      "save": {
+        "bobTranscriptSubmissionId": "body.submission.id"
+      }
+    },
+    {
+      "name": "Owner requests revision for Bob Transcript",
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}/submissions/{{bobTranscriptSubmissionId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "status": "revision",
+        "feedback": "Please upload the latest transcript."
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "submission.status": "revision"
+        }
+      }
+    },
+    {
+      "name": "Bob resubmits Transcript",
+      "method": "POST",
+      "path": "/projects/{{projectId}}/submissions",
+      "contentType": "multipart/form-data",
+      "body": {
+        "collabIndex": 1,
+        "docIndex": 2,
+        "fileFixture": "files/sample-transcript-revised.pdf"
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "success": true,
+          "submission.status": "submitted"
+        }
+      }
+    },
+    {
+      "name": "Owner fetches all submissions",
+      "method": "GET",
+      "path": "/projects/{{projectId}}/submissions",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "submissions.lengthAtLeast": 2
+        }
+      }
+    }
+  ],
+  "complete": {
+    "method": "PATCH",
+    "path": "/projects/{{projectId}}",
+    "headers": {
+      "Authorization": "Bearer {{token}}"
+    },
+    "body": {
+      "status": "completed"
+    },
+    "expect": {
+      "status": 200,
+      "body": {
+        "success": true,
+        "project.status": "completed"
+      }
+    }
+  },
+  "negativeCases": [
+    {
+      "name": "Create project without token is rejected",
+      "method": "POST",
+      "path": "/projects",
+      "body": {
+        "userid": "{{userId}}",
+        "name": "Unauthorized Project",
+        "type": "private"
+      },
+      "expect": {
+        "status": 401
+      }
+    },
+    {
+      "name": "Activate without subscription is rejected",
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}/activate",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "precondition": "No active stripe_subscriptions row exists for {{projectId}}.",
+      "expect": {
+        "status": 402
+      }
+    },
+    {
+      "name": "Submission without file is rejected",
+      "method": "POST",
+      "path": "/projects/{{projectId}}/submissions",
+      "body": {
+        "collabIndex": 0,
+        "docIndex": 0
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "success": false,
+          "message": "No file uploaded"
+        }
+      }
+    },
+    {
+      "name": "Invalid review status is rejected",
+      "method": "PATCH",
+      "path": "/projects/{{projectId}}/submissions/{{aliceResumeSubmissionId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "status": "pending"
+      },
+      "expect": {
+        "status": 400
+      }
+    }
+  ],
+  "cleanup": {
+    "deleteProject": {
+      "method": "DELETE",
+      "path": "/projects/{{projectId}}",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "expect": {
+        "status": 200
+      }
+    }
+  }
+}

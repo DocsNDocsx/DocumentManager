@@ -15,8 +15,9 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
   beforeEach(async () => {
     wizard = {
       isSaving: signal(false),
+      projectId: signal('new-project'),
       project: signal<any>({ documents: [] }),
-      savePublicDocuments: vi.fn(() => of({})),
+      savePublicDocuments: vi.fn(() => of({ id: 'new-project' })),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
 
@@ -47,7 +48,7 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
     component.continue();
 
     expect(wizard.savePublicDocuments).toHaveBeenCalledWith({ documents: component.documents() });
-    expect(router.navigate).toHaveBeenCalledWith(['/new-solo-project/public/decision']);
+    expect(router.navigate).toHaveBeenCalledWith(['/new-solo-project/public', 'new-project', 'decision']);
   });
 
   it('blocks invalid document counts and invalid documents', () => {

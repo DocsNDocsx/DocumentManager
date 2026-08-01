@@ -41,7 +41,7 @@ describe('LeftMenuNewSoloProjectPrivateDetailsComponent', () => {
         attachments: [{ name: 'old.pdf', size: '1 KB', iconClass: 'fa-file-pdf' }],
       }),
       loadDraft: vi.fn(() => of({})),
-      saveDetails: vi.fn(() => of({})),
+      saveDetails: vi.fn(() => of({ id: 'new-private-project' })),
       saveDraft: vi.fn(() => of({})),
       reset: vi.fn(() => wizard.project.set(null)),
     };
@@ -131,6 +131,44 @@ describe('LeftMenuNewSoloProjectPrivateDetailsComponent', () => {
       attachments: component.uploadedFiles(),
     });
     expect(router.navigate).toHaveBeenCalledWith(['../collaborators'], expect.anything());
+  });
+
+  it('saveAsDraft creates a new private draft and redirects into the draft URL', () => {
+    routeProjectId = null;
+    createComponent();
+    component.projectName.set('New Private Draft');
+    component.projectDescription.set('Saved from details page');
+    component.projectDeadline.set('2027-12-31');
+
+    component.saveAsDraft();
+
+    expect(wizard.saveDetails).toHaveBeenCalledWith({
+      name: 'New Private Draft',
+      description: 'Saved from details page',
+      deadline: '2027-12-31',
+      attachments: [],
+    });
+    expect(component.toastMsg()).toBe('Project saved as draft');
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/new-solo-project/private', 'new-private-project', 'details'],
+      { replaceUrl: true },
+    );
+  });
+
+  it('saveAsDraft updates an existing private draft without redirecting', () => {
+    component.saveAsDraft();
+
+    expect(wizard.saveDetails).toHaveBeenCalledWith({
+      name: 'Existing Project',
+      description: 'Existing description',
+      deadline: '2026-09-15',
+      attachments: component.uploadedFiles(),
+    });
+    expect(component.toastMsg()).toBe('Project saved as draft');
+    expect(router.navigate).not.toHaveBeenCalledWith(
+      ['/new-solo-project/private', 'new-private-project', 'details'],
+      expect.anything(),
+    );
   });
 
   it('does not save while invalid or uploading', () => {

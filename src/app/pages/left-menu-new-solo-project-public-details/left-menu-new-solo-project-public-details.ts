@@ -237,7 +237,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
       expectedCollaborators: this.expectedCollaborators(),
       staff,
     }).subscribe({
-      next: () => this.router.navigate(['/new-solo-project/public/documents']),
+      next: project => this.router.navigate(['/new-solo-project/public', project.id, 'documents']),
       error: () => {},
     });
   }

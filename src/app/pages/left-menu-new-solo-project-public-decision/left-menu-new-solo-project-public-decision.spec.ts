@@ -17,6 +17,7 @@ describe('LeftMenuNewSoloProjectPublicDecisionComponent', () => {
   beforeEach(async () => {
     wizard = {
       isSaving: signal(false),
+      projectId: signal('new-project'),
       projectCode: signal('PUB-123'),
       project: signal<any>({
         name: 'Public Project',
@@ -27,6 +28,7 @@ describe('LeftMenuNewSoloProjectPublicDecisionComponent', () => {
         staff: null,
       }),
       activateProject: vi.fn(() => of({ projectCode: 'PUB-123' })),
+      closeProject: vi.fn(() => of({ status: 'completed' })),
       saveDraft: vi.fn(() => of({})),
       cancelProject: vi.fn(() => of({})),
       reset: vi.fn(),
@@ -88,6 +90,17 @@ describe('LeftMenuNewSoloProjectPublicDecisionComponent', () => {
 
     component.finishEditing();
 
+    expect(wizard.activateProject).not.toHaveBeenCalled();
+    expect(wizard.reset).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);
+  });
+
+  it('closes an active public project without activating again', () => {
+    wizard.project.update((project: any) => ({ ...project, status: 'active' }));
+
+    component.closeProject();
+
+    expect(wizard.closeProject).toHaveBeenCalled();
     expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(wizard.reset).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);

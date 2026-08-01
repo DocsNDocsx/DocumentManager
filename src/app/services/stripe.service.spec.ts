@@ -23,7 +23,7 @@ describe('StripeService', () => {
       info: vi.fn(),
       error: vi.fn(),
     };
-    vi.mocked(loadStripe).mockResolvedValue({} as any);
+    vi.mocked(loadStripe).mockImplementation(() => Promise.resolve({} as any));
 
     TestBed.configureTestingModule({
       providers: [
@@ -43,11 +43,15 @@ describe('StripeService', () => {
   });
 
   it('loads and caches Stripe.js with the publishable key', async () => {
+    vi.mocked(loadStripe).mockImplementation(() => Promise.resolve({} as any));
+
     const first = service.getStripe();
     const second = service.getStripe();
 
     expect(first).toBe(second);
     expect(await first).toEqual({});
+    expect(loadStripe).toHaveBeenCalledWith(environment.stripePublishableKey);
+    expect(loadStripe).toHaveBeenCalledTimes(1);
   });
 
   it('creates a setup intent through the backend', () => {

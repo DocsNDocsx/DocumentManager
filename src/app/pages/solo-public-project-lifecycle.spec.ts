@@ -166,6 +166,54 @@ describe('Solo Public Project — Full Lifecycle', () => {
       expect(result?.completedStep).toBe(2);
     });
 
+    it('keeps an active public project active when editing details', () => {
+      wizardService.project.set(makeProject({ status: 'active', completedStep: 3, projectCode: PROJECT_CODE }));
+
+      wizardService.savePublicDetails({
+        name: '2026 Solo Public Research Program - Updated',
+        description: 'Updated public application.',
+        deadline: '2026-12-31',
+        attachments: [],
+        expectedCollaborators: '5',
+        staff: null,
+      }).subscribe();
+
+      const req = http.expectOne(`${environment.apiUrl}/projects/${PROJECT_ID}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body.status).toBe('active');
+
+      req.flush({
+        success: true,
+        project: makeProject({
+          name: '2026 Solo Public Research Program - Updated',
+          status: 'active',
+          completedStep: 3,
+          projectCode: PROJECT_CODE,
+        }),
+      });
+
+      expect(wizardService.project()?.status).toBe('active');
+    });
+
+    it('closes an active public project by marking it completed', () => {
+      wizardService.project.set(makeProject({ status: 'active', completedStep: 3, projectCode: PROJECT_CODE }));
+
+      let closed: Project | undefined;
+      wizardService.closeProject().subscribe(p => (closed = p));
+
+      const req = http.expectOne(`${environment.apiUrl}/projects/${PROJECT_ID}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ status: 'completed' });
+
+      req.flush({
+        success: true,
+        project: makeProject({ status: 'completed', completedStep: 3, projectCode: PROJECT_CODE }),
+      });
+
+      expect(closed?.status).toBe('completed');
+      expect(wizardService.project()?.status).toBe('completed');
+    });
+
     it('Step 3 — activates project and receives server-issued project code', () => {
       wizardService.project.set(makeProject({ completedStep: 2 }));
 

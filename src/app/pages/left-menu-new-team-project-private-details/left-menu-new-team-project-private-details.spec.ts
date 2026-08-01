@@ -30,10 +30,11 @@ describe('LeftMenuNewTeamProjectPrivateDetailsComponent', () => {
       projectId: signal(null),
       project: signal<any>(null),
       teamName: signal(''),
+      isSaving: signal(false),
       saveError: signal(null),
       reset: vi.fn(),
       loadDraft: vi.fn(() => of({})),
-      saveDetails: vi.fn(() => of({})),
+      saveDetails: vi.fn(() => of({ id: 'team-private-draft-1' })),
     };
     uploader = {
       upload: vi.fn(() => of({
@@ -118,5 +119,27 @@ describe('LeftMenuNewTeamProjectPrivateDetailsComponent', () => {
       attachments: component.uploadedFiles(),
     }));
     expect(router.navigate).toHaveBeenCalledWith(['/new-team-project/private/collaborators']);
+  });
+
+  it('save draft creates a new private team draft and redirects into the draft URL', () => {
+    component.selectedTeamId.set('team-1');
+    component.projectName.set('Team Private Draft');
+    component.projectDescription.set('Saved draft');
+    component.projectDeadline.set('2027-12-31');
+
+    component.onSaveDraft();
+
+    expect(wizard.teamName()).toBe('Alpha');
+    expect(wizard.saveDetails).toHaveBeenCalledWith(expect.objectContaining({
+      teamId: 'team-1',
+      name: 'Team Private Draft',
+      description: 'Saved draft',
+      deadline: '2027-12-31',
+      attachments: component.uploadedFiles(),
+    }));
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/new-team-project/private', 'team-private-draft-1', 'details'],
+      { replaceUrl: true },
+    );
   });
 });

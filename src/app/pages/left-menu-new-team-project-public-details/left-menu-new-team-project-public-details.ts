@@ -206,7 +206,6 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
     const supportStaff = this.supportFirstName().trim() || this.supportLastName().trim() || this.supportEmail().trim() || this.supportAffiliation().trim()
       ? { firstName: this.supportFirstName().trim(), lastName: this.supportLastName().trim(), email: this.supportEmail().trim(), affiliation: this.supportAffiliation().trim() }
       : null;
-    this.showToast('Project saved as draft');
     this.teamWizardService.saveDetails({
       teamId: this.selectedTeamId(),
       name: this.projectName().trim(),
@@ -217,6 +216,12 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
       attachments: this.uploadedFiles(),
       supportStaff,
     }).subscribe({
+      next: project => {
+        this.showToast('Project saved as draft');
+        if (!this.route.parent?.snapshot.paramMap.get('projectId')) {
+          this.router.navigate(['/new-team-project/public', project.id, 'details'], { replaceUrl: true });
+        }
+      },
       error: () => this.showToast('Failed to save draft — please try again'),
     });
   }

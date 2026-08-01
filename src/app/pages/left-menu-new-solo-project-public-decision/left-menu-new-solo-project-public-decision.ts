@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
@@ -18,6 +18,7 @@ import { BillingEstimateService } from '../../services/billing-estimate.service'
 })
 export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private wizardService = inject(ProjectWizardService);
   private billingEstimate = inject(BillingEstimateService);
 
@@ -61,7 +62,8 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
   }
 
   back(): void {
-    this.router.navigate(['/new-solo-project/public/documents']);
+    const id = this.route.parent?.snapshot.paramMap.get('projectId') ?? this.wizardService.projectId();
+    this.router.navigate(id ? ['/new-solo-project/public', id, 'documents'] : ['/new-solo-project/public/documents']);
   }
 
   openConfirmModal(): void {
@@ -104,6 +106,17 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
   finishEditing(): void {
     this.wizardService.reset();
     this.router.navigate(['/top-menu-solo-projects']);
+  }
+
+  closeProject(): void {
+    this.wizardService.closeProject().subscribe({
+      next: () => {
+        this.showToast('Project closed');
+        this.wizardService.reset();
+        this.router.navigate(['/top-menu-solo-projects']);
+      },
+      error: () => this.showToast('Failed to close project — please try again'),
+    });
   }
 
   saveAsDraft(): void {

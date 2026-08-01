@@ -81,7 +81,7 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
         affiliation: 'DocsNDocs',
       },
     }));
-    expect(router.navigate).toHaveBeenCalledWith(['/new-solo-project/public/documents']);
+    expect(router.navigate).toHaveBeenCalledWith(['/new-solo-project/public', 'new-project', 'documents']);
   });
 
   it('saveAsDraft redirects newly created public projects into the draft URL', () => {

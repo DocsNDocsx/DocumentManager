@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -27,6 +27,7 @@ export const FILE_TYPES = ['PDF', 'DOCX', 'DOC', 'JPG', 'PNG', 'XLSX'];
 })
 export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, OnDestroy {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private wizardService = inject(ProjectWizardService);
   dropdownOpen = signal(false);
 
@@ -164,7 +165,7 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
   }
 
   back(): void {
-    this.router.navigate(['/new-solo-project/public/details']);
+    this.router.navigate(this.publicProjectRoute('details'));
   }
 
   saveAsDraft(): void {
@@ -178,8 +179,13 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
   continue(): void {
     if (!this.isFormValid()) return;
     this.wizardService.savePublicDocuments({ documents: this.documents() }).subscribe({
-      next: () => this.router.navigate(['/new-solo-project/public/decision']),
+      next: project => this.router.navigate(['/new-solo-project/public', project.id, 'decision']),
       error: () => {},
     });
+  }
+
+  private publicProjectRoute(step: 'details' | 'documents' | 'decision'): any[] {
+    const id = this.route.parent?.snapshot.paramMap.get('projectId') ?? this.wizardService.projectId();
+    return id ? ['/new-solo-project/public', id, step] : ['/new-solo-project/public', step];
   }
 }
