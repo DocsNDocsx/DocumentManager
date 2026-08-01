@@ -44,6 +44,18 @@ function parseProjectRow(p) {
   };
 }
 
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null || value === '') return [];
+  if (typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function parseTeamRow(row, role) {
   return {
     id: row.id,
@@ -358,6 +370,13 @@ exports.updateTeamProject = async (req, res) => {
            FROM team_project_collaborators WHERE project_id = ? AND email IS NOT NULL AND email != ''`,
           [id]
         );
+        const [ownerRows] = await pool.query(
+          `SELECT u.email, u.firstname AS "firstName", u.lastname AS "lastName"
+           FROM teams t
+           JOIN users u ON u.userid = t.user_id
+           WHERE t.id = ? AND u.email IS NOT NULL AND u.email != ''`,
+          [project.teamId]
+        );
         const templatePath = path.join(__dirname, '../templates-email/projectactivation.html');
         const template = fs.readFileSync(templatePath, 'utf8');
 
@@ -367,9 +386,16 @@ exports.updateTeamProject = async (req, res) => {
         const projectCodeBlock = project.projectCode
           ? `<div class="code-section"><p class="code-label">Project Code</p><div class="code-box"><p class="code-value">${project.projectCode}</p></div></div>`
           : '';
+        const recipients = [
+          ...ownerRows.map(owner => ({
+            ...owner,
+            subject: `DocsNDocs: Your team project "${project.name}" is now active`,
+          })),
+          ...collabRows,
+        ];
 
         await Promise.all(
-          collabRows.map(c => {
+          recipients.map(c => {
             const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Collaborator';
             const body = template
               .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
@@ -377,7 +403,7 @@ exports.updateTeamProject = async (req, res) => {
               .replace('{{PROJECT_NAME}}', project.name)
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
               .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock);
-            return sendEmail(c.email, `DocsNDocs: "${project.name}" is now active — submit your documents`, body);
+            return sendEmail(c.email, c.subject ?? `DocsNDocs: "${project.name}" is now active - submit your documents`, body);
           })
         );
       } catch (emailErr) {
@@ -713,18 +739,15 @@ exports.joinProject = async (req, res) => {
     const { projectCode, userId } = req.body;
     if (!projectCode) return res.status(400).json({ success: false, message: 'projectCode is required' });
     if (!userId)      return res.status(400).json({ success: false, message: 'userId is required' });
+    const normalizedCode = String(projectCode).trim().toUpperCase();
 
     const [projectRows] = await pool.query(
       `SELECT tp.id, tp.name, t.name AS "teamName"
        FROM team_projects tp
        JOIN teams t ON t.id = tp.team_id
        WHERE tp.project_code = ? AND tp.type = 'public' AND tp.status = 'active'`,
-      [projectCode]
+      [normalizedCode]
     );
-    if (projectRows.length === 0)
-      return res.status(404).json({ success: false, message: 'Invalid or inactive project code' });
-
-    const project = projectRows[0];
 
     const [userRows] = await pool.query(
       `SELECT userid, firstname, lastname, email, organization FROM users WHERE userid = ?`,
@@ -734,6 +757,53 @@ exports.joinProject = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
 
     const user = userRows[0];
+
+    if (projectRows.length === 0) {
+      const [soloRows] = await pool.query(
+        `SELECT p.id, p.name, p.collaborators, u.firstname AS "ownerFirstName", u.lastname AS "ownerLastName"
+         FROM projects p
+         JOIN users u ON u.userid = p.user_id
+         WHERE p.project_code = ? AND p.type = 'public' AND p.status = 'active'`,
+        [normalizedCode]
+      );
+
+      if (soloRows.length === 0)
+        return res.status(404).json({ success: false, message: 'Invalid or inactive project code' });
+
+      const soloProject = soloRows[0];
+      const collaborators = parseJsonArray(soloProject.collaborators);
+      const userIdText = String(user.userid);
+      const userEmail = String(user.email ?? '').toLowerCase();
+      const alreadyJoined = collaborators.some(c => {
+        const collaboratorUserId = c?.userId ?? c?.userid ?? c?.user_id;
+        const collaboratorEmail = String(c?.email ?? '').toLowerCase();
+        return String(collaboratorUserId ?? '') === userIdText || (userEmail && collaboratorEmail === userEmail);
+      });
+
+      if (alreadyJoined)
+        return res.status(409).json({ success: false, message: 'You have already joined this project' });
+
+      collaborators.push({
+        userId: user.userid,
+        firstName: user.firstname ?? '',
+        lastName: user.lastname ?? '',
+        email: user.email ?? '',
+        affiliation: user.organization ?? '',
+      });
+
+      await pool.query(
+        'UPDATE projects SET collaborators = ? WHERE id = ?',
+        [JSON.stringify(collaborators), soloProject.id]
+      );
+
+      const ownerName = [soloProject.ownerFirstName, soloProject.ownerLastName].filter(Boolean).join(' ') || 'Project Owner';
+      return res.status(201).json({
+        success: true,
+        project: { id: soloProject.id, name: soloProject.name, projectType: 'solo', ownerName },
+      });
+    }
+
+    const project = projectRows[0];
 
     const [existing] = await pool.query(
       `SELECT id FROM team_project_collaborators WHERE project_id = ? AND user_id = ?`,
@@ -750,10 +820,11 @@ exports.joinProject = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      project: { id: project.id, name: project.name, teamName: project.teamName },
+      project: { id: project.id, name: project.name, projectType: 'team', teamName: project.teamName },
     });
   } catch (err) {
     console.error('Join project error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+

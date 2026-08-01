@@ -20,11 +20,15 @@ function loadStripeController({ stripe = {}, amountCents = 972, productId = 'pro
     normalizeVoucherCode: jest.fn(code => String(code || '').trim().toUpperCase()),
     getProductId: jest.fn(async () => productId),
   }));
+  jest.doMock('../utils/emailservice', () => ({
+    sendEmail: jest.fn(async () => undefined),
+  }));
 
   return {
     controller: require('../controllers/stripecontroller'),
     pool: require('../utils/sql'),
     stripeUtils: require('../utils/stripe'),
+    emailService: require('../utils/emailservice'),
   };
 }
 
@@ -32,6 +36,7 @@ describe('stripecontroller', () => {
   afterEach(() => {
     jest.dontMock('../utils/sql');
     jest.dontMock('../utils/stripe');
+    jest.dontMock('../utils/emailservice');
   });
 
   describe('createSetupIntent', () => {
@@ -180,7 +185,7 @@ describe('stripecontroller', () => {
           })),
         },
       };
-      const { controller, pool, stripeUtils } = loadStripeController({ stripe, amountCents: 972 });
+      const { controller, pool, stripeUtils, emailService } = loadStripeController({ stripe, amountCents: 972 });
       pool.query
         .mockResolvedValueOnce([[{
           userid: 123,
@@ -262,6 +267,11 @@ describe('stripecontroller', () => {
         status: 'active',
         voucherCode: 'WELCOME10',
       }));
+      expect(emailService.sendEmail).toHaveBeenCalledWith(
+        'paid@example.com',
+        'DocsNDocs: Payment receipt',
+        expect.stringContaining('Subscription:</strong> sub_123'),
+      );
     });
 
     it('rejects invalid voucher codes before charging the card', async () => {

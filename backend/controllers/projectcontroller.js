@@ -167,7 +167,13 @@ exports.activateProject = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [existing] = await pool.query('SELECT type FROM projects WHERE id = ?', [id]);
+    const [existing] = await pool.query(
+      `SELECT p.type, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName
+       FROM projects p
+       JOIN users u ON u.userid = p.user_id
+       WHERE p.id = ?`,
+      [id]
+    );
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
     const isPublic = existing[0].type === 'public';
@@ -193,7 +199,17 @@ exports.activateProject = async (req, res) => {
     // Notify collaborators and support staff - non-blocking
     try {
       const project = parseProject(rows[0]);
-      const collaborators = project.collaborators ?? [];
+      const recipients = [];
+      if (existing[0].ownerEmail) {
+        recipients.push({
+          email: existing[0].ownerEmail,
+          firstName: existing[0].ownerFirstName,
+          lastName: existing[0].ownerLastName,
+          name: 'Project Owner',
+          subject: `DocsNDocs: Your project "${project.name}" is now active`,
+        });
+      }
+      recipients.push(...(project.collaborators ?? []));
       const templatePath = path.join(__dirname, '../templates-email/projectactivation.html');
       const template = fs.readFileSync(templatePath, 'utf8');
 
@@ -205,14 +221,14 @@ exports.activateProject = async (req, res) => {
         : '';
 
       if (project.staff?.email) {
-        collaborators.push({
+        recipients.push({
           ...project.staff,
           name: [project.staff.firstName, project.staff.lastName].filter(Boolean).join(' ') || 'Support Staff',
         });
       }
 
       await Promise.all(
-        collaborators
+        recipients
           .filter(c => c.email)
           .map(c => {
             const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name || 'Collaborator';
@@ -222,7 +238,7 @@ exports.activateProject = async (req, res) => {
               .replace('{{PROJECT_NAME}}', project.name)
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
               .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock);
-            return sendEmail(c.email, `DocsNDocs: "${project.name}" is now active`, body);
+            return sendEmail(c.email, c.subject ?? `DocsNDocs: "${project.name}" is now active`, body);
           })
       );
     } catch (emailErr) {

@@ -28,7 +28,7 @@ export class LeftMenuAddExternalProjectComponent {
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   joinedProjectName = signal<string | null>(null);
-  joinedTeamName = signal<string | null>(null);
+  joinedByName = signal<string | null>(null);
 
   isFormValid = computed(() => this.projectCode().trim().length >= 6);
 
@@ -45,14 +45,14 @@ export class LeftMenuAddExternalProjectComponent {
     if (!this.isFormValid() || this.isLoading()) return;
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.http.post<{ success: boolean; project: { id: string; name: string; teamName: string } }>(
+    this.http.post<{ success: boolean; project: { id: string; name: string; teamName?: string; ownerName?: string } }>(
       `${environment.apiUrl}/teams/projects/join`,
-      { projectCode: this.projectCode().trim(), userId: this.auth.currentUserId() }
+      { projectCode: this.projectCode().trim().toUpperCase(), userId: this.auth.currentUserId() }
     ).subscribe({
       next: res => {
         this.isLoading.set(false);
         this.joinedProjectName.set(res.project.name);
-        this.joinedTeamName.set(res.project.teamName);
+        this.joinedByName.set(res.project.teamName ?? res.project.ownerName ?? null);
         this.submitted.set(true);
       },
       error: err => {

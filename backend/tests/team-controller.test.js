@@ -258,12 +258,13 @@ describe('teamcontroller', () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
-  it('activates a team project and sends collaborator notifications', async () => {
+  it('activates a team project and sends owner plus collaborator notifications', async () => {
     pool.query
       .mockResolvedValueOnce([[teamProjectRow({ status: 'draft', project_code: null })]])
       .mockResolvedValueOnce([{ affectedRows: 1 }])
       .mockResolvedValueOnce([[teamProjectRow({ status: 'active', project_code: 'ABCD-2345' })]])
-      .mockResolvedValueOnce([[{ firstName: 'Ava', lastName: 'Ray', email: 'ava@example.com' }]]);
+      .mockResolvedValueOnce([[{ firstName: 'Ava', lastName: 'Ray', email: 'ava@example.com' }]])
+      .mockResolvedValueOnce([[{ firstName: 'Owner', lastName: 'User', email: 'owner@example.com' }]]);
     sendEmail.mockResolvedValue(undefined);
     const res = mockResponse();
 
@@ -281,6 +282,11 @@ describe('teamcontroller', () => {
       'ava@example.com',
       expect.stringContaining('DocsNDocs: "Team Intake" is now active'),
       expect.stringContaining('Ava Ray'),
+    );
+    expect(sendEmail).toHaveBeenCalledWith(
+      'owner@example.com',
+      'DocsNDocs: Your team project "Team Intake" is now active',
+      expect.stringContaining('Owner User'),
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -547,7 +553,7 @@ describe('teamcontroller', () => {
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      project: { id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team' },
+      project: { id: 'team-project-1', name: 'Team Intake', projectType: 'team', teamName: 'Review Team' },
     });
   });
 
@@ -562,5 +568,81 @@ describe('teamcontroller', () => {
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'You have already joined this project' });
+  });
+
+  it('joins a public active solo project by project code', async () => {
+    pool.query
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com', organization: 'Org' }]])
+      .mockResolvedValueOnce([[
+        {
+          id: 'solo-project-1',
+          name: 'Solo Intake',
+          collaborators: JSON.stringify([{ userId: '789', email: 'other@example.com' }]),
+          ownerFirstName: 'Owner',
+          ownerLastName: 'User',
+        },
+      ]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await teamController.joinProject({ body: { projectCode: 'prj-abcd-2345', userId: '456' } }, res);
+
+    expect(pool.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('FROM projects p'),
+      ['PRJ-ABCD-2345']
+    );
+    expect(pool.query).toHaveBeenNthCalledWith(
+      4,
+      'UPDATE projects SET collaborators = ? WHERE id = ?',
+      [
+        JSON.stringify([
+          { userId: '789', email: 'other@example.com' },
+          { userId: '456', firstName: 'Join', lastName: 'User', email: 'join@example.com', affiliation: 'Org' },
+        ]),
+        'solo-project-1',
+      ]
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      project: { id: 'solo-project-1', name: 'Solo Intake', projectType: 'solo', ownerName: 'Owner User' },
+    });
+  });
+
+  it('rejects duplicate solo project joins by email', async () => {
+    pool.query
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com', organization: 'Org' }]])
+      .mockResolvedValueOnce([[
+        {
+          id: 'solo-project-1',
+          name: 'Solo Intake',
+          collaborators: JSON.stringify([{ firstName: 'Join', email: 'join@example.com' }]),
+          ownerFirstName: 'Owner',
+          ownerLastName: 'User',
+        },
+      ]]);
+    const res = mockResponse();
+
+    await teamController.joinProject({ body: { projectCode: 'PRJ-ABCD-2345', userId: '456' } }, res);
+
+    expect(pool.query).toHaveBeenCalledTimes(3);
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'You have already joined this project' });
+  });
+
+  it('rejects invalid or inactive project codes after checking team and solo projects', async () => {
+    pool.query
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com' }]])
+      .mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+
+    await teamController.joinProject({ body: { projectCode: 'PRJ-MISS-0000', userId: '456' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid or inactive project code' });
   });
 });

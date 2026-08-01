@@ -20,7 +20,13 @@
           <i class="fas fa-check-circle" aria-hidden="true"></i>
           <div>
             <strong>Successfully joined!</strong>
-            <p>You have joined <strong>{{ joinedProjectName() }}</strong> by {{ joinedTeamName() }}. You can now access it from your dashboard.</p>
+            <p>
+              You have joined <strong>{{ joinedProjectName() }}</strong>
+              @if (joinedByName()) {
+                by {{ joinedByName() }}
+              }
+              . You can now access it from your dashboard.
+            </p>
           </div>
         </div>
       } @else {

@@ -1,5 +1,8 @@
 const pool = require('../utils/sql');
 const { stripe, computeMonthlyAmountCents, getProductId, getVoucher, normalizeVoucherCode } = require('../utils/stripe');
+const fs = require('fs');
+const path = require('path');
+const { sendEmail } = require('../utils/emailservice');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 
@@ -23,6 +26,36 @@ async function isUsableStripeCustomer(customerId) {
   } catch (err) {
     if (err?.code === 'resource_missing') return false;
     throw err;
+  }
+}
+
+async function sendPaymentReceiptEmail({ user, subscription, amountCents, voucherCode }) {
+  try {
+    if (!user?.email) return;
+    const invoice = typeof subscription.latest_invoice === 'object' ? subscription.latest_invoice : null;
+    const templatePath = path.join(__dirname, '../templates-email/paymentreceipt.html');
+    const template = fs.readFileSync(templatePath, 'utf8');
+    const receiptUrl = invoice?.hosted_invoice_url || invoice?.invoice_pdf || '';
+    const receiptBlock = receiptUrl
+      ? `<p><a class="button" href="${receiptUrl}">View receipt</a></p>`
+      : '';
+    const name = `${user.firstname ?? ''} ${user.lastname ?? ''}`.trim() || 'there';
+    const paidAt = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+    const amount = ((invoice?.amount_paid ?? amountCents) / 100).toFixed(2);
+    const body = template
+      .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
+      .replace('{{CUSTOMER_NAME}}', name)
+      .replace('{{AMOUNT}}', amount)
+      .replace('{{CURRENCY}}', (invoice?.currency ?? 'usd').toUpperCase())
+      .replace('{{SUBSCRIPTION_ID}}', subscription.id)
+      .replace('{{INVOICE_NUMBER}}', invoice?.number ?? invoice?.id ?? subscription.id)
+      .replace('{{PAID_AT}}', paidAt)
+      .replace('{{VOUCHER_BLOCK}}', voucherCode ? `<p class="detail-row"><strong>Voucher:</strong> ${voucherCode}</p>` : '')
+      .replace('{{RECEIPT_BLOCK}}', receiptBlock);
+
+    await sendEmail(user.email, 'DocsNDocs: Payment receipt', body);
+  } catch (emailErr) {
+    console.error('[email] Payment receipt email failed (non-fatal):', emailErr);
   }
 }
 
@@ -251,6 +284,13 @@ exports.createSubscription = async (req, res) => {
     );
 
     await pool.query("UPDATE users SET issubscribed = 'true' WHERE userid = ?", [user.userid]);
+
+    await sendPaymentReceiptEmail({
+      user,
+      subscription,
+      amountCents: unitAmount,
+      voucherCode: normalizedVoucherCode || null,
+    });
 
     res.json({
       success: true,

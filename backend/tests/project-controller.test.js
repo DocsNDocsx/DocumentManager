@@ -207,7 +207,7 @@ describe('projectcontroller', () => {
     });
   });
 
-  it('activates a public project, logs activity, and emails collaborators plus support staff', async () => {
+  it('activates a public project, logs activity, and emails owner, collaborators, and support staff', async () => {
     const activeRow = projectRow({
       status: 'active',
       type: 'public',
@@ -215,7 +215,12 @@ describe('projectcontroller', () => {
       project_code: 'PRJ-ABCD-EFGH',
     });
     pool.query
-      .mockResolvedValueOnce([[{ type: 'public' }]])
+      .mockResolvedValueOnce([[{
+        type: 'public',
+        ownerEmail: 'owner@example.com',
+        ownerFirstName: 'Owner',
+        ownerLastName: 'User',
+      }]])
       .mockResolvedValueOnce([{ affectedRows: 1 }])
       .mockResolvedValueOnce([[activeRow]]);
     sendEmail.mockResolvedValue(undefined);
@@ -235,7 +240,12 @@ describe('projectcontroller', () => {
       null,
       'Research Intake',
     );
-    expect(sendEmail).toHaveBeenCalledTimes(2);
+    expect(sendEmail).toHaveBeenCalledTimes(3);
+    expect(sendEmail).toHaveBeenCalledWith(
+      'owner@example.com',
+      'DocsNDocs: Your project "Research Intake" is now active',
+      expect.stringContaining('Owner User'),
+    );
     expect(sendEmail).toHaveBeenCalledWith(
       'sam@example.com',
       'DocsNDocs: "Research Intake" is now active',
