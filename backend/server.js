@@ -1,6 +1,9 @@
 require('dotenv').config();
 
 const REQUIRED_ENV = ['JWT_SECRET', 'SMTP2GO_API_KEY', 'CRON_SECRET', 'STRIPE_SECRET_KEY'];
+if (process.env.NODE_ENV === 'production' && process.env.USE_LOCAL_FILE_STORAGE !== 'true') {
+  REQUIRED_ENV.push('BLOB_READ_WRITE_TOKEN');
+}
 const missing = REQUIRED_ENV.filter(k => !process.env[k] || process.env[k].startsWith('your-'));
 if (missing.length) {
   console.error(`[startup] Missing or placeholder env vars: ${missing.join(', ')}`);

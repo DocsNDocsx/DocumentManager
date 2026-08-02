@@ -6,6 +6,26 @@ const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
 
+const PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'cancelled']);
+const STATUS_TRANSITIONS = {
+  draft: new Set(['draft', 'active', 'cancelled']),
+  active: new Set(['active', 'completed', 'not_completed', 'cancelled']),
+  not_completed: new Set(['not_completed', 'completed', 'cancelled']),
+  cancelled: new Set(['cancelled', 'draft']),
+  completed: new Set(['completed']),
+};
+
+async function authenticatedUserId(req) {
+  if (!req.user?.email) return null;
+  const [rows] = await pool.query('SELECT userid FROM users WHERE email = ?', [req.user.email]);
+  return rows[0]?.userid == null ? null : String(rows[0].userid);
+}
+
+function includesCollaboratorEmail(value, email) {
+  const collaborators = typeof value === 'string' ? JSON.parse(value || '[]') : (value ?? []);
+  return collaborators.some(c => String(c?.email ?? '').toLowerCase() === String(email ?? '').toLowerCase());
+}
+
 function parseProject(row) {
   const jsonCols = ['collaborators', 'documents', 'assignments', 'attachments'];
   const parsed = { ...row };
@@ -52,6 +72,15 @@ exports.createProject = async (req, res) => {
     const { userid, name, description, deadline, collaborators, documents, assignments, attachments, staff, expectedCollaborators, type } = req.body;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
     if (!name) return res.status(400).json({ success: false, message: 'name is required' });
+    if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
+      return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
+    }
+    if (req.user?.email) {
+      const authenticatedId = await authenticatedUserId(req);
+      if (!authenticatedId || String(userid) !== authenticatedId) {
+        return res.status(403).json({ success: false, message: 'Projects can only be created for the authenticated user' });
+      }
+    }
 
     const id = randomUUID();
 
@@ -88,6 +117,16 @@ exports.getProjects = async (req, res) => {
   try {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
+    if (req.user?.email) {
+      const authenticatedId = await authenticatedUserId(req);
+      if (!authenticatedId || authenticatedId !== String(userid)) {
+        return res.status(403).json({ success: false, message: 'You can only list your own projects' });
+      }
+    }
+
+    await pool.query(
+      "UPDATE projects SET status = 'not_completed' WHERE status = 'active' AND deadline IS NOT NULL AND deadline < CURRENT_DATE",
+    );
 
     const [ownedRows] = await pool.query(
       "SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC",
@@ -133,6 +172,13 @@ exports.getProject = async (req, res) => {
     );
 
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (req.user?.email) {
+      const userId = await authenticatedUserId(req);
+      const isOwner = String(rows[0].user_id) === String(userId);
+      if (!isOwner && !includesCollaboratorEmail(rows[0].collaborators, req.user.email)) {
+        return res.status(403).json({ success: false, message: 'You cannot access this project' });
+      }
+    }
 
     const project = parseProject(rows[0]);
     project.ownerName = `${rows[0].owner_firstname ?? ''} ${rows[0].owner_lastname ?? ''}`.trim() || null;
@@ -148,8 +194,51 @@ exports.updateProject = async (req, res) => {
     const { id } = req.params;
     const { name, description, deadline, attachments, collaborators, documents, assignments, staff, expectedCollaborators, completedStep, status } = req.body;
 
+    if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
+      return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
+    }
+
+    let ownedProject = null;
+    if (req.user?.email) {
+      const userId = await authenticatedUserId(req);
+      const [owned] = await pool.query('SELECT id, status FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can update this project' });
+      ownedProject = owned[0];
+    }
+    if (status !== undefined) {
+      if (!PROJECT_STATUSES.has(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid project status' });
+      }
+      if (ownedProject && !STATUS_TRANSITIONS[ownedProject.status]?.has(status)) {
+        return res.status(409).json({ success: false, message: `Project cannot transition from ${ownedProject.status} to ${status}` });
+      }
+    }
+
     const setClauses = [];
     const values = [];
+
+    if (status === 'completed') {
+      const [projectRows] = await pool.query(
+        'SELECT type, collaborators, documents, assignments, expected_collaborators FROM projects WHERE id = ?',
+        [id]
+      );
+      if (projectRows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+      const project = parseProject(projectRows[0]);
+      const collaboratorsCount = project.collaborators.length;
+      if (project.type === 'public' && collaboratorsCount < Number(project.expectedCollaborators ?? 0)) {
+        return res.status(409).json({ success: false, message: 'Expected collaborators have not all joined' });
+      }
+      const requiredSlots = project.type === 'public'
+        ? collaboratorsCount * project.documents.length
+        : Object.values(project.assignments).reduce((sum, docs) => sum + docs.length, 0);
+      const [approvedRows] = await pool.query(
+        "SELECT COUNT(*) AS approved_count FROM submissions WHERE project_id = ? AND status = 'approved'",
+        [id]
+      );
+      if (requiredSlots === 0 || Number(approvedRows[0]?.approved_count ?? 0) < requiredSlots) {
+        return res.status(409).json({ success: false, message: 'All required documents must be approved before completing the project' });
+      }
+    }
 
     if (name !== undefined) { setClauses.push('name = ?'); values.push(name); }
     if (description !== undefined) { setClauses.push('description = ?'); values.push(description); }
@@ -187,14 +276,26 @@ exports.activateProject = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (req.user?.email) {
+      const userId = await authenticatedUserId(req);
+      const [owned] = await pool.query('SELECT id FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can activate this project' });
+    }
+
     const [existing] = await pool.query(
-      `SELECT p.type, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName
+      `SELECT p.type, p.deadline, p.documents, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName
        FROM projects p
        JOIN users u ON u.userid = p.user_id
        WHERE p.id = ?`,
       [id]
     );
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (!existing[0].deadline || new Date(existing[0].deadline) <= new Date()) {
+      return res.status(400).json({ success: false, message: 'A future deadline is required before activation' });
+    }
+    if (parseProject({ documents: existing[0].documents }).documents.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one required document is needed before activation' });
+    }
 
     const isPublic = existing[0].type === 'public';
     const rand = () => Math.random().toString(36).toUpperCase().slice(2, 6);
@@ -276,6 +377,12 @@ exports.cancelProject = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (req.user?.email) {
+      const userId = await authenticatedUserId(req);
+      const [owned] = await pool.query('SELECT id FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can cancel this project' });
+    }
+
     const [result] = await pool.query(
       "UPDATE projects SET status = 'cancelled' WHERE id = ?",
       [id]
@@ -294,6 +401,12 @@ exports.cancelProject = async (req, res) => {
 exports.deleteProject = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (req.user?.email) {
+      const userId = await authenticatedUserId(req);
+      const [owned] = await pool.query('SELECT id FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can delete this project' });
+    }
 
     // Submissions must be removed first due to the FK constraint on project_id.
     await pool.query('DELETE FROM submissions WHERE project_id = ?', [id]);

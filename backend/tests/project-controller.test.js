@@ -56,6 +56,29 @@ describe('projectcontroller', () => {
     uploadToBlob.mockResolvedValue('https://blob.example.com/project-files/file.pdf');
   });
 
+  it('rejects an invalid status on the general project PATCH', async () => {
+    const res = mockResponse();
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      body: { status: 'hacked' },
+    }, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid project status' });
+  });
+
+  it('prevents a non-owner from activating a solo project', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '999' }]])
+      .mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+    await projectController.activateProject({
+      params: { id: 'project-1' },
+      user: { email: 'intruder@example.com' },
+    }, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Only the project owner can activate this project' });
+  });
+
   it('requires userid and project name when creating a project', async () => {
     const resMissingUser = mockResponse();
     await projectController.createProject({ body: { name: 'Draft' } }, resMissingUser);
@@ -122,6 +145,7 @@ describe('projectcontroller', () => {
 
   it('returns projects parsed from stored JSON', async () => {
     pool.query
+      .mockResolvedValueOnce([{ affectedRows: 0 }])
       .mockResolvedValueOnce([[projectRow(), projectRow({ id: 'project-2', collaborators: 'bad-json' })]])
       .mockResolvedValueOnce([[{ email: 'owner@example.com' }]])
       .mockResolvedValueOnce([[]]);
@@ -140,6 +164,7 @@ describe('projectcontroller', () => {
 
   it('includes an active project joined as a collaborator', async () => {
     pool.query
+      .mockResolvedValueOnce([{ affectedRows: 0 }])
       .mockResolvedValueOnce([[]])
       .mockResolvedValueOnce([[{ email: 'join@example.com' }]])
       .mockResolvedValueOnce([[
@@ -237,6 +262,47 @@ describe('projectcontroller', () => {
     });
   });
 
+  it('blocks completion until every required public document is approved', async () => {
+    pool.query
+      .mockResolvedValueOnce([[projectRow({
+        type: 'public',
+        expected_collaborators: 2,
+        collaborators: JSON.stringify([{ email: 'a@example.com' }, { email: 'b@example.com' }]),
+        documents: JSON.stringify([{ name: 'Transcript' }]),
+      })]])
+      .mockResolvedValueOnce([[{ approved_count: 1 }]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({ params: { id: 'project-1' }, body: { status: 'completed' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'All required documents must be approved before completing the project',
+    });
+  });
+
+  it('completes a public project after all required documents are approved', async () => {
+    pool.query
+      .mockResolvedValueOnce([[projectRow({
+        type: 'public',
+        expected_collaborators: 2,
+        collaborators: JSON.stringify([{ email: 'a@example.com' }, { email: 'b@example.com' }]),
+        documents: JSON.stringify([{ name: 'Transcript' }]),
+      })]])
+      .mockResolvedValueOnce([[{ approved_count: 2 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[projectRow({ status: 'completed' })]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({ params: { id: 'project-1' }, body: { status: 'completed' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      project: expect.objectContaining({ status: 'completed' }),
+    });
+  });
+
   it('activates a public project, logs activity, and emails owner, collaborators, and support staff', async () => {
     const activeRow = projectRow({
       status: 'active',
@@ -247,6 +313,8 @@ describe('projectcontroller', () => {
     pool.query
       .mockResolvedValueOnce([[{
         type: 'public',
+        deadline: new Date(Date.now() + 86400000).toISOString(),
+        documents: JSON.stringify([{ name: 'Transcript' }]),
         ownerEmail: 'owner@example.com',
         ownerFirstName: 'Owner',
         ownerLastName: 'User',
@@ -297,6 +365,8 @@ describe('projectcontroller', () => {
     pool.query
       .mockResolvedValueOnce([[{
         type: 'private',
+        deadline: new Date(Date.now() + 86400000).toISOString(),
+        documents: JSON.stringify([{ name: 'Transcript' }]),
         ownerEmail: 'owner@example.com',
         ownerFirstName: 'Owner',
         ownerLastName: 'User',

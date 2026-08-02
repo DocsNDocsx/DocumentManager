@@ -74,7 +74,7 @@ export const routes: Routes = [
     { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
     { path: 'dashboard-recent-activity', component: DashboardRecentActivityComponent, canActivate: [authGuard] },
     { path: 'check-submissions', component: CheckSubmissionsComponent, canActivate: [authGuard] },
-    { path: 'collaborator-view/:projectId/:collabIndex', component: CollaboratorViewComponent },
+    { path: 'collaborator-view/:projectId/:collabIndex', component: CollaboratorViewComponent, canActivate: [authGuard] },
 
     // Dropdown menus
     { path: 'drop-down-profile', component: DropDownProfileComponent, canActivate: [authGuard] },

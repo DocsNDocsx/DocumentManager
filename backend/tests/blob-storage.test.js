@@ -13,6 +13,7 @@ const { uploadToBlob } = require('../utils/blobStorage');
 describe('blobStorage', () => {
   const originalToken = process.env.BLOB_READ_WRITE_TOKEN;
   const originalLocalFlag = process.env.USE_LOCAL_FILE_STORAGE;
+  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     jest.clearAllMocks();
@@ -20,6 +21,19 @@ describe('blobStorage', () => {
     else process.env.BLOB_READ_WRITE_TOKEN = originalToken;
     if (originalLocalFlag === undefined) delete process.env.USE_LOCAL_FILE_STORAGE;
     else process.env.USE_LOCAL_FILE_STORAGE = originalLocalFlag;
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  it('fails instead of silently using ephemeral disk when production Blob configuration is missing', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.USE_LOCAL_FILE_STORAGE;
+
+    await expect(uploadToBlob({
+      folder: 'submissions/solo/project-1',
+      file: { originalname: 'file.pdf', mimetype: 'application/pdf', buffer: Buffer.from('pdf') },
+    })).rejects.toThrow('BLOB_READ_WRITE_TOKEN is required in production');
+    expect(fs.writeFile).not.toHaveBeenCalled();
   });
 
   it('uses local public storage when Blob token is not configured', async () => {

@@ -8,6 +8,45 @@ const { sendEmail } = require('../utils/emailservice');
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonLen = col => isMySQL ? `JSON_LENGTH(${col})` : `jsonb_array_length(${col}::jsonb)`;
 const emailCollate = isMySQL ? 'COLLATE utf8mb4_unicode_ci' : '';
+const TEAM_PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'deleted']);
+const TEAM_STATUS_TRANSITIONS = {
+  draft: new Set(['draft', 'active', 'deleted']),
+  active: new Set(['active', 'completed', 'not_completed', 'deleted']),
+  not_completed: new Set(['not_completed', 'completed', 'deleted']),
+  completed: new Set(['completed']),
+  deleted: new Set(['deleted', 'draft']),
+};
+
+async function authenticatedUserId(req) {
+  if (!req.user?.email) return null;
+  const [rows] = await pool.query('SELECT userid FROM users WHERE LOWER(email) = LOWER(?)', [req.user.email]);
+  return rows[0]?.userid == null ? null : String(rows[0].userid);
+}
+
+async function canAccessTeamProject(projectId, userId, requireManager = false) {
+  if (!userId) return false;
+  const roleFilter = requireManager ? "AND tpr.role IN ('host', 'supervisor')" : '';
+  const [rows] = await pool.query(
+    `SELECT tp.id FROM team_projects tp
+     JOIN teams t ON t.id = tp.team_id
+     LEFT JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ? ${roleFilter}
+     LEFT JOIN team_project_collaborators tpc ON tpc.project_id = tp.id AND tpc.user_id = ?
+     WHERE tp.id = ? AND (t.user_id = ? OR tpr.user_id IS NOT NULL ${requireManager ? '' : 'OR tpc.user_id IS NOT NULL'})
+     LIMIT 1`,
+    [userId, userId, projectId, userId]
+  );
+  return rows.length > 0;
+}
+
+async function requireTeamProjectAccess(req, res, requireManager = false) {
+  if (!req.user?.email) return true;
+  const userId = await authenticatedUserId(req);
+  if (await canAccessTeamProject(req.params.id, userId, requireManager)) return true;
+  res.status(403).json({ success: false, message: requireManager
+    ? 'Only the team owner, host, or supervisor can modify this project'
+    : 'You cannot access this project' });
+  return false;
+}
 
 function generateProjectCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -297,6 +336,19 @@ exports.createTeamProject = async (req, res) => {
     if (!userId)  return res.status(400).json({ success: false, message: 'userId is required' });
     if (!teamId)  return res.status(400).json({ success: false, message: 'teamId is required' });
     if (!name)    return res.status(400).json({ success: false, message: 'name is required' });
+    if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
+      return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
+    }
+    if (req.user?.email) {
+      const authenticatedId = await authenticatedUserId(req);
+      if (!authenticatedId || authenticatedId !== String(userId)) {
+        return res.status(403).json({ success: false, message: 'Projects can only be created as the authenticated user' });
+      }
+      const [ownedTeams] = await pool.query('SELECT id FROM teams WHERE id = ? AND user_id = ?', [teamId, authenticatedId]);
+      if (ownedTeams.length === 0) {
+        return res.status(403).json({ success: false, message: 'Only the team owner can create this project' });
+      }
+    }
 
     const projectId = randomUUID();
     const stepValue = completedStep ?? 1;
@@ -330,8 +382,20 @@ exports.updateTeamProject = async (req, res) => {
     const { id } = req.params;
     const { name, description, deadline, status, completedStep, expectedCollaborators, supportStaff, attachments } = req.body;
 
+    if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
+      return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
+    }
+
+    if (!await requireTeamProjectAccess(req, res, true)) return;
+
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (status !== undefined) {
+      if (!TEAM_PROJECT_STATUSES.has(status)) return res.status(400).json({ success: false, message: 'Invalid project status' });
+      if (!TEAM_STATUS_TRANSITIONS[existing[0].status]?.has(status)) {
+        return res.status(409).json({ success: false, message: `Project cannot transition from ${existing[0].status} to ${status}` });
+      }
+    }
 
     const setClauses = [];
     const values = [];
@@ -430,6 +494,7 @@ exports.saveProjectCollaborators = async (req, res) => {
   try {
     const { id } = req.params;
     const { collaborators } = req.body;
+    if (!await requireTeamProjectAccess(req, res, true)) return;
 
     const [existing] = await pool.query('SELECT id FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -480,6 +545,7 @@ exports.saveProjectDocuments = async (req, res) => {
   try {
     const { id } = req.params;
     const { documents } = req.body;
+    if (!await requireTeamProjectAccess(req, res, true)) return;
 
     const [existing] = await pool.query('SELECT id FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -501,6 +567,7 @@ exports.saveProjectDocuments = async (req, res) => {
 exports.getTeamProject = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!await requireTeamProjectAccess(req, res, false)) return;
     const [rows] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
     res.json({ success: true, project: parseProjectRow(rows[0]) });
@@ -513,6 +580,7 @@ exports.getTeamProject = async (req, res) => {
 exports.getProjectCollaborators = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!await requireTeamProjectAccess(req, res, false)) return;
     const [rows] = await pool.query(
       `SELECT id, first_name AS "firstName", last_name AS "lastName", email, affiliation, role
        FROM team_project_collaborators WHERE project_id = ? ORDER BY created_at ASC`,
@@ -531,6 +599,7 @@ exports.getProjectCollaborators = async (req, res) => {
 exports.deleteTeamProject = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!await requireTeamProjectAccess(req, res, true)) return;
 
     const [result] = await pool.query('DELETE FROM team_projects WHERE id = ?', [id]);
     if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -546,6 +615,12 @@ exports.getTeamProjects = async (req, res) => {
   try {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
+    if (req.user?.email) {
+      const authenticatedId = await authenticatedUserId(req);
+      if (!authenticatedId || authenticatedId !== String(userid)) {
+        return res.status(403).json({ success: false, message: 'You can only list your own team projects' });
+      }
+    }
 
     const [hostedTeams] = await pool.query(
       `SELECT id, name FROM teams WHERE user_id = ?`,
@@ -694,6 +769,12 @@ exports.getTeamProjectStats = async (req, res) => {
   try {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
+    if (req.user?.email) {
+      const authenticatedId = await authenticatedUserId(req);
+      if (!authenticatedId || authenticatedId !== String(userid)) {
+        return res.status(403).json({ success: false, message: 'You can only view your own team project statistics' });
+      }
+    }
 
     const [hostedTeams] = await pool.query(
       `SELECT id, name FROM teams WHERE user_id = ?`,
@@ -770,10 +851,16 @@ exports.joinProject = async (req, res) => {
     const { projectCode, userId } = req.body;
     if (!projectCode) return res.status(400).json({ success: false, message: 'projectCode is required' });
     if (!userId)      return res.status(400).json({ success: false, message: 'userId is required' });
+    if (req.user?.email) {
+      const authenticatedId = await authenticatedUserId(req);
+      if (!authenticatedId || authenticatedId !== String(userId)) {
+        return res.status(403).json({ success: false, message: 'You can only join a project as the authenticated user' });
+      }
+    }
     const normalizedCode = String(projectCode).trim().toUpperCase();
 
     const [projectRows] = await pool.query(
-      `SELECT tp.id, tp.name, t.name AS "teamName"
+      `SELECT tp.id, tp.name, tp.expected_collaborators, t.name AS "teamName"
        FROM team_projects tp
        JOIN teams t ON t.id = tp.team_id
        WHERE tp.project_code = ? AND tp.type = 'public' AND tp.status = 'active'`,
@@ -791,7 +878,8 @@ exports.joinProject = async (req, res) => {
 
     if (projectRows.length === 0) {
       const [soloRows] = await pool.query(
-        `SELECT p.id, p.name, p.collaborators, u.firstname AS "ownerFirstName", u.lastname AS "ownerLastName"
+        `SELECT p.id, p.name, p.collaborators, p.deadline, p.expected_collaborators,
+                u.firstname AS "ownerFirstName", u.lastname AS "ownerLastName"
          FROM projects p
          JOIN users u ON u.userid = p.user_id
          WHERE p.project_code = ? AND p.type = 'public' AND p.status = 'active'`,
@@ -814,6 +902,11 @@ exports.joinProject = async (req, res) => {
       if (alreadyJoined)
         return res.status(409).json({ success: false, message: 'You have already joined this project' });
 
+      if (Number(soloProject.expected_collaborators ?? 0) > 0
+          && collaborators.length >= Number(soloProject.expected_collaborators)) {
+        return res.status(409).json({ success: false, message: 'This project has reached its collaborator limit' });
+      }
+
       collaborators.push({
         userId: user.userid,
         firstName: user.firstname ?? '',
@@ -822,15 +915,37 @@ exports.joinProject = async (req, res) => {
         affiliation: user.organization ?? '',
       });
 
-      await pool.query(
-        'UPDATE projects SET collaborators = ? WHERE id = ?',
+      const lengthExpression = isMySQL ? 'JSON_LENGTH(collaborators)' : 'jsonb_array_length(collaborators::jsonb)';
+      const [joinResult] = await pool.query(
+        `UPDATE projects SET collaborators = ? WHERE id = ?
+         AND (expected_collaborators IS NULL OR expected_collaborators <= 0 OR ${lengthExpression} < expected_collaborators)`,
         [JSON.stringify(collaborators), soloProject.id]
       );
+      if (joinResult.affectedRows === 0) {
+        return res.status(409).json({ success: false, message: 'This project has reached its collaborator limit' });
+      }
 
       const ownerName = [soloProject.ownerFirstName, soloProject.ownerLastName].filter(Boolean).join(' ') || 'Project Owner';
+      const collaboratorIndex = collaborators.length - 1;
+      const workspacePath = `/collaborator-view/${soloProject.id}/${collaboratorIndex}`;
+      try {
+        const template = fs.readFileSync(path.join(__dirname, '../templates-email/projectactivation.html'), 'utf8');
+        const deadlineBlock = soloProject.deadline
+          ? `<p class="detail-row"><strong>Deadline:</strong> ${new Date(soloProject.deadline).toDateString()}</p>`
+          : '';
+        const body = template
+          .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
+          .replace('{{COLLABORATOR_NAME}}', [user.firstname, user.lastname].filter(Boolean).join(' ') || 'Collaborator')
+          .replace('{{PROJECT_NAME}}', soloProject.name)
+          .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
+          .replace('{{PROJECT_CODE_BLOCK}}', `<p><a href="${process.env.APP_BASE_URL ?? ''}${workspacePath}">Open your submission workspace</a></p>`);
+        await sendEmail(user.email, `DocsNDocs: You joined "${soloProject.name}"`, body);
+      } catch (emailErr) {
+        console.error('[email] Project join email failed (non-fatal):', emailErr);
+      }
       return res.status(201).json({
         success: true,
-        project: { id: soloProject.id, name: soloProject.name, projectType: 'solo', ownerName },
+        project: { id: soloProject.id, name: soloProject.name, projectType: 'solo', ownerName, collaboratorIndex, workspacePath },
       });
     }
 
@@ -843,11 +958,26 @@ exports.joinProject = async (req, res) => {
     if (existing.length > 0)
       return res.status(409).json({ success: false, message: 'You have already joined this project' });
 
-    await pool.query(
-      `INSERT INTO team_project_collaborators (id, project_id, user_id, first_name, last_name, email, affiliation, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'contributor')`,
-      [randomUUID(), project.id, userId, user.firstname ?? '', user.lastname ?? '', user.email ?? '', user.organization ?? '']
+    const [countRows] = await pool.query(
+      'SELECT COUNT(*) AS collaborator_count FROM team_project_collaborators WHERE project_id = ?',
+      [project.id]
     );
+    if (Number(project.expected_collaborators ?? 0) > 0
+        && Number(countRows[0]?.collaborator_count ?? 0) >= Number(project.expected_collaborators)) {
+      return res.status(409).json({ success: false, message: 'This project has reached its collaborator limit' });
+    }
+
+    const [joinResult] = await pool.query(
+      `INSERT INTO team_project_collaborators (id, project_id, user_id, first_name, last_name, email, affiliation, role)
+       SELECT ?, ?, ?, ?, ?, ?, ?, 'contributor'
+       WHERE NOT EXISTS (SELECT 1 FROM team_project_collaborators WHERE project_id = ? AND user_id = ?)
+         AND (? <= 0 OR (SELECT COUNT(*) FROM team_project_collaborators WHERE project_id = ?) < ?)`,
+      [randomUUID(), project.id, userId, user.firstname ?? '', user.lastname ?? '', user.email ?? '', user.organization ?? '',
+        project.id, userId, Number(project.expected_collaborators ?? 0), project.id, Number(project.expected_collaborators ?? 0)]
+    );
+    if (joinResult.affectedRows === 0) {
+      return res.status(409).json({ success: false, message: 'This project is already joined or has reached its collaborator limit' });
+    }
 
     res.status(201).json({
       success: true,

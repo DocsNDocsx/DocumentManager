@@ -5,36 +5,151 @@ const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
+const { get } = require('@vercel/blob');
+const { Readable } = require('stream');
+
+const SIZE_MULTIPLIERS = { KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
+const FORMAT_MIMES = {
+  PDF: ['application/pdf'], DOC: ['application/msword'],
+  DOCX: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  XLS: ['application/vnd.ms-excel'], XLSX: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  PPT: ['application/vnd.ms-powerpoint'], PPTX: ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+  TXT: ['text/plain'], CSV: ['text/csv', 'application/vnd.ms-excel'],
+  JPG: ['image/jpeg'], JPEG: ['image/jpeg'], PNG: ['image/png'],
+};
+
+function parseArray(value) {
+  if (Array.isArray(value)) return value;
+  try { return JSON.parse(value ?? '[]'); } catch { return []; }
+}
+
+function maxDocumentBytes(document) {
+  const amount = Number(document?.maxSize);
+  if (!Number.isFinite(amount) || amount <= 0) return 50 * 1024 * 1024;
+  return amount * (SIZE_MULTIPLIERS[String(document?.sizeUnit ?? 'MB').toUpperCase()] ?? 1);
+}
+
+function isAllowedDocumentType(document, mimeType, fileName) {
+  const formats = Array.isArray(document?.fileTypes) ? document.fileTypes : [];
+  if (formats.length === 0) return true;
+  const extension = String(fileName ?? '').split('.').pop()?.toUpperCase();
+  return formats.some(format => {
+    const normalized = String(format).toUpperCase();
+    return normalized === extension || (FORMAT_MIMES[normalized] ?? []).includes(mimeType);
+  });
+}
+
+async function ownerIdForEmail(email) {
+  const [rows] = await pool.query('SELECT userid FROM users WHERE email = ?', [email]);
+  return rows[0]?.userid == null ? null : String(rows[0].userid);
+}
+
+async function getBlobResult(filePath) {
+  if (String(filePath).startsWith('/public/uploads/local/')) {
+    const absolutePath = path.join(__dirname, '..', String(filePath).replace(/^\//, ''));
+    if (!fs.existsSync(absolutePath)) return null;
+    return {
+      statusCode: 200,
+      blob: { contentType: 'application/octet-stream' },
+      stream: fs.createReadStream(absolutePath),
+    };
+  }
+  try {
+    return await get(filePath, { access: 'private' });
+  } catch {
+    return get(filePath, { access: 'public' });
+  }
+}
+
+function toNodeStream(stream) {
+  return typeof stream?.pipe === 'function' ? stream : Readable.fromWeb(stream);
+}
 
 exports.createSubmission = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { collabIndex, docIndex } = req.body;
+    const { collabIndex, docIndex, blobUrl, fileName, fileSize, fileType } = req.body;
     const file = req.file;
 
-    if (!file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    if (!file && !blobUrl) return res.status(400).json({ success: false, message: 'No file uploaded' });
     if (collabIndex === undefined || docIndex === undefined) {
       return res.status(400).json({ success: false, message: 'collabIndex and docIndex are required' });
     }
 
-    const [projects] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
+    const [projects] = await pool.query(
+      'SELECT id, type, collaborators, documents, assignments, deadline, status FROM projects WHERE id = ?',
+      [projectId]
+    );
     if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
     const collabIdx = Number(collabIndex);
     const docIdx = Number(docIndex);
-    const filePath = await uploadToBlob({
-      folder: `submissions/solo/${projectId}/${collabIdx}`,
-      prefix: `doc-${docIdx}`,
-      file,
-    });
+    const project = projects[0];
+    const collaborators = parseArray(project.collaborators);
+    const documents = parseArray(project.documents);
+    const document = documents[docIdx];
+    if (!Number.isInteger(collabIdx) || !collaborators[collabIdx]) {
+      return res.status(400).json({ success: false, message: 'Invalid collaborator' });
+    }
+    if (req.user?.email && String(collaborators[collabIdx].email ?? '').toLowerCase() !== String(req.user.email).toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized collaborator' });
+    }
+    if (!Number.isInteger(docIdx) || !document) {
+      return res.status(400).json({ success: false, message: 'Invalid document' });
+    }
+    if (project.status !== 'active') {
+      return res.status(409).json({ success: false, message: 'Project is not accepting submissions' });
+    }
+    if (project.deadline && new Date(project.deadline) < new Date()) {
+      return res.status(409).json({ success: false, message: 'Project deadline has passed' });
+    }
+    if (project.type !== 'public') {
+      const assignments = project.assignments && typeof project.assignments === 'string'
+        ? JSON.parse(project.assignments) : (project.assignments ?? {});
+      if (!(assignments[String(collabIdx)] ?? []).includes(docIdx)) {
+        return res.status(403).json({ success: false, message: 'Document is not assigned to this collaborator' });
+      }
+    }
+    const effectiveName = file?.originalname ?? String(fileName ?? 'file');
+    const effectiveSize = file?.size ?? Number(fileSize ?? 0);
+    const effectiveType = file?.mimetype ?? String(fileType ?? '');
+    if (effectiveSize <= 0 || effectiveSize > maxDocumentBytes(document)) {
+      return res.status(400).json({ success: false, message: 'File exceeds the configured document size limit' });
+    }
+    if (!isAllowedDocumentType(document, effectiveType, effectiveName)) {
+      return res.status(400).json({ success: false, message: 'File type is not allowed for this document' });
+    }
+    let filePath;
+    if (file) {
+      filePath = await uploadToBlob({
+        folder: `submissions/solo/${projectId}/${collabIdx}`,
+        prefix: `doc-${docIdx}`,
+        file,
+      });
+    } else {
+      const parsedUrl = new URL(blobUrl);
+      if (!parsedUrl.hostname.endsWith('.blob.vercel-storage.com')) {
+        return res.status(400).json({ success: false, message: 'Invalid uploaded file URL' });
+      }
+      const expectedFolder = `/submissions/solo/${projectId}/${collabIdx}/`;
+      if (!decodeURIComponent(parsedUrl.pathname).includes(expectedFolder)) {
+        return res.status(400).json({ success: false, message: 'Uploaded file URL does not belong to this submission' });
+      }
+      filePath = parsedUrl.toString();
+    }
+    const storedFileName = effectiveName;
+    const storedFileSize = effectiveSize;
 
     // Multer sends body fields as strings; cast to number so the unique index
     // (project_id, collaborator_index, document_index) matches correctly.
     const [existing] = await pool.query(
-      'SELECT id FROM submissions WHERE project_id = ? AND collaborator_index = ? AND document_index = ?',
+      'SELECT id, status FROM submissions WHERE project_id = ? AND collaborator_index = ? AND document_index = ?',
       [projectId, collabIdx, docIdx]
     );
 
+    if (existing[0]?.status === 'rejected') {
+      return res.status(409).json({ success: false, message: 'This document was permanently rejected and cannot be resubmitted' });
+    }
     if (existing.length > 0) {
       // Re-submission: reset status to 'submitted' and clear feedback so the
       // owner must re-review. submitted_at is refreshed to reflect the new upload time.
@@ -42,14 +157,14 @@ exports.createSubmission = async (req, res) => {
         `UPDATE submissions
          SET file_name = ?, file_size = ?, file_path = ?, status = 'submitted', feedback = NULL, submitted_at = NOW()
          WHERE project_id = ? AND collaborator_index = ? AND document_index = ?`,
-        [file.originalname, file.size, filePath, projectId, collabIdx, docIdx]
+        [storedFileName, storedFileSize, filePath, projectId, collabIdx, docIdx]
       );
     } else {
       const id = randomUUID();
       await pool.query(
         `INSERT INTO submissions (id, project_id, collaborator_index, document_index, file_name, file_size, file_path, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted')`,
-        [id, projectId, collabIdx, docIdx, file.originalname, file.size, filePath]
+        [id, projectId, collabIdx, docIdx, storedFileName, storedFileSize, filePath]
       );
     }
 
@@ -119,9 +234,17 @@ exports.updateSubmission = async (req, res) => {
     const { projectId, submissionId } = req.params;
     const { status, feedback } = req.body;
 
-    const ALLOWED = new Set(['approved', 'revision']);
+    const ALLOWED = new Set(['approved', 'revision', 'rejected']);
     if (!ALLOWED.has(status)) {
-      return res.status(400).json({ success: false, message: 'status must be approved or revision' });
+      return res.status(400).json({ success: false, message: 'status must be approved, revision, or rejected' });
+    }
+    if ((status === 'revision' || status === 'rejected') && !String(feedback ?? '').trim()) {
+      return res.status(400).json({ success: false, message: 'Feedback is required for revision or rejection' });
+    }
+    if (req.user?.email) {
+      const ownerId = await ownerIdForEmail(req.user.email);
+      const [owned] = await pool.query('SELECT id FROM projects WHERE id = ? AND user_id = ?', [projectId, ownerId]);
+      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can review submissions' });
     }
 
     const [result] = await pool.query(
@@ -148,6 +271,7 @@ exports.updateSubmission = async (req, res) => {
 
         if (collaborator?.email) {
           const isApproved = status === 'approved';
+          const isRejected = status === 'rejected';
           const collaboratorName = [collaborator.firstName, collaborator.lastName].filter(Boolean).join(' ') || collaborator.name || 'Collaborator';
           const documentName = document?.name ?? submission.file_name;
 
@@ -160,17 +284,21 @@ exports.updateSubmission = async (req, res) => {
             .replaceAll('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
             .replaceAll('{{COLLABORATOR_NAME}}', collaboratorName)
             .replaceAll('{{PROJECT_NAME}}', project.name)
-            .replaceAll('{{STATUS_CLASS}}', isApproved ? 'status-approved' : 'status-revision')
-            .replaceAll('{{STATUS_LABEL}}', isApproved ? 'Approved' : 'Revision Required')
+            .replaceAll('{{STATUS_CLASS}}', isApproved ? 'status-approved' : (isRejected ? 'status-rejected' : 'status-revision'))
+            .replaceAll('{{STATUS_LABEL}}', isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Revision Required'))
             .replaceAll('{{DOCUMENT_NAME}}', documentName)
             .replaceAll('{{FEEDBACK_BLOCK}}', feedbackBlock)
             .replaceAll('{{STATUS_MESSAGE}}', isApproved
               ? 'Your document has been approved. No further action is required.'
-              : 'Please review the feedback above and resubmit your document.');
+              : (isRejected
+                ? 'Your document was declined and cannot be resubmitted for this requirement.'
+                : 'Please review the feedback above and resubmit your document.'));
 
           const subject = isApproved
             ? `DocsNDocs: Your submission for "${project.name}" has been approved`
-            : `DocsNDocs: Revision requested for your submission in "${project.name}"`;
+            : (isRejected
+              ? `DocsNDocs: Your submission for "${project.name}" was declined`
+              : `DocsNDocs: Revision requested for your submission in "${project.name}"`);
 
           await sendEmail(collaborator.email, subject, body);
         }
@@ -214,6 +342,19 @@ exports.getSubmissions = async (req, res) => {
     const { projectId } = req.params;
     const { collabIndex } = req.query;
 
+    if (req.user?.email) {
+      const [projects] = await pool.query('SELECT user_id, collaborators FROM projects WHERE id = ?', [projectId]);
+      if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+      const ownerId = await ownerIdForEmail(req.user.email);
+      const isOwner = String(projects[0].user_id) === String(ownerId);
+      const collaborators = parseArray(projects[0].collaborators);
+      const isRequestedCollaborator = collabIndex !== undefined
+        && String(collaborators[Number(collabIndex)]?.email ?? '').toLowerCase() === String(req.user.email).toLowerCase();
+      if (!isOwner && !isRequestedCollaborator) {
+        return res.status(403).json({ success: false, message: 'You cannot view these submissions' });
+      }
+    }
+
     let query = 'SELECT * FROM submissions WHERE project_id = ?';
     const params = [projectId];
 
@@ -229,5 +370,61 @@ exports.getSubmissions = async (req, res) => {
   } catch (err) {
     console.error('Get submissions error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.downloadSubmission = async (req, res) => {
+  try {
+    const ownerId = await ownerIdForEmail(req.user?.email);
+    const [rows] = await pool.query(
+      `SELECT s.file_name, s.file_path
+       FROM submissions s
+       JOIN projects p ON p.id = s.project_id
+       WHERE s.id = ? AND s.project_id = ? AND p.user_id = ?`,
+      [req.params.submissionId, req.params.projectId, ownerId]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Submission not found' });
+    const result = await getBlobResult(rows[0].file_path);
+    if (!result || result.statusCode !== 200) return res.status(404).json({ success: false, message: 'File not found' });
+    res.set('Content-Type', result.blob.contentType || 'application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename="${String(rows[0].file_name).replace(/["\r\n]/g, '_')}"`);
+    toNodeStream(result.stream).pipe(res);
+  } catch (err) {
+    console.error('Download submission error:', err);
+    res.status(500).json({ success: false, message: 'Could not download document' });
+  }
+};
+
+exports.downloadApprovedSubmissions = async (req, res) => {
+  try {
+    const ownerId = await ownerIdForEmail(req.user?.email);
+    const [rows] = await pool.query(
+      `SELECT s.file_name, s.file_path, s.collaborator_index, s.document_index
+       FROM submissions s
+       JOIN projects p ON p.id = s.project_id
+       WHERE s.project_id = ? AND s.status = 'approved' AND p.user_id = ?
+       ORDER BY s.collaborator_index, s.document_index`,
+      [req.params.projectId, ownerId]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'No approved documents found' });
+
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', 'attachment; filename="approved-documents.zip"');
+    const archiver = require('archiver');
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', err => { throw err; });
+    archive.pipe(res);
+    for (const row of rows) {
+      const result = await getBlobResult(row.file_path);
+      if (result?.statusCode === 200) {
+        const safeName = String(row.file_name).replace(/[^a-zA-Z0-9._-]+/g, '-');
+        archive.append(toNodeStream(result.stream), { name: `collaborator-${row.collaborator_index + 1}/${safeName}` });
+      }
+    }
+    await archive.finalize();
+  } catch (err) {
+    console.error('Download approved submissions error:', err);
+    if (!res.headersSent) res.status(500).json({ success: false, message: 'Could not download approved documents' });
+    else res.end();
   }
 };

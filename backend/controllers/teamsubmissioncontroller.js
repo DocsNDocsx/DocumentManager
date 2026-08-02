@@ -5,6 +5,23 @@ const pool = require('../utils/sql');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
 
+async function requireTeamProjectReviewer(req, res) {
+  if (!req.user?.email) return true;
+  const [users] = await pool.query('SELECT userid FROM users WHERE LOWER(email) = LOWER(?)', [req.user.email]);
+  const userId = users[0]?.userid;
+  const [rows] = await pool.query(
+    `SELECT tp.id FROM team_projects tp
+     JOIN teams t ON t.id = tp.team_id
+     LEFT JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ? AND tpr.role IN ('host', 'supervisor')
+     WHERE tp.id = ? AND (t.user_id = ? OR tpr.user_id IS NOT NULL)
+     LIMIT 1`,
+    [userId, req.params.id, userId]
+  );
+  if (rows.length > 0) return true;
+  res.status(403).json({ success: false, message: 'Only the team owner, host, or supervisor can review submissions' });
+  return false;
+}
+
 // GET /teams/projects/:id/upload-info/:collaboratorId
 exports.getUploadInfo = async (req, res) => {
   try {
@@ -36,6 +53,9 @@ exports.getUploadInfo = async (req, res) => {
     }
 
     const collaborator = collabRows[0];
+    if (req.user?.email && String(collaborator.email).toLowerCase() !== String(req.user.email).toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'You cannot access this collaborator workspace' });
+    }
 
     const [submissions] = await pool.query(
       `SELECT id, document_index AS documentIndex, file_name AS fileName, file_size AS fileSize,
@@ -67,6 +87,7 @@ exports.getUploadInfo = async (req, res) => {
 exports.getSubmissions = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!await requireTeamProjectReviewer(req, res)) return;
 
     const [projectRows] = await pool.query(
       'SELECT documents FROM team_projects WHERE id = ?', [id]
@@ -111,6 +132,7 @@ exports.updateSubmission = async (req, res) => {
   try {
     const { id, submissionId } = req.params;
     const { status, feedback } = req.body;
+    if (!await requireTeamProjectReviewer(req, res)) return;
 
     const ALLOWED = new Set(['approved', 'revision']);
     if (!ALLOWED.has(status)) {
@@ -192,11 +214,14 @@ exports.createSubmission = async (req, res) => {
     if (docIndex === undefined) return res.status(400).json({ success: false, message: 'docIndex is required' });
 
     const [collabRows] = await pool.query(
-      `SELECT id FROM team_project_collaborators WHERE id = ? AND project_id = ?`,
+      `SELECT id, email FROM team_project_collaborators WHERE id = ? AND project_id = ?`,
       [collaboratorId, id]
     );
     if (collabRows.length === 0) {
       return res.status(404).json({ success: false, message: 'Collaborator not found' });
+    }
+    if (req.user?.email && String(collabRows[0].email).toLowerCase() !== String(req.user.email).toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'You cannot submit for another collaborator' });
     }
     const docIdx = Number(docIndex);
     const filePath = await uploadToBlob({

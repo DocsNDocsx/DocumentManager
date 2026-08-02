@@ -45,12 +45,16 @@ export class LeftMenuAddExternalProjectComponent {
     if (!this.isFormValid() || this.isLoading()) return;
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.http.post<{ success: boolean; project: { id: string; name: string; teamName?: string; ownerName?: string } }>(
+    this.http.post<{ success: boolean; project: { id: string; name: string; teamName?: string; ownerName?: string; collaboratorIndex?: number; workspacePath?: string; projectType?: string } }>(
       `${environment.apiUrl}/teams/projects/join`,
       { projectCode: this.projectCode().trim().toUpperCase(), userId: this.auth.currentUserId() }
     ).subscribe({
       next: res => {
         this.isLoading.set(false);
+        if (res.project.projectType === 'solo' && res.project.collaboratorIndex !== undefined) {
+          this.router.navigate(['/collaborator-view', res.project.id, res.project.collaboratorIndex]);
+          return;
+        }
         this.joinedProjectName.set(res.project.name);
         this.joinedByName.set(res.project.teamName ?? res.project.ownerName ?? null);
         this.submitted.set(true);

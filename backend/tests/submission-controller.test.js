@@ -69,6 +69,21 @@ function projectNotificationRow(overrides = {}) {
   };
 }
 
+function uploadProjectRow() {
+  return {
+    id: 'project-1',
+    type: 'public',
+    status: 'active',
+    deadline: new Date(Date.now() + 86400000).toISOString(),
+    collaborators: JSON.stringify([{ firstName: 'Ava', lastName: 'Ray', email: 'ava@example.com' }]),
+    documents: JSON.stringify([
+      { name: 'CV', fileTypes: ['PDF'], maxSize: '5', sizeUnit: 'MB' },
+      { name: 'Transcript', fileTypes: ['PDF'], maxSize: '5', sizeUnit: 'MB' },
+    ]),
+    assignments: JSON.stringify({}),
+  };
+}
+
 describe('submissioncontroller', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -114,9 +129,24 @@ describe('submissioncontroller', () => {
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Project not found' });
   });
 
+  it('rejects a file that exceeds the configured document size', async () => {
+    pool.query.mockResolvedValueOnce([[uploadProjectRow()]]);
+    const res = mockResponse();
+
+    await submissionController.createSubmission({
+      params: { projectId: 'project-1' },
+      body: { collabIndex: '0', docIndex: '1' },
+      file: uploadFile({ size: 6 * 1024 * 1024 }),
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'File exceeds the configured document size limit' });
+    expect(uploadToBlob).not.toHaveBeenCalled();
+  });
+
   it('inserts a new submission, logs activity, and emails the owner', async () => {
     pool.query
-      .mockResolvedValueOnce([[{ id: 'project-1' }]])
+      .mockResolvedValueOnce([[uploadProjectRow()]])
       .mockResolvedValueOnce([[]])
       .mockResolvedValueOnce([{ affectedRows: 1 }])
       .mockResolvedValueOnce([[submissionRow()]])
@@ -166,7 +196,7 @@ describe('submissioncontroller', () => {
 
   it('updates an existing submission as a resubmission', async () => {
     pool.query
-      .mockResolvedValueOnce([[{ id: 'project-1' }]])
+      .mockResolvedValueOnce([[uploadProjectRow()]])
       .mockResolvedValueOnce([[{ id: 'existing-submission' }]])
       .mockResolvedValueOnce([{ affectedRows: 1 }])
       .mockResolvedValueOnce([[submissionRow({ id: 'existing-submission', file_name: 'updated.pdf' })]])
@@ -191,6 +221,38 @@ describe('submissioncontroller', () => {
     });
   });
 
+  it('records a file uploaded directly to Vercel Blob', async () => {
+    pool.query
+      .mockResolvedValueOnce([[uploadProjectRow()]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[submissionRow()]])
+      .mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+
+    await submissionController.createSubmission({
+      params: { projectId: 'project-1' },
+      body: {
+        collabIndex: '0',
+        docIndex: '1',
+        blobUrl: 'https://store.public.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+        fileName: 'transcript.pdf',
+        fileSize: 2048,
+      },
+    }, res);
+
+    expect(uploadToBlob).not.toHaveBeenCalled();
+    expect(pool.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('INSERT INTO submissions'),
+      expect.arrayContaining([
+        'project-1', 0, 1, 'transcript.pdf', 2048,
+        'https://store.public.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+      ]),
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
   it('rejects invalid submission review status', async () => {
     const res = mockResponse();
 
@@ -200,7 +262,30 @@ describe('submissioncontroller', () => {
     }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'status must be approved or revision' });
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'status must be approved, revision, or rejected' });
+  });
+
+  it('permanently rejects a submission when owner feedback is provided', async () => {
+    pool.query
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[submissionRow({ status: 'rejected', feedback: 'Unreadable document.' })]])
+      .mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+
+    await submissionController.updateSubmission({
+      params: { projectId: 'project-1', submissionId: 'submission-1' },
+      body: { status: 'rejected', feedback: 'Unreadable document.' },
+    }, res);
+
+    expect(pool.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('UPDATE submissions SET status = ?'),
+      ['rejected', 'Unreadable document.', 'submission-1', 'project-1'],
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      submission: expect.objectContaining({ status: 'rejected' }),
+    });
   });
 
   it('returns 404 when reviewing a missing submission', async () => {

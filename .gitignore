@@ -43,6 +43,7 @@ yarn-error.log
 
 # Markdown files (untracked)
 *.md
+!docs/*.md
 
 # Miscellaneous
 /.angular/cache

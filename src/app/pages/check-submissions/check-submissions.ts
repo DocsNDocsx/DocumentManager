@@ -13,7 +13,7 @@ import { LoggingService } from '../../services/logging.service';
 
 type SubmissionStatus = 'pending' | 'approved' | 'revision' | 'rejected';
 type ProjectTab = 'solo' | 'team';
-type DecisionMode = 'approve' | 'revise' | null;
+type DecisionMode = 'approve' | 'revise' | 'reject' | null;
 
 interface Collaborator {
   firstName: string;
@@ -69,6 +69,8 @@ export class CheckSubmissionsComponent implements OnInit {
   resultsVisible = signal(false);
   showReviewModal = signal(false);
   isLoadingSubmissions = signal(false);
+  reviewError = signal<string | null>(null);
+  downloadError = signal<string | null>(null);
 
   selectedSoloProject = signal('');
   selectedTeamProject = signal('');
@@ -242,6 +244,7 @@ export class CheckSubmissionsComponent implements OnInit {
     this.reviewComments.set('');
     this.showCommentsForm.set(false);
     this.modalFooterMode.set(null);
+    this.reviewError.set(null);
     this.showReviewModal.set(true);
   }
 
@@ -269,15 +272,22 @@ export class CheckSubmissionsComponent implements OnInit {
     this.modalFooterMode.set('revise');
   }
 
+  showRejectForm(): void {
+    this.decisionMode.set('reject');
+    this.showCommentsForm.set(true);
+    this.modalFooterMode.set('reject');
+  }
+
   submitDecision(): void {
     const mode = this.decisionMode();
     const comments = this.reviewComments().trim();
-    if (mode === 'revise' && !comments) return;
+    if ((mode === 'revise' || mode === 'reject') && !comments) return;
 
     const reviewing = this.currentReviewing();
     if (!reviewing) return;
+    this.reviewError.set(null);
 
-    const dbStatus = mode === 'approve' ? 'approved' : 'revision';
+    const dbStatus = mode === 'approve' ? 'approved' : (mode === 'reject' ? 'rejected' : 'revision');
     const isTeam = this.activeTab() === 'team';
     const projectId = isTeam ? this.selectedTeamProject() : this.selectedSoloProject();
     const url = isTeam
@@ -287,7 +297,7 @@ export class CheckSubmissionsComponent implements OnInit {
     this.logger.info('Submitting review decision', { submissionId: reviewing.id, decision: dbStatus });
     this.http.patch<{ success: boolean }>(url, { status: dbStatus, feedback: comments || null }).subscribe({
       next: () => {
-        const newStatus: SubmissionStatus = mode === 'approve' ? 'approved' : 'revision';
+        const newStatus: SubmissionStatus = mode === 'approve' ? 'approved' : (mode === 'reject' ? 'rejected' : 'revision');
         this.logger.info('Review decision submitted', { submissionId: reviewing.id, status: newStatus });
         this.allSubmissions.update(subs => subs.map(s => {
           if (s.id !== reviewing.id) return s;
@@ -300,7 +310,44 @@ export class CheckSubmissionsComponent implements OnInit {
         }));
         this.closeReviewModal();
       },
+      error: err => {
+        this.reviewError.set(err?.error?.message ?? 'Could not save the review decision. Please try again.');
+        this.logger.error('Failed to submit review decision', err);
+      },
     });
+  }
+
+  downloadSubmission(submission: ReviewItem): void {
+    const projectId = this.activeTab() === 'team' ? this.selectedTeamProject() : this.selectedSoloProject();
+    if (!projectId || this.activeTab() === 'team') return;
+    this.downloadError.set(null);
+    this.http.get(`${environment.apiUrl}/projects/${projectId}/submissions/${submission.id}/download`, {
+      responseType: 'blob',
+    }).subscribe({
+      next: blob => this.saveBlob(blob, submission.fileName),
+      error: err => this.downloadError.set(err?.error?.message ?? 'Could not download the document.'),
+    });
+  }
+
+  downloadAllApproved(): void {
+    const projectId = this.selectedSoloProject();
+    if (!projectId || this.activeTab() !== 'solo') return;
+    this.downloadError.set(null);
+    this.http.get(`${environment.apiUrl}/projects/${projectId}/submissions/approved/download`, {
+      responseType: 'blob',
+    }).subscribe({
+      next: blob => this.saveBlob(blob, 'approved-documents.zip'),
+      error: err => this.downloadError.set(err?.error?.message ?? 'Could not download approved documents.'),
+    });
+  }
+
+  private saveBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   getInitials(first: string, last: string): string {

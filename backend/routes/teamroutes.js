@@ -7,9 +7,9 @@ const teamSubmissionUpload = require('../utils/teamSubmissionUpload');
 const router = express.Router();
 
 // Public routes — external collaborators access without login
-router.post('/teams/projects/join', teamController.joinProject);
-router.get('/teams/projects/:id/upload-info/:collaboratorId', teamSubmissionController.getUploadInfo);
-router.post('/teams/projects/:id/submissions', teamSubmissionUpload.single('file'), teamSubmissionController.createSubmission);
+router.post('/teams/projects/join', verifyJwt, teamController.joinProject);
+router.get('/teams/projects/:id/upload-info/:collaboratorId', verifyJwt, teamSubmissionController.getUploadInfo);
+router.post('/teams/projects/:id/submissions', verifyJwt, teamSubmissionUpload.single('file'), teamSubmissionController.createSubmission);
 
 router.use(verifyJwt);
 

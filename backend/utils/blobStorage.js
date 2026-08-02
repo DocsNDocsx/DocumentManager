@@ -20,7 +20,11 @@ async function uploadToBlob({ folder, file, prefix }) {
   ].filter(Boolean).join('/');
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token || process.env.USE_LOCAL_FILE_STORAGE === 'true') {
+  const useLocalStorage = process.env.USE_LOCAL_FILE_STORAGE === 'true';
+  if (process.env.NODE_ENV === 'production' && !token && !useLocalStorage) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is required in production');
+  }
+  if (!token || useLocalStorage) {
     return uploadToLocalPublic(pathname, file.buffer);
   }
 

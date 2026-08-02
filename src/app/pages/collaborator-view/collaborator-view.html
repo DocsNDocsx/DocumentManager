@@ -66,6 +66,10 @@
       </div>
     </div>
 
+    @if (uploadError()) {
+      <div class="error-message" role="alert">{{ uploadError() }}</div>
+    }
+
     <!-- Documents Grid -->
     <div class="documents-grid">
       @for (doc of documents(); track doc.docIndex) {
@@ -78,8 +82,12 @@
               <span class="status-badge status-required">Required</span>
             } @else if (doc.status === 'submitted') {
               <span class="status-badge status-submitted">&#10003; Submitted</span>
-            } @else {
+            } @else if (doc.status === 'approved') {
+              <span class="status-badge status-submitted">&#10003; Approved</span>
+            } @else if (doc.status === 'revision') {
               <span class="status-badge status-revision">Needs Revision</span>
+            } @else {
+              <span class="status-badge status-revision">Declined</span>
             }
           </div>
 
@@ -88,6 +96,13 @@
               <div class="feedback-title">
                 <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Reviewer Feedback
               </div>
+              <div class="feedback-text">{{ doc.feedback }}</div>
+            </div>
+          }
+
+          @if (doc.status === 'rejected' && doc.feedback) {
+            <div class="feedback-box">
+              <div class="feedback-title"><i class="fas fa-times-circle" aria-hidden="true"></i> Document Declined</div>
               <div class="feedback-text">{{ doc.feedback }}</div>
             </div>
           }
@@ -126,7 +141,7 @@
             </div>
           }
 
-          @if (doc.status !== 'submitted') {
+          @if (doc.status === 'required' || doc.status === 'revision') {
             <input type="file"
                    [id]="'file-' + doc.docIndex"
                    style="display:none"
@@ -184,7 +199,7 @@
                 </button>
               }
             </div>
-          } @else {
+          } @else if (doc.status === 'submitted' || doc.status === 'approved') {
             <div class="document-actions">
               <button class="btn-action btn-view">
                 <i class="fas fa-eye" aria-hidden="true"></i> View Submitted

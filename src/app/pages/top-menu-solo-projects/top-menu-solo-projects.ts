@@ -31,6 +31,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   dropdownOpen = signal(false);
   activeFilter = signal<FilterTab>('Active');
   viewingProject = signal<Project | null>(null);
+  actionError = signal<string | null>(null);
 
   private nonCancelledProjects = computed(() => this.listService.projects().filter(p => p.status !== 'cancelled'));
   private activeOnlyProjects   = computed(() => this.nonCancelledProjects().filter(p => p.status === 'active' && this.daysFromNow(p.deadline) >= 0));
@@ -41,7 +42,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
       case 'Active':        return this.activeOnlyProjects();
       case 'Draft':         return all.filter(p => p.status === 'draft');
       case 'Completed':     return all.filter(p => p.status === 'completed');
-      case 'Not Completed': return all.filter(p => p.status === 'active' && this.daysFromNow(p.deadline) < 0);
+      case 'Not Completed': return all.filter(p => p.status === 'not_completed' || (p.status === 'active' && this.daysFromNow(p.deadline) < 0));
       case 'Deleted':       return all.filter(p => p.status === 'cancelled');
       default:              return [];
     }
@@ -143,16 +144,16 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   }
 
   statusLabel(project: Project): string {
-    if (project.status === 'active' && this.daysFromNow(project.deadline) < 0) return 'Expired';
+    if (project.status === 'not_completed' || (project.status === 'active' && this.daysFromNow(project.deadline) < 0)) return 'Expired';
     if (project.status === 'cancelled') return 'Deleted';
-    const map: Record<string, string> = { draft: 'Draft', active: 'Active', completed: 'Completed' };
+    const map: Record<string, string> = { draft: 'Draft', active: 'Active', completed: 'Completed', not_completed: 'Expired' };
     return map[project.status] ?? project.status;
   }
 
   statusClass(project: Project): string {
-    if (project.status === 'active' && this.daysFromNow(project.deadline) < 0) return 'status-badge status-expired';
+    if (project.status === 'not_completed' || (project.status === 'active' && this.daysFromNow(project.deadline) < 0)) return 'status-badge status-expired';
     if (project.status === 'cancelled') return 'status-badge status-deleted';
-    const map: Record<string, string> = { draft: 'status-badge status-draft', active: 'status-badge status-active', completed: 'status-badge status-completed' };
+    const map: Record<string, string> = { draft: 'status-badge status-draft', active: 'status-badge status-active', completed: 'status-badge status-completed', not_completed: 'status-badge status-expired' };
     return map[project.status] ?? 'status-badge';
   }
 
@@ -179,13 +180,17 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   onMarkComplete(project: Project, e: Event): void {
     e.stopPropagation();
+    this.actionError.set(null);
     this.logger.info('Marking project complete', { id: project.id });
     this.http.patch<{ success: boolean; project: Project }>(`${environment.apiUrl}/projects/${project.id}`, { status: 'completed' }).subscribe({
       next: () => {
         this.logger.info('Project marked complete', { id: project.id });
         this.listService.updateOne(project.id, { status: 'completed' });
       },
-      error: err => this.logger.error('Failed to mark project complete', err),
+      error: err => {
+        this.actionError.set(err?.error?.message ?? 'Could not complete the project.');
+        this.logger.error('Failed to mark project complete', err);
+      },
     });
   }
 
@@ -251,6 +256,9 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   }
 
   totalSlots(project: Project): number {
+    if (project.type === 'public') {
+      return (project.collaborators?.length ?? 0) * (project.documents?.length ?? 0);
+    }
     return Object.values(project.assignments).reduce((s, docs) => s + docs.length, 0);
   }
 

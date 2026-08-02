@@ -158,10 +158,13 @@
             }
           </select>
         </div>
-        <button class="btn-download-all" [disabled]="stats().approved === 0">
+        <button class="btn-download-all" [disabled]="stats().approved === 0 || activeTab() !== 'solo'" (click)="downloadAllApproved()">
           <i class="fas fa-download" aria-hidden="true"></i> Download All Approved
         </button>
       </div>
+      @if (downloadError()) {
+        <div class="error-message" role="alert">{{ downloadError() }}</div>
+      }
 
       <!-- Submissions Table -->
       <div class="submissions-section">
@@ -201,8 +204,8 @@
                       <button class="btn-action btn-view" (click)="openReviewModal(sub.id)">
                         <i class="fas fa-eye" aria-hidden="true"></i> Review
                       </button>
-                      @if (sub.status === 'approved') {
-                        <button class="btn-action btn-download">
+                      @if (sub.status === 'approved' && activeTab() === 'solo') {
+                        <button class="btn-action btn-download" (click)="downloadSubmission(sub)">
                           <i class="fas fa-download" aria-hidden="true"></i>
                         </button>
                       }
@@ -251,9 +254,11 @@
             <div class="document-preview">
               <i class="fas fa-file-pdf" aria-hidden="true"></i>
               <p>{{ sub.fileName }}</p>
-              <button class="btn-preview-download">
-                <i class="fas fa-download" aria-hidden="true"></i> Download Document
-              </button>
+              @if (activeTab() === 'solo') {
+                <button class="btn-preview-download" (click)="downloadSubmission(sub)">
+                  <i class="fas fa-download" aria-hidden="true"></i> Download Document
+                </button>
+              }
             </div>
           </div>
           @if (sub.status !== 'pending') {
@@ -279,17 +284,25 @@
               <button class="btn-decision btn-revise-modal" (click)="showRevisionForm()">
                 <i class="fas fa-redo" aria-hidden="true"></i> Request Revision
               </button>
+              @if (activeTab() === 'solo') {
+                <button class="btn-decision" style="background:#4b5563;color:#fff;" (click)="showRejectForm()">
+                  <i class="fas fa-times" aria-hidden="true"></i> Decline Permanently
+                </button>
+              }
             </div>
           </div>
           @if (showCommentsForm()) {
             <div class="review-section">
               <label class="review-label" for="reviewComments">
-                Comments @if (decisionMode() === 'revise') { <span style="color:var(--accent-red)" aria-hidden="true">*</span> }
+                Comments @if (decisionMode() === 'revise' || decisionMode() === 'reject') { <span style="color:var(--accent-red)" aria-hidden="true">*</span> }
               </label>
               <textarea class="form-control" id="reviewComments" rows="4"
-                [placeholder]="decisionMode() === 'approve' ? 'Enter approval notes (optional)...' : 'Explain what needs to be revised (required)...'"
+                [placeholder]="decisionMode() === 'approve' ? 'Enter approval notes (optional)...' : (decisionMode() === 'reject' ? 'Explain why this document is permanently declined (required)...' : 'Explain what needs to be revised (required)...')"
                 [value]="reviewComments()" (input)="reviewComments.set($any($event.target).value)"></textarea>
             </div>
+          }
+          @if (reviewError()) {
+            <div class="error-message" role="alert">{{ reviewError() }}</div>
           }
         </div>
         <div class="modal-footer">
@@ -299,9 +312,13 @@
               <button class="btn-modal" style="background:var(--accent-green);color:#fff;" (click)="submitDecision()">
                 <i class="fas fa-check" aria-hidden="true"></i> Confirm Approval
               </button>
-            } @else {
+            } @else if (modalFooterMode() === 'revise') {
               <button class="btn-modal" style="background:var(--accent-yellow);color:#78350f;" (click)="submitDecision()">
                 <i class="fas fa-redo" aria-hidden="true"></i> Request Revision
+              </button>
+            } @else {
+              <button class="btn-modal" style="background:#4b5563;color:#fff;" (click)="submitDecision()">
+                <i class="fas fa-times" aria-hidden="true"></i> Confirm Permanent Decline
               </button>
             }
           } @else {

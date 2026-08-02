@@ -135,9 +135,11 @@ function installSoloSqlMock(initialProject) {
       return [{ affectedRows: 1 }];
     }
 
-    if (text.startsWith('SELECT p.type, u.email AS ownerEmail')) {
+    if (text.startsWith('SELECT p.type, p.deadline, p.documents, u.email AS ownerEmail')) {
       return [[{
         type: project.type,
+        deadline: project.deadline,
+        documents: project.documents,
         ownerEmail: 'owner@example.com',
         ownerFirstName: 'Owner',
         ownerLastName: 'Person',
@@ -146,6 +148,17 @@ function installSoloSqlMock(initialProject) {
 
     if (text === 'SELECT * FROM projects WHERE id = ?') {
       return [[project]];
+    }
+
+    if (text.startsWith('SELECT type, collaborators, documents, assignments, expected_collaborators FROM projects')) {
+      return [[project]];
+    }
+
+    if (text.startsWith('SELECT COUNT(*) AS approved_count FROM submissions')) {
+      const collaboratorCount = JSON.parse(project.collaborators).length;
+      const documentCount = JSON.parse(project.documents).length;
+      const assignmentCount = Object.values(JSON.parse(project.assignments)).reduce((sum, docs) => sum + docs.length, 0);
+      return [[{ approved_count: project.type === 'public' ? collaboratorCount * documentCount : assignmentCount }]];
     }
 
     if (text.startsWith('UPDATE projects SET')) {
@@ -164,11 +177,15 @@ function installSoloSqlMock(initialProject) {
       return [{ affectedRows: 1 }];
     }
 
+    if (text.startsWith('SELECT id, type, collaborators, documents, assignments, deadline, status FROM projects')) {
+      return [[project]];
+    }
+
     if (text === 'SELECT id FROM projects WHERE id = ?') {
       return [[{ id: project.id }]];
     }
 
-    if (text.startsWith('SELECT id FROM submissions')) {
+    if (text.startsWith('SELECT id') && text.includes('FROM submissions')) {
       return [[]];
     }
 
@@ -311,8 +328,9 @@ function installTeamSqlMock(initialProject) {
       }]];
     }
 
-    if (text.startsWith('SELECT id FROM team_project_collaborators WHERE id = ?')) {
-      return [[{ id: collaborator.id }]];
+    if (text.startsWith('SELECT id, email FROM team_project_collaborators WHERE id = ?')
+        || text.startsWith('SELECT id FROM team_project_collaborators WHERE id = ?')) {
+      return [[{ id: collaborator.id, email: collaborator.email }]];
     }
 
     if (text.startsWith('SELECT id FROM team_project_submissions')) {

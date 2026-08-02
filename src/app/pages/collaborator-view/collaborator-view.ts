@@ -5,8 +5,10 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Project, Submission } from '../../models/project.models';
 import { LoggingService } from '../../services/logging.service';
+import { upload } from '@vercel/blob/client';
+import { from, switchMap } from 'rxjs';
 
-type DocStatus = 'required' | 'submitted' | 'revision';
+type DocStatus = 'required' | 'submitted' | 'approved' | 'revision' | 'rejected';
 
 interface DocumentSlot {
   docIndex: number;       // position in project.documents[] — used as the stable key
@@ -40,6 +42,7 @@ export class CollaboratorViewComponent implements OnInit {
   isLoading = signal(true);
   loadError = signal<string | null>(null);
   showSuccessModal = signal(false);
+  uploadError = signal<string | null>(null);
   documents = signal<DocumentSlot[]>([]);
 
   collaboratorName = computed(() => {
@@ -196,17 +199,37 @@ export class CollaboratorViewComponent implements OnInit {
     if (!doc?.selectedFile) return;
 
     this.documents.update(docs => docs.map(d => d.docIndex === docIdx ? { ...d, uploading: true } : d));
+    this.uploadError.set(null);
     this.logger.info('Uploading document', { projectId: this.projectId(), docIdx, fileName: doc.selectedFile.name });
 
-    const formData = new FormData();
-    formData.append('file', doc.selectedFile);
-    formData.append('collabIndex', String(this.collabIndex()));
-    formData.append('docIndex', String(docIdx));
+    const submissionUrl = `${environment.apiUrl}/projects/${this.projectId()}/submissions`;
+    const request$ = environment.production
+      ? from(upload(
+          `submissions/solo/${this.projectId()}/${this.collabIndex()}/doc-${docIdx}-${doc.selectedFile.name}`,
+          doc.selectedFile,
+          {
+            access: 'private',
+            handleUploadUrl: `${submissionUrl}/upload-token`,
+            clientPayload: JSON.stringify({ collabIndex: this.collabIndex(), docIndex: docIdx }),
+            multipart: true,
+          },
+        )).pipe(switchMap(blob => this.http.post<{ success: boolean; submission: Submission }>(submissionUrl, {
+          blobUrl: blob.url,
+          fileName: doc.selectedFile!.name,
+          fileSize: doc.selectedFile!.size,
+          fileType: doc.selectedFile!.type,
+          collabIndex: this.collabIndex(),
+          docIndex: docIdx,
+        })))
+      : (() => {
+          const formData = new FormData();
+          formData.append('file', doc.selectedFile!);
+          formData.append('collabIndex', String(this.collabIndex()));
+          formData.append('docIndex', String(docIdx));
+          return this.http.post<{ success: boolean; submission: Submission }>(submissionUrl, formData);
+        })();
 
-    this.http.post<{ success: boolean; submission: Submission }>(
-      `${environment.apiUrl}/projects/${this.projectId()}/submissions`,
-      formData
-    ).subscribe({
+    request$.subscribe({
       next: res => {
         const sub = res.submission;
         this.documents.update(docs => docs.map(d => {
@@ -227,6 +250,7 @@ export class CollaboratorViewComponent implements OnInit {
       },
       error: (err) => {
         this.logger.error('Document upload failed', err);
+        this.uploadError.set(err?.error?.message ?? err?.message ?? 'Document upload failed. Please try again.');
         this.documents.update(docs => docs.map(d => d.docIndex === docIdx ? { ...d, uploading: false } : d));
       },
     });

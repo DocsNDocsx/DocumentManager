@@ -25,7 +25,7 @@ function buildBody(template, { collaboratorName, projectName, deadlineDate, days
 async function processSoloProjects(days, template) {
   let sent = 0;
   const [projects] = await pool.query(
-    `SELECT id, name, deadline, collaborators, assignments
+    `SELECT id, name, type, deadline, collaborators, documents, assignments
      FROM projects
      WHERE status = 'active'
        AND deadline IS NOT NULL
@@ -38,12 +38,16 @@ async function processSoloProjects(days, template) {
       ? JSON.parse(project.collaborators) : (project.collaborators ?? []);
     const assignments = typeof project.assignments === 'string'
       ? JSON.parse(project.assignments) : (project.assignments ?? {});
+    const documents = typeof project.documents === 'string'
+      ? JSON.parse(project.documents) : (project.documents ?? []);
 
     for (let i = 0; i < collaborators.length; i++) {
       const collab = collaborators[i];
       if (!collab?.email) continue;
 
-      const requiredDocs = assignments[String(i)] ?? [];
+      const requiredDocs = project.type === 'public'
+        ? documents.map((_, index) => index)
+        : (assignments[String(i)] ?? []);
       if (requiredDocs.length === 0) continue;
 
       const [subs] = await pool.query(
@@ -127,6 +131,12 @@ async function processTeamProjects(days, template) {
 }
 
 async function sendDeadlineReminders() {
+  await pool.query(
+    "UPDATE projects SET status = 'not_completed' WHERE status = 'active' AND deadline IS NOT NULL AND deadline < CURRENT_DATE",
+  );
+  await pool.query(
+    "UPDATE team_projects SET status = 'not_completed' WHERE status = 'active' AND deadline IS NOT NULL AND deadline < CURRENT_DATE",
+  );
   const template = fs.readFileSync(
     path.join(__dirname, '../templates-email/reminderdeadline.html'), 'utf8'
   );

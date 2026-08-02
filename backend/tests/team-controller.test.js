@@ -80,6 +80,30 @@ describe('teamcontroller', () => {
     sendEmail.mockReset();
   });
 
+  it('rejects invalid team project status values', async () => {
+    pool.query.mockResolvedValueOnce([[teamProjectRow({ status: 'draft' })]]);
+    const res = mockResponse();
+    await teamController.updateTeamProject({
+      params: { id: 'team-project-1' },
+      body: { status: 'hacked' },
+    }, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid project status' });
+  });
+
+  it('blocks arbitrary authenticated users from reading a team project', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '999' }]])
+      .mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+    await teamController.getTeamProject({
+      params: { id: 'team-project-1' },
+      user: { email: 'intruder@example.com' },
+    }, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'You cannot access this project' });
+  });
+
   it('requires userid when listing teams', async () => {
     const res = mockResponse();
 
@@ -581,9 +605,10 @@ describe('teamcontroller', () => {
 
   it('joins a public active team project by project code', async () => {
     pool.query
-      .mockResolvedValueOnce([[{ id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team' }]])
+      .mockResolvedValueOnce([[{ id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team', expected_collaborators: 5 }]])
       .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com', organization: 'Org' }]])
       .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ collaborator_count: 0 }]])
       .mockResolvedValueOnce([{ affectedRows: 1 }]);
     const res = mockResponse();
 
@@ -634,7 +659,7 @@ describe('teamcontroller', () => {
     );
     expect(pool.query).toHaveBeenNthCalledWith(
       4,
-      'UPDATE projects SET collaborators = ? WHERE id = ?',
+      expect.stringContaining('UPDATE projects SET collaborators = ? WHERE id = ?'),
       [
         JSON.stringify([
           { userId: '789', email: 'other@example.com' },
@@ -646,7 +671,10 @@ describe('teamcontroller', () => {
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      project: { id: 'solo-project-1', name: 'Solo Intake', projectType: 'solo', ownerName: 'Owner User' },
+      project: {
+        id: 'solo-project-1', name: 'Solo Intake', projectType: 'solo', ownerName: 'Owner User',
+        collaboratorIndex: 1, workspacePath: '/collaborator-view/solo-project-1/1',
+      },
     });
   });
 

@@ -31,7 +31,7 @@ export interface ProjectStaff {
   affiliation: string;
 }
 
-export type ProjectStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+export type ProjectStatus = 'draft' | 'active' | 'completed' | 'not_completed' | 'cancelled';
 
 export interface Project {
   id: string;
@@ -73,7 +73,7 @@ export interface Submission {
   file_name: string;
   file_size: number;
   file_path: string;
-  status: 'submitted' | 'approved' | 'revision';
+  status: 'submitted' | 'approved' | 'revision' | 'rejected';
   feedback: string | null;
   submitted_at: string;
   updated_at: string;
