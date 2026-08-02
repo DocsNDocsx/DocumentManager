@@ -129,6 +129,7 @@ describe('authcontroller dropdown/account APIs', () => {
 
   it('sends forgot-password OTP email', async () => {
     jest.spyOn(crypto, 'randomInt').mockReturnValueOnce(654321);
+    pool.execute.mockResolvedValueOnce([[{ 1: 1 }]]);
     pool.query
       .mockResolvedValueOnce([{ affectedRows: 0 }])
       .mockResolvedValueOnce([{ affectedRows: 1 }]);
@@ -151,6 +152,25 @@ describe('authcontroller dropdown/account APIs', () => {
     expect(res.json).toHaveBeenCalledWith({ success: true, message: 'OTP Email Sent' });
 
     crypto.randomInt.mockRestore();
+  });
+
+  it('rejects forgot-password requests for an unregistered email', async () => {
+    pool.execute.mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+
+    await authController.passForgot({ body: { email: 'missing@example.com' } }, res);
+
+    expect(pool.execute).toHaveBeenCalledWith(
+      'SELECT 1 FROM users WHERE email = ?',
+      ['missing@example.com'],
+    );
+    expect(pool.query).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'No registered account found for this email',
+    });
   });
 
   it('verifies password-reset OTP and returns reset token plus user session data', async () => {

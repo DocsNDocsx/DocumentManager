@@ -121,7 +121,10 @@ describe('projectcontroller', () => {
   });
 
   it('returns projects parsed from stored JSON', async () => {
-    pool.query.mockResolvedValueOnce([[projectRow(), projectRow({ id: 'project-2', collaborators: 'bad-json' })]]);
+    pool.query
+      .mockResolvedValueOnce([[projectRow(), projectRow({ id: 'project-2', collaborators: 'bad-json' })]])
+      .mockResolvedValueOnce([[{ email: 'owner@example.com' }]])
+      .mockResolvedValueOnce([[]]);
     const res = mockResponse();
 
     await projectController.getProjects({ query: { userid: '123' } }, res);
@@ -132,6 +135,33 @@ describe('projectcontroller', () => {
         expect.objectContaining({ id: 'project-1', documents: [{ name: 'Transcript' }] }),
         expect.objectContaining({ id: 'project-2', collaborators: [] }),
       ],
+    });
+  });
+
+  it('includes an active project joined as a collaborator', async () => {
+    pool.query
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ email: 'join@example.com' }]])
+      .mockResolvedValueOnce([[
+        projectRow({
+          id: 'joined-project',
+          user_id: '999',
+          status: 'active',
+          collaborators: JSON.stringify([
+            { userId: '456', email: 'join@example.com' },
+          ]),
+        }),
+      ]]);
+    const res = mockResponse();
+
+    await projectController.getProjects({ query: { userid: '456' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      projects: [expect.objectContaining({
+        id: 'joined-project',
+        userId: '999',
+      })],
     });
   });
 

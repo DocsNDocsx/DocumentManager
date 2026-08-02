@@ -89,10 +89,30 @@ exports.getProjects = async (req, res) => {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
 
-    const [rows] = await pool.query(
+    const [ownedRows] = await pool.query(
       "SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC",
       [userid]
     );
+    const [userRows] = await pool.query(
+      'SELECT email FROM users WHERE userid = ?',
+      [userid]
+    );
+    const [activeRows] = await pool.query(
+      "SELECT * FROM projects WHERE user_id != ? AND status = 'active' ORDER BY created_at DESC",
+      [userid]
+    );
+
+    const userEmail = String(userRows[0]?.email ?? '').toLowerCase();
+    const collaboratorRows = activeRows.filter(row => {
+      const collaborators = parseProject(row).collaborators;
+      return collaborators.some(collaborator => {
+        const collaboratorUserId = collaborator?.userId ?? collaborator?.userid ?? collaborator?.user_id;
+        const collaboratorEmail = String(collaborator?.email ?? '').toLowerCase();
+        return String(collaboratorUserId ?? '') === String(userid)
+          || (userEmail && collaboratorEmail === userEmail);
+      });
+    });
+    const rows = [...ownedRows, ...collaboratorRows];
 
     res.json({ success: true, projects: rows.map(parseProject) });
   } catch (err) {

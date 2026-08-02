@@ -651,6 +651,29 @@ exports.getTeamProjects = async (req, res) => {
       }
     }
 
+    const [collaboratorRows] = await pool.query(
+      `SELECT ${projectSqlFields}
+       FROM team_project_collaborators tpc_user
+       JOIN team_projects tp ON tp.id = tpc_user.project_id
+       JOIN teams t ON t.id = tp.team_id
+       LEFT JOIN team_project_roles tpr_all ON tpr_all.project_id = tp.id
+       LEFT JOIN team_project_roles tpr_user ON tpr_user.project_id = tp.id
+                                             AND tpr_user.user_id = ?
+       LEFT JOIN team_project_collaborators tpc_me ON tpc_me.project_id = tp.id
+                                             AND tpc_me.user_id = ?
+       WHERE tpc_user.user_id = ?
+         AND tp.status != 'deleted'
+       GROUP BY tp.id, tp.team_id, t.name, tp.name, tp.type, tp.status, tp.deadline, tp.project_code, tp.created_at, tp.updated_at, tp.documents, tpr_user.role
+       ORDER BY tp.created_at DESC`,
+      [userid, userid, userid]
+    );
+    for (const row of collaboratorRows) {
+      if (!seenIds.has(row.id)) {
+        projects.push(mapProjectRow(row));
+        seenIds.add(row.id);
+      }
+    }
+
     const needsCode = projects.filter(p => p.status === 'active' && !p.projectCode);
     if (needsCode.length > 0) {
       await Promise.all(needsCode.map(async p => {

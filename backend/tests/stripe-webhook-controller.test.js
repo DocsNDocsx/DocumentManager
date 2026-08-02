@@ -17,10 +17,14 @@ function loadWebhookController({ stripe = {}, webhookSecret = 'whsec_test' } = {
   jest.doMock('../utils/stripe', () => ({
     stripe,
   }));
+  jest.doMock('../utils/emailservice', () => ({
+    sendEmail: jest.fn(async () => undefined),
+  }));
 
   return {
     controller: require('../controllers/stripewebhookcontroller'),
     pool: require('../utils/sql'),
+    emailService: require('../utils/emailservice'),
   };
 }
 
@@ -38,6 +42,7 @@ describe('stripewebhookcontroller.handleWebhook', () => {
   afterEach(() => {
     jest.dontMock('../utils/sql');
     jest.dontMock('../utils/stripe');
+    jest.dontMock('../utils/emailservice');
     process.env.STRIPE_WEBHOOK_SECRET = originalWebhookSecret;
     jest.restoreAllMocks();
   });
@@ -89,12 +94,13 @@ describe('stripewebhookcontroller.handleWebhook', () => {
       type: 'invoice.payment_succeeded',
       data: { object: invoice },
     });
-    const { controller, pool } = loadWebhookController({ stripe });
+    const { controller, pool, emailService } = loadWebhookController({ stripe });
     pool.query
       .mockResolvedValueOnce([[{ userid: 123, type: 'solo' }]])
       .mockResolvedValueOnce([[]])
       .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[{ email: 'paid@example.com', firstname: 'Paid', lastname: 'User' }]]);
     const res = mockResponse();
 
     await controller.handleWebhook({
@@ -122,6 +128,52 @@ describe('stripewebhookcontroller.handleWebhook', () => {
       'UPDATE stripe_subscriptions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?',
       ['active', 'sub_1'],
     );
+    expect(pool.query).toHaveBeenNthCalledWith(
+      5,
+      'SELECT email, firstname, lastname FROM users WHERE userid = ?',
+      [123],
+    );
+    expect(emailService.sendEmail).toHaveBeenCalledWith(
+      'paid@example.com',
+      'DocsNDocs: Payment receipt',
+      expect.stringContaining('Invoice:</strong> INV-1'),
+    );
+    expect(emailService.sendEmail.mock.calls[0][2]).toContain('USD 9.72');
+    expect(res.json).toHaveBeenCalledWith({ received: true });
+  });
+
+  it('does not send a duplicate receipt for a repeated successful invoice webhook', async () => {
+    const invoice = {
+      id: 'in_1',
+      number: 'INV-1',
+      subscription: 'sub_1',
+      amount_paid: 972,
+      currency: 'usd',
+      created: 1798761500,
+    };
+    const stripe = stripeWithEvent({
+      type: 'invoice.payment_succeeded',
+      data: { object: invoice },
+    });
+    const { controller, pool, emailService } = loadWebhookController({ stripe });
+    pool.query
+      .mockResolvedValueOnce([[{ userid: 123, type: 'solo' }]])
+      .mockResolvedValueOnce([[{ id: 55 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await controller.handleWebhook({
+      headers: { 'stripe-signature': 'sig_ok' },
+      body: Buffer.from('{}'),
+    }, res);
+
+    expect(pool.query).toHaveBeenCalledTimes(3);
+    expect(pool.query).toHaveBeenNthCalledWith(
+      3,
+      'UPDATE stripe_subscriptions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?',
+      ['active', 'sub_1'],
+    );
+    expect(emailService.sendEmail).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({ received: true });
   });
 

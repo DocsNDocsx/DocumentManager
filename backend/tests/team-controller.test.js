@@ -477,6 +477,7 @@ describe('teamcontroller', () => {
         },
       ]])
       .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
       .mockResolvedValueOnce([{ affectedRows: 1 }]);
     const res = mockResponse();
 
@@ -496,6 +497,38 @@ describe('teamcontroller', () => {
         documentCount: 3,
       })],
     });
+  });
+
+  it('includes a project joined directly as a collaborator', async () => {
+    pool.query
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[
+        {
+          id: 'team-project-1', teamId: 'team-1', teamName: 'Review Team', userRole: null,
+          name: 'Team Intake', type: 'public', status: 'active', deadline: null,
+          projectCode: 'ABCD-2345', collaboratorCount: '0', documentCount: '3',
+          submittedCount: '0', approvedCount: '0', collabUploadCount: '1',
+          createdAt: '2026-07-01T00:00:00.000Z', updatedAt: '2026-07-02T00:00:00.000Z',
+          myCollaboratorId: 'collab-1',
+        },
+      ]]);
+    const res = mockResponse();
+
+    await teamController.getTeamProjects({ query: { userid: '456' } }, res);
+
+    expect(pool.query).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('FROM team_project_collaborators tpc_user'),
+      ['456', '456', '456'],
+    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      projects: [expect.objectContaining({
+        id: 'team-project-1',
+        myCollaboratorId: 'collab-1',
+      })],
+    }));
   });
 
   it('requires userid when getting team projects', async () => {

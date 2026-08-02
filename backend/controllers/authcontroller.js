@@ -120,6 +120,14 @@ exports.register = async (req, res) => {
 exports.passForgot = async (req, res) => {
   try {
     const toEmail = req.body.email;
+    const [users] = await pool.execute('SELECT 1 FROM users WHERE email = ?', [toEmail]);
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No registered account found for this email',
+      });
+    }
+
     const otp = generateOtp();
     await storeOtp(toEmail, otp);
     const subject = 'Your OTP Code for DocsNDocs';

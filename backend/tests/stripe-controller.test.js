@@ -182,6 +182,15 @@ describe('stripecontroller', () => {
             id: 'sub_123',
             status: 'active',
             current_period_end: 1798761600,
+            latest_invoice: {
+              id: 'in_123',
+              number: 'INV-123',
+              amount_paid: 972,
+              currency: 'usd',
+              hosted_invoice_url: 'https://invoice.stripe.test/in_123',
+              created: 1798761500,
+              status_transitions: { paid_at: 1798761600 },
+            },
           })),
         },
       };
@@ -270,8 +279,10 @@ describe('stripecontroller', () => {
       expect(emailService.sendEmail).toHaveBeenCalledWith(
         'paid@example.com',
         'DocsNDocs: Payment receipt',
-        expect.stringContaining('Subscription:</strong> sub_123'),
+        expect.stringContaining('Invoice:</strong> INV-123'),
       );
+      expect(emailService.sendEmail.mock.calls[0][2]).toContain('USD 9.72');
+      expect(emailService.sendEmail.mock.calls[0][2]).toContain('https://invoice.stripe.test/in_123');
     });
 
     it('rejects invalid voucher codes before charging the card', async () => {

@@ -1,5 +1,6 @@
 const pool = require('../utils/sql');
 const { stripe } = require('../utils/stripe');
+const { sendPaymentReceiptEmail } = require('../utils/paymentreceipt');
 
 /**
  * POST /api/stripe/webhook
@@ -30,8 +31,18 @@ exports.handleWebhook = async (req, res) => {
     switch (event.type) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
-        await recordPayment(invoice, 'paid');
+        const payment = await recordPayment(invoice, 'paid');
         await setSubStatus(invoice.subscription, 'active');
+        if (payment?.inserted) {
+          const user = await getReceiptUser(payment.userid);
+          await sendPaymentReceiptEmail({
+            user,
+            subscriptionId: invoice.subscription,
+            invoice,
+            amountCents: invoice.amount_paid ?? invoice.amount_due ?? 0,
+            voucherCode: invoice.metadata?.voucherCode || null,
+          });
+        }
         break;
       }
       case 'invoice.payment_failed': {
@@ -85,14 +96,14 @@ async function recordPayment(invoice, status) {
       type = rows[0].type;
     }
   }
-  if (!userid) return;
+  if (!userid) return { inserted: false, userid: null, duplicate: false };
 
   const invoiceNo = invoice.number ?? invoice.id;
   const [existing] = await pool.query(
     'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
     [invoiceNo, userid]
   );
-  if (existing.length > 0) return;
+  if (existing.length > 0) return { inserted: false, userid, duplicate: true };
 
   const paidAt = invoice.status_transitions?.paid_at ?? invoice.created;
   await pool.query(
@@ -111,6 +122,17 @@ async function recordPayment(invoice, status) {
       type,
     ]
   );
+
+  return { inserted: true, userid, duplicate: false };
+}
+
+async function getReceiptUser(userid) {
+  if (!userid) return null;
+  const [rows] = await pool.query(
+    'SELECT email, firstname, lastname FROM users WHERE userid = ?',
+    [userid]
+  );
+  return rows[0] ?? null;
 }
 
 async function setSubStatus(subId, status) {

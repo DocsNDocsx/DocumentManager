@@ -1,0 +1,580 @@
+{
+  "info": {
+    "name": "DocsNDocs Team Flow API Tests",
+    "_postman_id": "1f62d2e1-d6b8-4a34-8df4-2f2a80ef2df1",
+    "description": "Manual/integration API test payloads for team creation, team public project, team private project, activation, join, submissions, and negative cases. Set baseUrl, authToken, userId, paymentMethodId, and optional existing collaborator ids before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.docsndocs.com/api" },
+    { "key": "authToken", "value": "PASTE_JWT_TOKEN_HERE" },
+    { "key": "userId", "value": "PASTE_USER_ID_HERE" },
+    { "key": "paymentMethodId", "value": "pm_card_visa" },
+    { "key": "teamId", "value": "" },
+    { "key": "teamPublicProjectId", "value": "" },
+    { "key": "teamPrivateProjectId", "value": "" },
+    { "key": "teamProjectCode", "value": "" },
+    { "key": "teamCollaboratorId", "value": "" },
+    { "key": "teamSubmissionId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{authToken}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 Team Setup",
+      "item": [
+        {
+          "name": "Create Team",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"name\": \"API Test Research Team\",\n  \"description\": \"Team created from team-flow.postman_collection.json\",\n  \"icon\": \"fa-users\",\n  \"members\": [\n    {\n      \"firstName\": \"Taylor\",\n      \"lastName\": \"Reviewer\",\n      \"email\": \"taylor.reviewer@example.com\",\n      \"affiliation\": \"DocsNDocs QA\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('team created', function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('teamId', json.team.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Team",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/teams/{{teamId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('team loads', function () { pm.response.to.have.status(200); });",
+                  "pm.test('members exist', function () { pm.expect(pm.response.json().team.members.length).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Team Public Project",
+      "item": [
+        {
+          "name": "Create Public Team Project Details",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"teamId\": \"{{teamId}}\",\n  \"name\": \"API Team Public Project\",\n  \"description\": \"Public team collection created by API test JSON.\",\n  \"deadline\": \"2026-12-31\",\n  \"type\": \"public\",\n  \"completedStep\": 1,\n  \"expectedCollaborators\": 3,\n  \"supportStaff\": {\n    \"firstName\": \"Sam\",\n    \"lastName\": \"Support\",\n    \"email\": \"sam.support@example.com\",\n    \"affiliation\": \"DocsNDocs\"\n  },\n  \"attachments\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('public project created', function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('teamPublicProjectId', json.project.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Public Team Documents",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}/documents",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documents\": [\n    {\n      \"name\": \"Resume\",\n      \"fileTypes\": [\"PDF\", \"DOCX\"],\n      \"maxSize\": \"10\",\n      \"sizeUnit\": \"MB\",\n      \"templateName\": \"\"\n    },\n    {\n      \"name\": \"Transcript\",\n      \"fileTypes\": [\"PDF\"],\n      \"maxSize\": \"15\",\n      \"sizeUnit\": \"MB\",\n      \"templateName\": \"\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('documents saved', function () { pm.response.to.have.status(200); });",
+                  "pm.test('step did not go backward', function () { pm.expect(pm.response.json().project.completedStep).to.be.at.least(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Subscription For Public Team Activation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/stripe/subscription",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethodId\": \"{{paymentMethodId}}\",\n  \"type\": \"team\",\n  \"projects\": 1,\n  \"collaborators\": 3,\n  \"documents\": 2,\n  \"days\": 30,\n  \"projectId\": \"{{teamPublicProjectId}}\",\n  \"voucherCode\": \"WELCOME10\",\n  \"billingAddress\": {\n    \"line1\": \"123 Peachtree St NE\",\n    \"city\": \"Atlanta\",\n    \"state\": \"GA\",\n    \"postalCode\": \"30303\",\n    \"country\": \"US\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('subscription created', function () { pm.response.to.have.status(200); });",
+                  "pm.test('subscription id returned', function () { pm.expect(pm.response.json().subscriptionId).to.exist; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate Public Team Project",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"completedStep\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('public project activated', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.expect(json.project.status).to.eql('active');",
+                  "pm.collectionVariables.set('teamProjectCode', json.project.projectCode);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit Active Public Team Details Must Not Reset Completed Step",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"API Team Public Project - Edited\",\n  \"description\": \"Edited after activation; should remain active.\",\n  \"deadline\": \"2027-01-15\",\n  \"completedStep\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('active edit succeeded', function () { pm.response.to.have.status(200); });",
+                  "const project = pm.response.json().project;",
+                  "pm.expect(project.status).to.eql('active');",
+                  "pm.expect(project.completedStep).to.be.at.least(5);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Join Public Team Project",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/join",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectCode\": \"{{teamProjectCode}}\",\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('join accepted or already joined', function () { pm.expect([201, 409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Public Team Collaborators",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}/collaborators"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('collaborators loaded', function () { pm.response.to.have.status(200); });",
+                  "const list = pm.response.json().collaborators || [];",
+                  "if (list.length > 0) pm.collectionVariables.set('teamCollaboratorId', list[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Public Team Upload Info",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}/upload-info/{{teamCollaboratorId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('upload info loaded', function () { pm.response.to.have.status(200); });",
+                  "pm.expect(pm.response.json().project.documents.length).to.be.above(0);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Team Private Project",
+      "item": [
+        {
+          "name": "Create Private Team Project Details",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"teamId\": \"{{teamId}}\",\n  \"name\": \"API Team Private Project\",\n  \"description\": \"Private team collection created by API test JSON.\",\n  \"deadline\": \"2026-12-31\",\n  \"type\": \"private\",\n  \"completedStep\": 1,\n  \"supportStaff\": {\n    \"firstName\": \"Priya\",\n    \"lastName\": \"Support\",\n    \"email\": \"priya.support@example.com\",\n    \"affiliation\": \"DocsNDocs\"\n  },\n  \"attachments\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('private project created', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('teamPrivateProjectId', pm.response.json().project.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Private Team Collaborators",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPrivateProjectId}}/collaborators",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collaborators\": [\n    {\n      \"firstName\": \"Alex\",\n      \"lastName\": \"Contributor\",\n      \"email\": \"alex.contributor@example.com\",\n      \"affiliation\": \"QA University\",\n      \"role\": \"contributor\"\n    },\n    {\n      \"firstName\": \"Jordan\",\n      \"lastName\": \"Supervisor\",\n      \"email\": \"jordan.supervisor@example.com\",\n      \"affiliation\": \"QA University\",\n      \"role\": \"supervisor\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('private collaborators saved', function () { pm.response.to.have.status(200); });",
+                  "pm.expect(pm.response.json().project.completedStep).to.be.at.least(2);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Private Team Documents",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPrivateProjectId}}/documents",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documents\": [\n    {\n      \"name\": \"ID Proof\",\n      \"fileTypes\": [\"PDF\", \"PNG\"],\n      \"maxSize\": \"10\",\n      \"sizeUnit\": \"MB\",\n      \"templateName\": \"\"\n    },\n    {\n      \"name\": \"Signed NDA\",\n      \"fileTypes\": [\"PDF\"],\n      \"maxSize\": \"5\",\n      \"sizeUnit\": \"MB\",\n      \"templateName\": \"\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('private documents saved', function () { pm.response.to.have.status(200); });",
+                  "pm.expect(pm.response.json().project.completedStep).to.be.at.least(3);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Private Team Assignment Progress",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPrivateProjectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completedStep\": 4\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('assignment progress saved', function () { pm.response.to.have.status(200); });",
+                  "pm.expect(pm.response.json().project.completedStep).to.be.at.least(4);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Subscription For Private Team Activation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/stripe/subscription",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethodId\": \"{{paymentMethodId}}\",\n  \"type\": \"team\",\n  \"projects\": 1,\n  \"collaborators\": 2,\n  \"documents\": 2,\n  \"days\": 30,\n  \"projectId\": \"{{teamPrivateProjectId}}\",\n  \"billingAddress\": {\n    \"line1\": \"123 Peachtree St NE\",\n    \"city\": \"Atlanta\",\n    \"state\": \"GA\",\n    \"postalCode\": \"30303\",\n    \"country\": \"US\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('subscription created', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate Private Team Project",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPrivateProjectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"completedStep\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('private project activated', function () { pm.response.to.have.status(200); });",
+                  "const project = pm.response.json().project;",
+                  "pm.expect(project.status).to.eql('active');",
+                  "pm.expect(project.completedStep).to.be.at.least(5);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Close Private Team Project",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPrivateProjectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('private project closed', function () { pm.response.to.have.status(200); });",
+                  "pm.expect(pm.response.json().project.status).to.eql('completed');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Negative Cases",
+      "item": [
+        {
+          "name": "Create Team Missing Token",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"name\": \"Should Not Create\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('unauthorized', function () { pm.expect([401, 403]).to.include(pm.response.code); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Team Missing Name",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('name required', function () { pm.response.to.have.status(400); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate Team Project Without Subscription",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"completedStep\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('requires subscription or already active', function () { pm.expect([200, 402]).to.include(pm.response.code); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Join Bad Team Project Code",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/join",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectCode\": \"PRJ-DOES-NOT-EXIST\",\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('bad code rejected', function () { pm.response.to.have.status(404); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Join Duplicate Public Team Project",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/join",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectCode\": \"{{teamProjectCode}}\",\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('duplicate rejected', function () { pm.expect([409, 404]).to.include(pm.response.code); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid Team Submission Review Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/teams/projects/{{teamPublicProjectId}}/submissions/{{teamSubmissionId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"pending\",\n  \"feedback\": \"Invalid status should fail\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('invalid review status rejected', function () { pm.expect([400, 404]).to.include(pm.response.code); });"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
