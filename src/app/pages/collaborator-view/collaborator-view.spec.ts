@@ -111,6 +111,8 @@ describe('CollaboratorViewComponent', () => {
     );
 
     expect(component.uploadError()).toBe('Blob storage is not configured for this environment');
+    expect(component.toastVisible()).toBe(true);
+    expect(component.toastMsg()).toBe('Blob storage is not configured for this environment');
     environment.production = originalProduction;
   });
 });

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -31,7 +31,7 @@ interface DocumentSlot {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
 })
-export class CollaboratorViewComponent implements OnInit {
+export class CollaboratorViewComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
   private logger = inject(LoggingService);
@@ -43,6 +43,9 @@ export class CollaboratorViewComponent implements OnInit {
   loadError = signal<string | null>(null);
   showSuccessModal = signal(false);
   uploadError = signal<string | null>(null);
+  toastMsg = signal('');
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
   documents = signal<DocumentSlot[]>([]);
 
   collaboratorName = computed(() => {
@@ -97,6 +100,17 @@ export class CollaboratorViewComponent implements OnInit {
     this.projectId.set(projectId);
     this.collabIndex.set(collabIndex);
     this.loadData(projectId, collabIndex);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
+
+  private showErrorToast(message: string): void {
+    this.toastMsg.set(message);
+    this.toastVisible.set(true);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastVisible.set(false), 4000);
   }
 
   private loadData(projectId: string, collabIndex: number): void {
@@ -252,7 +266,9 @@ export class CollaboratorViewComponent implements OnInit {
       },
       error: (err) => {
         this.logger.error('Document upload failed', err);
-        this.uploadError.set(err?.error?.message ?? err?.message ?? 'Document upload failed. Please try again.');
+        const message = err?.error?.message ?? err?.message ?? 'Document upload failed. Please try again.';
+        this.uploadError.set(message);
+        this.showErrorToast(message);
         this.documents.update(docs => docs.map(d => d.docIndex === docIdx ? { ...d, uploading: false } : d));
       },
     });

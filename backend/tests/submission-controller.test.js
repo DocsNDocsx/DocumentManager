@@ -8,6 +8,10 @@ jest.mock('../utils/emailservice', () => ({
 jest.mock('../utils/blobStorage', () => ({
   uploadToBlob: jest.fn(),
 }));
+jest.mock('@vercel/blob', () => ({
+  get: jest.fn(),
+  head: jest.fn(),
+}));
 jest.mock('fs', () => ({
   readFileSync: jest.fn(() => (
     '{{BASE_URL}} {{OWNER_NAME}} {{COLLABORATOR_NAME}} {{PROJECT_NAME}} {{DOCUMENT_NAME}} ' +
@@ -19,6 +23,7 @@ const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
+const { head } = require('@vercel/blob');
 const submissionController = require('../controllers/submissioncontroller');
 
 function mockResponse() {
@@ -88,6 +93,11 @@ describe('submissioncontroller', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     uploadToBlob.mockResolvedValue('https://blob.example.com/solo/transcript.pdf');
+    head.mockResolvedValue({
+      size: 2048,
+      contentType: 'application/pdf',
+      url: 'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+    });
   });
 
   it('requires an uploaded file when creating a submission', async () => {
@@ -235,9 +245,10 @@ describe('submissioncontroller', () => {
       body: {
         collabIndex: '0',
         docIndex: '1',
-        blobUrl: 'https://store.public.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+        blobUrl: 'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
         fileName: 'transcript.pdf',
         fileSize: 2048,
+        fileType: 'application/pdf',
       },
     }, res);
 
@@ -247,10 +258,40 @@ describe('submissioncontroller', () => {
       expect.stringContaining('INSERT INTO submissions'),
       expect.arrayContaining([
         'project-1', 0, 1, 'transcript.pdf', 2048,
-        'https://store.public.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+        'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
       ]),
     );
+    expect(head).toHaveBeenCalledWith(
+      'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+      { token: process.env.BLOB_READ_WRITE_TOKEN },
+    );
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('rejects direct-upload metadata that does not match the private Blob object', async () => {
+    pool.query.mockResolvedValueOnce([[uploadProjectRow()]]);
+    head.mockResolvedValueOnce({
+      size: 4096,
+      contentType: 'application/pdf',
+      url: 'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+    });
+    const res = mockResponse();
+
+    await submissionController.createSubmission({
+      params: { projectId: 'project-1' },
+      user: { email: 'ava@example.com' },
+      body: {
+        collabIndex: '0', docIndex: '1',
+        blobUrl: 'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/0/transcript.pdf',
+        fileName: 'transcript.pdf', fileSize: 2048, fileType: 'application/pdf',
+      },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'Uploaded file size does not match secure storage',
+    });
   });
 
   it('rejects invalid submission review status', async () => {

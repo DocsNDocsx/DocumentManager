@@ -5,7 +5,7 @@ const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
-const { get } = require('@vercel/blob');
+const { get, head } = require('@vercel/blob');
 const { Readable } = require('stream');
 
 const SIZE_MULTIPLIERS = { KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
@@ -128,14 +128,27 @@ exports.createSubmission = async (req, res) => {
       });
     } else {
       const parsedUrl = new URL(blobUrl);
-      if (!parsedUrl.hostname.endsWith('.blob.vercel-storage.com')) {
+      if (!parsedUrl.hostname.endsWith('.private.blob.vercel-storage.com')) {
         return res.status(400).json({ success: false, message: 'Invalid uploaded file URL' });
       }
       const expectedFolder = `/submissions/solo/${projectId}/${collabIdx}/`;
       if (!decodeURIComponent(parsedUrl.pathname).includes(expectedFolder)) {
         return res.status(400).json({ success: false, message: 'Uploaded file URL does not belong to this submission' });
       }
-      filePath = parsedUrl.toString();
+      let blobMetadata;
+      try {
+        blobMetadata = await head(parsedUrl.toString(), { token: process.env.BLOB_READ_WRITE_TOKEN });
+      } catch (error) {
+        console.error('Verify uploaded Blob error:', error);
+        return res.status(400).json({ success: false, message: 'Uploaded file could not be verified in secure storage' });
+      }
+      if (Number(blobMetadata.size) !== effectiveSize) {
+        return res.status(400).json({ success: false, message: 'Uploaded file size does not match secure storage' });
+      }
+      if (effectiveType && blobMetadata.contentType && blobMetadata.contentType !== effectiveType) {
+        return res.status(400).json({ success: false, message: 'Uploaded file type does not match secure storage' });
+      }
+      filePath = blobMetadata.url;
     }
     const storedFileName = effectiveName;
     const storedFileSize = effectiveSize;
