@@ -85,4 +85,32 @@ describe('CollaboratorViewComponent', () => {
     expect(component.totalCount()).toBe(2);
     expect(component.documents().map(d => d.title)).toEqual(['Resume', 'Transcript']);
   });
+
+  it('shows the backend reason when secure upload token generation fails', () => {
+    const originalProduction = environment.production;
+    environment.production = true;
+    component.projectId.set('project-1');
+    component.collabIndex.set(0);
+    component.documents.set([{
+      docIndex: 0,
+      title: 'Resume',
+      maxSize: '5 MB',
+      acceptedFormats: ['PDF'],
+      status: 'required',
+      selectedFile: new File(['pdf'], 'resume.pdf', { type: 'application/pdf' }),
+      uploading: false,
+    }]);
+
+    component.uploadDocument(0);
+
+    const request = http.expectOne(`${environment.apiUrl}/projects/project-1/submissions/upload-token`);
+    expect(request.request.body.type).toBe('blob.generate-client-token');
+    request.flush(
+      { success: false, message: 'Blob storage is not configured for this environment' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+
+    expect(component.uploadError()).toBe('Blob storage is not configured for this environment');
+    environment.production = originalProduction;
+  });
 });

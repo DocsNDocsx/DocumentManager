@@ -19,6 +19,13 @@ router.get('/projects/:projectId/submissions/approved/download', verifyJwt, subm
 router.get('/projects/:projectId/submissions/:submissionId/download', verifyJwt, submissionController.downloadSubmission);
 router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (req, res) => {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error('Create submission upload token error: BLOB_READ_WRITE_TOKEN is not configured');
+      return res.status(503).json({
+        success: false,
+        message: 'Secure file storage is temporarily unavailable. Please contact support.',
+      });
+    }
     const { projectId } = req.params;
     const result = await handleUpload({
       request: req,
@@ -46,7 +53,20 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
     res.json(result);
   } catch (err) {
     console.error('Create submission upload token error:', err);
-    res.status(400).json({ success: false, message: err.message || 'Could not start upload' });
+    const message = String(err?.message ?? 'Could not start upload');
+    if (message === 'Unauthorized collaborator') {
+      return res.status(403).json({ success: false, message: 'You are not authorized to upload for this collaborator.' });
+    }
+    if (message === 'Project not found') {
+      return res.status(404).json({ success: false, message });
+    }
+    if (message === 'Project is not accepting submissions') {
+      return res.status(409).json({ success: false, message });
+    }
+    if (/token|blob|store/i.test(message)) {
+      return res.status(503).json({ success: false, message: 'Secure file storage is temporarily unavailable. Please contact support.' });
+    }
+    res.status(400).json({ success: false, message });
   }
 });
 router.post('/projects/:projectId/submissions', verifyJwt, submissionUpload.single('file'), submissionController.createSubmission);

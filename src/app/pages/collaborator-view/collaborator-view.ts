@@ -5,8 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Project, Submission } from '../../models/project.models';
 import { LoggingService } from '../../services/logging.service';
-import { AuthService } from '../../services/auth.service';
-import { upload } from '@vercel/blob/client';
+import { put } from '@vercel/blob/client';
 import { from, switchMap } from 'rxjs';
 
 type DocStatus = 'required' | 'submitted' | 'approved' | 'revision' | 'rejected';
@@ -36,7 +35,6 @@ export class CollaboratorViewComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
   private logger = inject(LoggingService);
-  private auth = inject(AuthService);
 
   projectId = signal('');
   collabIndex = signal(0);
@@ -205,19 +203,19 @@ export class CollaboratorViewComponent implements OnInit {
     this.logger.info('Uploading document', { projectId: this.projectId(), docIdx, fileName: doc.selectedFile.name });
 
     const submissionUrl = `${environment.apiUrl}/projects/${this.projectId()}/submissions`;
-    const authToken = this.auth.getToken();
+    const pathname = `submissions/solo/${this.projectId()}/${this.collabIndex()}/doc-${docIdx}-${doc.selectedFile.name}`;
+    const clientPayload = JSON.stringify({ collabIndex: this.collabIndex(), docIndex: docIdx });
     const request$ = environment.production
-      ? from(upload(
-          `submissions/solo/${this.projectId()}/${this.collabIndex()}/doc-${docIdx}-${doc.selectedFile.name}`,
-          doc.selectedFile,
-          {
+      ? this.http.post<{ clientToken: string }>(`${submissionUrl}/upload-token`, {
+          type: 'blob.generate-client-token',
+          payload: { pathname, clientPayload, multipart: true },
+        }).pipe(
+          switchMap(tokenResponse => from(put(pathname, doc.selectedFile!, {
             access: 'private',
-            handleUploadUrl: `${submissionUrl}/upload-token`,
-            clientPayload: JSON.stringify({ collabIndex: this.collabIndex(), docIndex: docIdx }),
+            token: tokenResponse.clientToken,
             multipart: true,
-            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-          },
-        )).pipe(switchMap(blob => this.http.post<{ success: boolean; submission: Submission }>(submissionUrl, {
+          }))),
+          switchMap(blob => this.http.post<{ success: boolean; submission: Submission }>(submissionUrl, {
           blobUrl: blob.url,
           fileName: doc.selectedFile!.name,
           fileSize: doc.selectedFile!.size,
