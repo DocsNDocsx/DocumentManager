@@ -42,7 +42,6 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
           addRandomSuffix: true,
         };
       },
-      onUploadCompleted: async () => {},
     });
     res.json(result);
   } catch (err) {
