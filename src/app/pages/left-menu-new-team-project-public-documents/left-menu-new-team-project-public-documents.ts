@@ -28,6 +28,7 @@ export const TEAM_FILE_TYPES = ['PDF', 'DOCX', 'DOC', 'JPG', 'PNG', 'XLSX'];
 export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   readonly teamWizardService = inject(TeamProjectWizardService);
+  readonly isActiveProject = computed(() => this.teamWizardService.project()?.status === 'active');
 
   dropdownOpen = signal(false);
 

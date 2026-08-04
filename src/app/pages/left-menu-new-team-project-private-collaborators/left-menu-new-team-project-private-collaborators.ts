@@ -21,6 +21,7 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   readonly teamWizardService = inject(TeamProjectWizardService);
+  readonly isActiveProject = computed(() => this.teamWizardService.project()?.status === 'active');
 
   dropdownOpen = signal(false);
   collaboratorCount = signal(1);

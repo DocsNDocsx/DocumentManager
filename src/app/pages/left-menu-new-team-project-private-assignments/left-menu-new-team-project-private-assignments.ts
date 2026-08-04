@@ -24,6 +24,7 @@ export class LeftMenuNewTeamProjectPrivateAssignmentsComponent implements OnInit
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   readonly wizardService = inject(TeamProjectWizardService);
+  readonly isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
 
   dropdownOpen = signal(false);
   collaborators = signal<CollabSummary[]>([]);

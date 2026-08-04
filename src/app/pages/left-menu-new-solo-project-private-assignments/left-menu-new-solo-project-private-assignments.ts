@@ -28,6 +28,7 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
+  readonly isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
   dropdownOpen = signal(false);
 
   toastMsg = signal('');

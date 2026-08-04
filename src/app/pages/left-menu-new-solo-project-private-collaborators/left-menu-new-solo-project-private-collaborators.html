@@ -92,7 +92,7 @@
         <button class="btn-action btn-back" type="button" (click)="back()">
           <i class="fas fa-arrow-left" aria-hidden="true"></i> Back
         </button>
-        <button class="btn-action btn-draft" type="button" (click)="saveAsDraft()">
+        <button class="btn-action btn-draft" type="button" [hidden]="isActiveProject()" (click)="saveAsDraft()">
           <i class="fas fa-save" aria-hidden="true"></i> Save as Draft
         </button>
       </div>

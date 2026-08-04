@@ -18,6 +18,7 @@ import { ProjectWizardService } from '../../services/project-wizard.service';
 export class LeftMenuNewSoloProjectPrivateStaffComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
+  readonly isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
   dropdownOpen = signal(false);
 
   toastMsg = signal('');

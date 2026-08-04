@@ -154,6 +154,7 @@
         </button>
         <button
           class="btn-action btn-draft"
+          [hidden]="isActiveProject()"
           type="button"
           [disabled]="!isFormValid()"
           [attr.aria-disabled]="!isFormValid()"

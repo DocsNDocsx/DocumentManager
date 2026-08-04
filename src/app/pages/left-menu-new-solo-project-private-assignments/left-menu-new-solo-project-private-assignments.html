@@ -120,6 +120,7 @@
         </button>
         <button
           class="btn-action btn-draft"
+          [hidden]="isActiveProject()"
           type="button"
           [disabled]="!allAssigned()"
           [attr.aria-disabled]="!allAssigned()"

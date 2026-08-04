@@ -19,6 +19,7 @@ export const FILE_TYPES = ['PDF', 'DOCX', 'DOC', 'JPG', 'PNG', 'XLSX'];
 export class LeftMenuNewTeamProjectPrivateDocumentsComponent implements OnInit {
   private readonly router = inject(Router);
   readonly wizardService = inject(TeamProjectWizardService);
+  readonly isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
 
   dropdownOpen = signal(false);
   documentCount = signal(1);
