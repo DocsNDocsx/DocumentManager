@@ -24,6 +24,8 @@ export interface CreateSubscriptionRequest {
   days: number;
   /** Calendar days added to an already-active project's paid duration. */
   extensionDays?: number;
+  /** Stripe timestamp shared by the preview and update so the final proration matches. */
+  prorationDate?: number;
   /** Project being activated by this payment. */
   projectId?: string | null;
   /** Estimated monthly total shown to the user (informational; server is source of truth). */

@@ -9,5 +9,6 @@ router.get('/stripe/billing-profile', stripeController.getBillingProfile);
 router.post('/stripe/tax-estimate', stripeController.estimateTax);
 router.post('/stripe/subscription', stripeController.createSubscription);
 router.post('/stripe/subscription/upgrade', stripeController.upgradeSubscription);
+router.post('/stripe/subscription/upgrade-preview', stripeController.previewSubscriptionUpgrade);
 
 module.exports = router;

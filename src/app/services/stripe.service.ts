@@ -77,6 +77,12 @@ export class StripeService {
     return this.http.post<CreateSubscriptionResponse>(`${environment.apiUrl}/stripe/subscription/upgrade`, data);
   }
 
+  previewSubscriptionUpgrade(data: Partial<CreateSubscriptionRequest> & { projectId: string }) {
+    return this.http.post<{ success: boolean; proratedAmountDueCents: number; newRecurringAmountCents: number; prorationDate: number }>(
+      `${environment.apiUrl}/stripe/subscription/upgrade-preview`, data,
+    );
+  }
+
   getBillingProfile() {
     return this.http.get<{ success: boolean; billingAddress: CreateSubscriptionRequest['billingAddress'] | null }>(
       `${environment.apiUrl}/stripe/billing-profile`,

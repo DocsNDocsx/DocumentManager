@@ -55,6 +55,10 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   activationProjectId = signal('');
   isUpgrade = signal(false);
   extensionDays = signal(0);
+  proratedUpgradeAmount = signal<number | null>(null);
+  upgradePreviewLoading = signal(false);
+  upgradePreviewError = signal('');
+  prorationDate = signal<number | null>(null);
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
@@ -62,7 +66,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   taxEstimateLoading = signal(false);
   taxEstimateError = signal('');
 
-  subtotal  = computed(() => this.monthlyBase());
+  subtotal  = computed(() => this.isUpgrade() ? (this.proratedUpgradeAmount() ?? 0) : this.monthlyBase());
   grossTotal = computed(() => this.subtotal());
   voucherDiscount = computed(() => {
     const voucher = VOUCHERS[this.appliedVoucherCode()];
@@ -71,6 +75,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   });
   subtotalAfterDiscount = computed(() => Math.max(0, this.grossTotal() - this.voucherDiscount()));
   stripeProcessingFee = computed(() => {
+    if (this.isUpgrade()) return 0;
     const amount = this.subtotalAfterDiscount();
     if (amount <= 0) return 0;
     return Math.round((amount * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE) * 100) / 100;
@@ -131,6 +136,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.activationProjectId.set(String(params['projectId'] || ''));
         this.isUpgrade.set(params['upgrade'] === '1');
         this.extensionDays.set(Math.max(0, Number(params['extensionDays']) || 0));
+        if (this.isUpgrade() && this.activationProjectId()) this.loadUpgradePreview();
         const voucherCode = this.normalizeVoucherCode(params['voucherCode']);
         if (voucherCode && VOUCHERS[voucherCode]) {
           this.voucherCode.set(voucherCode);
@@ -163,6 +169,26 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     }
 
     this.initStripe();
+  }
+
+  private loadUpgradePreview(): void {
+    this.upgradePreviewLoading.set(true);
+    this.upgradePreviewError.set('');
+    this.stripeService.previewSubscriptionUpgrade({
+      projectId: this.activationProjectId(), type: this.projectType(), projects: this.projects(),
+      collaborators: this.collaborators(), documents: this.documents(), days: this.days(), extensionDays: this.extensionDays(),
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: preview => {
+        this.proratedUpgradeAmount.set(preview.proratedAmountDueCents / 100);
+        this.prorationDate.set(preview.prorationDate);
+        this.upgradePreviewLoading.set(false);
+        this.queueTaxEstimate();
+      },
+      error: err => {
+        this.upgradePreviewError.set(err?.error?.message ?? 'Could not calculate the prorated amount.');
+        this.upgradePreviewLoading.set(false);
+      },
+    });
   }
 
   ngAfterViewInit(): void {
@@ -435,6 +461,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         documents: this.documents(),
         days: this.days(),
         extensionDays: this.extensionDays(),
+        prorationDate: this.prorationDate() ?? undefined,
         projectId: this.activationProjectId() || null,
         monthlyEstimate: this.total(),
         voucherCode: this.appliedVoucherCode() || null,
