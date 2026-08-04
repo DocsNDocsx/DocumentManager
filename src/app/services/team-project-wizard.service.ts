@@ -155,10 +155,12 @@ export class TeamProjectWizardService {
             const previous = this.billingEstimate.buildTeamActivationQuery(previousProject);
             const current = this.billingEstimate.buildTeamActivationQuery(res.project);
             if (previous && current && Number(current['monthly']) > Number(previous['monthly'])) {
+              const extensionDays = this.billingEstimate.deadlineExtensionDays(previousProject.deadline, res.project.deadline);
               setTimeout(() => this.router.navigate(['/pricing-plan-ccard-information'], {
                 queryParams: {
                   ...current,
                   monthly: (Number(current['monthly']) - Number(previous['monthly'])).toFixed(2),
+                  extensionDays,
                   upgrade: '1',
                 },
               }));

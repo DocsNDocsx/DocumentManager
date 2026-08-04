@@ -31,6 +31,13 @@ export class BillingEstimateService {
     return this.buildActivationQuery('team', project, collaboratorCount);
   }
 
+  deadlineExtensionDays(previousDeadline: string | null | undefined, newDeadline: string | null | undefined): number {
+    const previous = previousDeadline ? this.parseDeadlineToUtcDay(previousDeadline) : null;
+    const current = newDeadline ? this.parseDeadlineToUtcDay(newDeadline) : null;
+    if (previous === null || current === null || current <= previous) return 0;
+    return Math.round((current - previous) / 86_400_000);
+  }
+
   private buildActivationQuery(
     type: 'solo' | 'team',
     project: BillingProject,

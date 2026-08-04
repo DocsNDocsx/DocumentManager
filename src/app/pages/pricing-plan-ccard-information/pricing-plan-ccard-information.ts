@@ -54,6 +54,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   monthlyBase   = signal(0);
   activationProjectId = signal('');
   isUpgrade = signal(false);
+  extensionDays = signal(0);
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
@@ -129,6 +130,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
         this.activationProjectId.set(String(params['projectId'] || ''));
         this.isUpgrade.set(params['upgrade'] === '1');
+        this.extensionDays.set(Math.max(0, Number(params['extensionDays']) || 0));
         const voucherCode = this.normalizeVoucherCode(params['voucherCode']);
         if (voucherCode && VOUCHERS[voucherCode]) {
           this.voucherCode.set(voucherCode);
@@ -432,6 +434,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         collaborators: this.collaborators(),
         documents: this.documents(),
         days: this.days(),
+        extensionDays: this.extensionDays(),
         projectId: this.activationProjectId() || null,
         monthlyEstimate: this.total(),
         voucherCode: this.appliedVoucherCode() || null,
@@ -524,6 +527,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     });
     if (this.activationProjectId()) params.set('projectId', this.activationProjectId());
     if (this.isUpgrade()) params.set('upgrade', '1');
+    if (this.extensionDays()) params.set('extensionDays', String(this.extensionDays()));
     if (this.appliedVoucherCode()) params.set('voucherCode', this.appliedVoucherCode());
     return `${base}?${params.toString()}`;
   }

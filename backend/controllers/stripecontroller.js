@@ -320,7 +320,7 @@ exports.upgradeSubscription = async (req, res) => {
     if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    const { paymentMethodId, projectId, projects = 1, collaborators = 1, documents = 1, days = 1, billingAddress = {} } = req.body ?? {};
+    const { paymentMethodId, projectId, projects = 1, collaborators = 1, documents = 1, days = 1, extensionDays = 0, billingAddress = {} } = req.body ?? {};
     if (!paymentMethodId || !projectId) return res.status(400).json({ success: false, message: 'paymentMethodId and projectId are required' });
 
     const [rows] = await pool.query(
@@ -329,7 +329,8 @@ exports.upgradeSubscription = async (req, res) => {
     );
     const record = rows[0];
     if (!record) return res.status(404).json({ success: false, message: 'Active project subscription not found' });
-    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, documents, days });
+    const upgradedDays = Math.max(Number(days), Number(record.days) + Math.max(0, Number(extensionDays) || 0));
+    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, documents, days: upgradedDays });
     const previousAmountCents = Math.round(Number(record.amount) * 100);
     if (unitAmount <= previousAmountCents) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
 
@@ -349,12 +350,12 @@ exports.upgradeSubscription = async (req, res) => {
       items: [{ id: item.id, price_data: { currency: 'usd', product, unit_amount: unitAmount, recurring: { interval: 'month' } } }],
       proration_behavior: 'always_invoice',
       payment_behavior: 'error_if_incomplete',
-      metadata: { ...subscription.metadata, projects: String(projects), collaborators: String(collaborators), documents: String(documents), days: String(days) },
+      metadata: { ...subscription.metadata, projects: String(projects), collaborators: String(collaborators), documents: String(documents), days: String(upgradedDays) },
       expand: ['latest_invoice.payment_intent'],
     }, { idempotencyKey: `upgrade_${user.userid}_${projectId}_${unitAmount}` });
     await pool.query(
       'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [projects, collaborators, documents, days, (unitAmount / 100).toFixed(2), updated.status, record.id]
+      [projects, collaborators, documents, upgradedDays, (unitAmount / 100).toFixed(2), updated.status, record.id]
     );
     return res.json({ success: true, subscriptionId: updated.id, status: updated.status, previousAmountCents, amountCents: unitAmount });
   } catch (err) {

@@ -22,6 +22,8 @@ export interface CreateSubscriptionRequest {
   collaborators: number;
   documents: number;
   days: number;
+  /** Calendar days added to an already-active project's paid duration. */
+  extensionDays?: number;
   /** Project being activated by this payment. */
   projectId?: string | null;
   /** Estimated monthly total shown to the user (informational; server is source of truth). */
