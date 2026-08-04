@@ -333,6 +333,12 @@ ALTER TABLE stripe_subscriptions
 ALTER TABLE stripe_subscriptions
   ADD COLUMN IF NOT EXISTS project_id VARCHAR(255);
 
+ALTER TABLE stripe_subscriptions
+  ADD COLUMN IF NOT EXISTS last_charge_amount NUMERIC(10,2);
+
+ALTER TABLE stripe_subscriptions
+  ADD COLUMN IF NOT EXISTS last_invoice_id VARCHAR(255);
+
 CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_userid ON stripe_subscriptions (userid);
 CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_project_id ON stripe_subscriptions (project_id);
 

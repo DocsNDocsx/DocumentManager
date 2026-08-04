@@ -58,7 +58,6 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   proratedUpgradeAmount = signal<number | null>(null);
   upgradePreviewLoading = signal(false);
   upgradePreviewError = signal('');
-  prorationDate = signal<number | null>(null);
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
@@ -180,7 +179,6 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: preview => {
         this.proratedUpgradeAmount.set(preview.proratedAmountDueCents / 100);
-        this.prorationDate.set(preview.prorationDate);
         this.upgradePreviewLoading.set(false);
         this.queueTaxEstimate();
       },
@@ -461,7 +459,6 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         documents: this.documents(),
         days: this.days(),
         extensionDays: this.extensionDays(),
-        prorationDate: this.prorationDate() ?? undefined,
         projectId: this.activationProjectId() || null,
         monthlyEstimate: this.total(),
         voucherCode: this.appliedVoucherCode() || null,

@@ -133,7 +133,7 @@
 
       <div class="usage-badge">
         <i class="fas fa-chart-line" aria-hidden="true"></i>
-        {{ isUpgrade() ? 'Prorated project upgrade' : 'Usage-based billing' }}
+        {{ isUpgrade() ? 'Incremental project upgrade' : 'Usage-based billing' }}
       </div>
 
       <div class="summary-item">
@@ -230,7 +230,7 @@
 
       <p class="billing-cycle-note">
         @if (isUpgrade()) {
-          This shows only the increased project usage. Stripe calculates the final prorated invoice from the time remaining in the current billing period.
+          This shows only the difference between the last paid project configuration and the updated configuration. That exact difference is charged immediately.
         } @else {
           Calculated from the project duration and usage entered before activation. Dates use {{ durationTimeZone() }}. Stripe calculates sales tax from the billing ZIP/address.
         }

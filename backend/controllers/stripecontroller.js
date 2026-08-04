@@ -70,9 +70,9 @@ async function paidUpgradeUsage(projectId, record, requested) {
 
   return {
     projects: Math.max(1, Number(record.projects) || Number(requested.projects) || 1),
-    collaborators: Number(record.collaborators) + Math.max(0, currentCollaborators - baselineCollaborators),
-    documents: Number(record.documents) + Math.max(0, currentDocuments - baselineDocuments),
-    days: Number(record.days) + dateIncreaseDays(baseline.deadline, current.deadline),
+    collaborators: Math.max(Number(record.collaborators) + Math.max(0, currentCollaborators - baselineCollaborators), Number(requested.collaborators) || 0),
+    documents: Math.max(Number(record.documents) + Math.max(0, currentDocuments - baselineDocuments), Number(requested.documents) || 0),
+    days: Number(record.days) + Math.max(dateIncreaseDays(baseline.deadline, current.deadline), Math.max(0, Number(requested.extensionDays) || 0)),
   };
 }
 
@@ -369,7 +369,7 @@ exports.upgradeSubscription = async (req, res) => {
     if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    const { paymentMethodId, projectId, projects = 1, collaborators = 1, documents = 1, days = 1, extensionDays = 0, prorationDate, billingAddress = {} } = req.body ?? {};
+    const { paymentMethodId, projectId, projects = 1, collaborators = 1, documents = 1, days = 1, extensionDays = 0, billingAddress = {} } = req.body ?? {};
     if (!paymentMethodId || !projectId) return res.status(400).json({ success: false, message: 'paymentMethodId and projectId are required' });
 
     const [rows] = await pool.query(
@@ -385,7 +385,8 @@ exports.upgradeSubscription = async (req, res) => {
     const upgradedDays = persistedUsage?.days ?? Math.max(Number(days), Number(record.days) + Math.max(0, Number(extensionDays) || 0));
     const unitAmount = computeMonthlyAmountCents({ projects: upgradedProjects, collaborators: upgradedCollaborators, documents: upgradedDocuments, days: upgradedDays });
     const previousAmountCents = Math.round(Number(record.amount) * 100);
-    if (unitAmount <= previousAmountCents) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
+    const upgradeChargeCents = unitAmount - previousAmountCents;
+    if (upgradeChargeCents <= 0) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
 
     const customerUpdate = { invoice_settings: { default_payment_method: paymentMethodId } };
     if (billingAddress.postalCode && billingAddress.country) customerUpdate.address = {
@@ -398,28 +399,43 @@ exports.upgradeSubscription = async (req, res) => {
     const item = subscription.items?.data?.[0];
     if (!item) return res.status(409).json({ success: false, message: 'Subscription item not found' });
     const product = await getProductId();
+    const invoice = await stripe.invoices.create({
+      customer: record.stripe_customer_id,
+      collection_method: 'charge_automatically',
+      auto_advance: false,
+      metadata: { projectId: String(projectId), kind: 'project_upgrade', previousAmountCents: String(previousAmountCents), newAmountCents: String(unitAmount) },
+    }, { idempotencyKey: `upgrade_invoice_${record.id}_${unitAmount}` });
+    await stripe.invoiceItems.create({
+      customer: record.stripe_customer_id,
+      invoice: invoice.id,
+      amount: upgradeChargeCents,
+      currency: 'usd',
+      description: `Project upgrade (${previousAmountCents} cents to ${unitAmount} cents)`,
+    }, { idempotencyKey: `upgrade_item_${record.id}_${unitAmount}` });
+    await stripe.invoices.finalizeInvoice(invoice.id, { auto_advance: false });
+    const paidInvoice = await stripe.invoices.pay(invoice.id, { payment_method: paymentMethodId });
+    if (!paidInvoice.paid && paidInvoice.status !== 'paid') {
+      return res.status(402).json({ success: false, message: 'The upgrade invoice could not be paid' });
+    }
     const updated = await stripe.subscriptions.update(record.stripe_subscription_id, {
       default_payment_method: paymentMethodId,
       items: [{ id: item.id, price_data: { currency: 'usd', product, unit_amount: unitAmount, recurring: { interval: 'month' } } }],
-      proration_behavior: 'always_invoice',
-      ...(Number.isInteger(Number(prorationDate)) && Number(prorationDate) > 0 ? { proration_date: Number(prorationDate) } : {}),
-      payment_behavior: 'error_if_incomplete',
+      proration_behavior: 'none',
       metadata: { ...subscription.metadata, projects: String(upgradedProjects), collaborators: String(upgradedCollaborators), documents: String(upgradedDocuments), days: String(upgradedDays) },
-      expand: ['latest_invoice.payment_intent'],
     }, { idempotencyKey: `upgrade_${user.userid}_${projectId}_${unitAmount}` });
     await pool.query(
-      'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), updated.status, record.id]
+      'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, last_charge_amount = ?, last_invoice_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), (upgradeChargeCents / 100).toFixed(2), paidInvoice.id, updated.status, record.id]
     );
     await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
-    const invoice = typeof updated.latest_invoice === 'object' ? updated.latest_invoice : null;
     return res.json({
       success: true,
       subscriptionId: updated.id,
       status: updated.status,
       previousAmountCents,
       amountCents: unitAmount,
-      proratedAmountDueCents: invoice?.amount_due ?? invoice?.amount_paid ?? null,
+      proratedAmountDueCents: upgradeChargeCents,
+      invoiceId: paidInvoice.id,
     });
   } catch (err) {
     console.error('Upgrade subscription error:', {
@@ -452,24 +468,8 @@ exports.previewSubscriptionUpgrade = async (req, res) => {
     const unitAmount = computeMonthlyAmountCents(usage);
     const previousAmountCents = Math.round(Number(record.amount) * 100);
     if (unitAmount <= previousAmountCents) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
-    const subscription = await stripe.subscriptions.retrieve(record.stripe_subscription_id);
-    const item = subscription.items?.data?.[0];
-    if (!item) return res.status(409).json({ success: false, message: 'Subscription item not found' });
-    const product = await getProductId();
-    const prorationDate = Math.floor(Date.now() / 1000);
-    const preview = await stripe.invoices.createPreview({
-      customer: record.stripe_customer_id,
-      subscription: record.stripe_subscription_id,
-      subscription_details: {
-        items: [{ id: item.id, price_data: { currency: 'usd', product, unit_amount: unitAmount, recurring: { interval: 'month' } } }],
-        proration_behavior: 'always_invoice',
-        proration_date: prorationDate,
-      },
-    });
-    const proratedAmountDueCents = (preview.lines?.data ?? [])
-      .filter(line => line.proration === true || line.parent?.subscription_item_details?.proration === true)
-      .reduce((sum, line) => sum + Number(line.amount ?? 0), 0);
-    return res.json({ success: true, proratedAmountDueCents: Math.max(0, proratedAmountDueCents), newRecurringAmountCents: unitAmount, prorationDate });
+    const proratedAmountDueCents = unitAmount - previousAmountCents;
+    return res.json({ success: true, proratedAmountDueCents, newRecurringAmountCents: unitAmount });
   } catch (err) {
     console.error('Preview subscription upgrade error:', { message: err.message, type: err.type, code: err.code, statusCode: err.statusCode });
     return res.status(err?.statusCode ? 400 : 500).json({ success: false, message: err?.statusCode ? err.message : 'Could not preview the prorated upgrade' });
