@@ -9,12 +9,13 @@ import { Project } from '../../models/project.models';
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
 import { BillingEstimateService } from '../../services/billing-estimate.service';
+import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 
 type FilterTab = 'Active' | 'Draft' | 'Completed' | 'Not Completed' | 'Deleted';
 
 @Component({
   selector: 'app-top-menu-solo-projects',
-  imports: [SharedHeaderComponent, SharedSidebarComponent, RouterLink],
+  imports: [SharedHeaderComponent, SharedSidebarComponent, RouterLink, ConfirmModalComponent],
   templateUrl: './top-menu-solo-projects.html',
   styleUrl: './top-menu-solo-projects.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +33,8 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   activeFilter = signal<FilterTab>('Active');
   viewingProject = signal<Project | null>(null);
   actionError = signal<string | null>(null);
+  incompleteProject = signal<Project | null>(null);
+  incompleteRequirements = signal<string[]>([]);
 
   private nonCancelledProjects = computed(() => this.listService.projects().filter(p => p.status !== 'cancelled'));
   private activeOnlyProjects   = computed(() => this.nonCancelledProjects().filter(p => p.status === 'active' && this.daysFromNow(p.deadline) >= 0));
@@ -196,14 +199,26 @@ export class TopMenuSoloProjectsComponent implements OnInit {
       },
       error: err => {
         if (!forceComplete && err?.status === 409 && err?.error?.code === 'INCOMPLETE_REQUIREMENTS') {
-          const confirmed = confirm(`This project still has incomplete requirements:\n\n${err.error.message}\n\nMark it complete anyway?`);
-          if (confirmed) this.completeProject(project, true);
+          this.incompleteProject.set(project);
+          this.incompleteRequirements.set(String(err.error.message || 'Project requirements are incomplete').split('; ').filter(Boolean));
           return;
         }
         this.actionError.set(err?.error?.message ?? 'Could not complete the project.');
         this.logger.error('Failed to mark project complete', err);
       },
     });
+  }
+
+  closeIncompleteModal(): void {
+    this.incompleteProject.set(null);
+    this.incompleteRequirements.set([]);
+  }
+
+  confirmIncompleteCompletion(): void {
+    const project = this.incompleteProject();
+    if (!project) return;
+    this.closeIncompleteModal();
+    this.completeProject(project, true);
   }
 
   onSoftDelete(project: Project, e: Event): void {

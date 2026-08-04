@@ -250,3 +250,22 @@
     </div>
   </div>
 }
+
+@if (incompleteProject(); as project) {
+  <app-confirm-modal
+    title="Incomplete Project Requirements"
+    confirmLabel="Complete Anyway"
+    cancelLabel="Go Back"
+    confirmIcon="fas fa-check-circle"
+    modalId="incompleteProjectModalTitle"
+    (confirm)="confirmIncompleteCompletion()"
+    (cancel)="closeIncompleteModal()">
+    <p><strong>{{ project.name }}</strong> has the following incomplete requirements:</p>
+    <ul style="margin: 1rem 0; padding-left: 1.25rem;">
+      @for (requirement of incompleteRequirements(); track requirement) {
+        <li style="margin-bottom: 0.5rem;">{{ requirement }}</li>
+      }
+    </ul>
+    <p>Completing the project now will close it with these requirements unfinished.</p>
+  </app-confirm-modal>
+}
