@@ -466,10 +466,13 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
               },
             });
         },
-        error: () => {
+        error: err => {
+          const serverReason = err?.error?.message;
           this.validationError.set(this.isUpgrade()
-            ? 'Your card was saved but the prorated project upgrade could not be charged. No additional billing was applied.'
-            : 'Your card was saved but we could not start your subscription. Please contact support.');
+            ? (serverReason
+                ? `The prorated project upgrade could not be charged: ${serverReason}`
+                : 'Your card was saved but the prorated project upgrade could not be charged. No additional billing was applied.')
+            : (serverReason ?? 'Your card was saved but we could not start your subscription. Please contact support.'));
           this.processing.set(false);
         },
       });

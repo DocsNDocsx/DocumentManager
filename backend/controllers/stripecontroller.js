@@ -358,7 +358,14 @@ exports.upgradeSubscription = async (req, res) => {
     );
     return res.json({ success: true, subscriptionId: updated.id, status: updated.status, previousAmountCents, amountCents: unitAmount });
   } catch (err) {
-    console.error('Upgrade subscription error:', err.message);
+    console.error('Upgrade subscription error:', {
+      message: err.message,
+      type: err.type,
+      code: err.code,
+      declineCode: err.decline_code,
+      statusCode: err.statusCode,
+      requestId: err.requestId,
+    });
     return res.status(err?.statusCode ? 400 : 500).json({ success: false, message: err?.statusCode ? err.message : 'Could not upgrade subscription' });
   }
 };
