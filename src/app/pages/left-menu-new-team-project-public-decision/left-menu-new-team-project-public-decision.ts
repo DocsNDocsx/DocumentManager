@@ -99,8 +99,10 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
   }
 
   finishEditing(): void {
+    const upgradeQuery = this.teamWizardService.pendingUpgradeQuery();
     this.teamWizardService.reset();
-    this.router.navigate(['/top-menu-team-projects']);
+    this.router.navigate(upgradeQuery ? ['/pricing-plan-ccard-information'] : ['/top-menu-team-projects'],
+      upgradeQuery ? { queryParams: upgradeQuery } : undefined);
   }
 
   closeProject(): void {

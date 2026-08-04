@@ -1,7 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, finalize, map, tap, throwError } from 'rxjs';
-import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { LoggingService } from './logging.service';
@@ -21,12 +20,12 @@ export class ProjectWizardService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private logger = inject(LoggingService);
-  private router = inject(Router);
   private billingEstimate = inject(BillingEstimateService);
 
   project = signal<Project | null>(null);
   isSaving = signal(false);
   saveError = signal<string | null>(null);
+  pendingUpgradeQuery = signal<Record<string, string | number> | null>(null);
 
   projectId = computed(() => this.project()?.id ?? null);
   completedStep = computed(() => this.project()?.completedStep ?? 0);
@@ -180,6 +179,7 @@ export class ProjectWizardService {
     this.logger.debug('Wizard state reset');
     this.project.set(null);
     this.saveError.set(null);
+    this.pendingUpgradeQuery.set(null);
   }
 
   private runSave(req$: Observable<ProjectApiResponse>, context = 'step'): Observable<Project> {
@@ -197,14 +197,13 @@ export class ProjectWizardService {
             const current = this.billingEstimate.buildSoloActivationQuery(res.project, res.project.collaborators?.length);
             if (previous && current && Number(current['monthly']) > Number(previous['monthly'])) {
               const extensionDays = this.billingEstimate.deadlineExtensionDays(previousProject.deadline, res.project.deadline);
-              setTimeout(() => this.router.navigate(['/pricing-plan-ccard-information'], {
-                queryParams: {
-                  ...current,
-                  monthly: (Number(current['monthly']) - Number(previous['monthly'])).toFixed(2),
-                  extensionDays,
-                  upgrade: '1',
-                },
-              }));
+              const pending = this.pendingUpgradeQuery();
+              this.pendingUpgradeQuery.set({
+                ...current,
+                monthly: (Number(pending?.['monthly'] ?? 0) + Number(current['monthly']) - Number(previous['monthly'])).toFixed(2),
+                extensionDays: Number(pending?.['extensionDays'] ?? 0) + extensionDays,
+                upgrade: '1',
+              });
             }
           }
         }),

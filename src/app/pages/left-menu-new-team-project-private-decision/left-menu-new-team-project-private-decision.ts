@@ -90,8 +90,10 @@ export class LeftMenuNewTeamProjectPrivateDecisionComponent implements OnInit {
   }
 
   finishEditing(): void {
+    const upgradeQuery = this.wizardService.pendingUpgradeQuery();
     this.wizardService.reset();
-    this.router.navigate(['/top-menu-team-projects']);
+    this.router.navigate(upgradeQuery ? ['/pricing-plan-ccard-information'] : ['/top-menu-team-projects'],
+      upgradeQuery ? { queryParams: upgradeQuery } : undefined);
   }
 
   closeProject(): void {

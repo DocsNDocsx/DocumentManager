@@ -71,6 +71,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
       { label: 'Details',   state: 'active' },
       { label: 'Documents', state: done >= 1 ? 'completed' : 'locked' },
       { label: 'Decision',  state: done >= 2 ? 'completed' : 'locked' },
+      { label: 'Payment',   state: 'locked' },
     ];
   });
 

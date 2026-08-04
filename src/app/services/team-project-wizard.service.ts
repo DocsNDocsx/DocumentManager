@@ -1,5 +1,4 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, finalize, map, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -21,13 +20,13 @@ export class TeamProjectWizardService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private logger = inject(LoggingService);
-  private router = inject(Router);
   private billingEstimate = inject(BillingEstimateService);
 
   project = signal<TeamProjectDraft | null>(null);
   isSaving = signal(false);
   saveError = signal<string | null>(null);
   teamName = signal<string>('');
+  pendingUpgradeQuery = signal<Record<string, string | number> | null>(null);
 
   projectId = computed(() => this.project()?.id ?? null);
   completedStep = computed(() => this.project()?.completedStep ?? 0);
@@ -139,6 +138,7 @@ export class TeamProjectWizardService {
     this.project.set(null);
     this.saveError.set(null);
     this.teamName.set('');
+    this.pendingUpgradeQuery.set(null);
   }
 
   private runSave(req$: Observable<TeamProjectDraftApiResponse>, context = 'step'): Observable<TeamProjectDraft> {
@@ -156,14 +156,13 @@ export class TeamProjectWizardService {
             const current = this.billingEstimate.buildTeamActivationQuery(res.project);
             if (previous && current && Number(current['monthly']) > Number(previous['monthly'])) {
               const extensionDays = this.billingEstimate.deadlineExtensionDays(previousProject.deadline, res.project.deadline);
-              setTimeout(() => this.router.navigate(['/pricing-plan-ccard-information'], {
-                queryParams: {
-                  ...current,
-                  monthly: (Number(current['monthly']) - Number(previous['monthly'])).toFixed(2),
-                  extensionDays,
-                  upgrade: '1',
-                },
-              }));
+              const pending = this.pendingUpgradeQuery();
+              this.pendingUpgradeQuery.set({
+                ...current,
+                monthly: (Number(pending?.['monthly'] ?? 0) + Number(current['monthly']) - Number(previous['monthly'])).toFixed(2),
+                extensionDays: Number(pending?.['extensionDays'] ?? 0) + extensionDays,
+                upgrade: '1',
+              });
             }
           }
         }),

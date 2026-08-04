@@ -122,8 +122,10 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
   }
 
   finishEditing(): void {
+    const upgradeQuery = this.wizardService.pendingUpgradeQuery();
     this.wizardService.reset();
-    this.router.navigate(['/top-menu-solo-projects']);
+    this.router.navigate(upgradeQuery ? ['/pricing-plan-ccard-information'] : ['/top-menu-solo-projects'],
+      upgradeQuery ? { queryParams: upgradeQuery } : undefined);
   }
 
   closeProject(): void {
