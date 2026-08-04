@@ -79,6 +79,39 @@ describe('projectcontroller', () => {
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Only the project owner can activate this project' });
   });
 
+  it('validates activation requirements before subscription payment', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '123' }]])
+      .mockResolvedValueOnce([[projectRow({ deadline: '2020-01-01' })]]);
+    const res = mockResponse();
+    const next = jest.fn();
+
+    await projectController.validateActivation({
+      params: { id: 'project-1' },
+      user: { email: 'owner@example.com' },
+    }, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'A future deadline is required before activation' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('continues to subscription validation when the project is activation-ready', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '123' }]])
+      .mockResolvedValueOnce([[projectRow({ deadline: '2099-01-01' })]]);
+    const res = mockResponse();
+    const next = jest.fn();
+
+    await projectController.validateActivation({
+      params: { id: 'project-1' },
+      user: { email: 'owner@example.com' },
+    }, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
   it('requires userid and project name when creating a project', async () => {
     const resMissingUser = mockResponse();
     await projectController.createProject({ body: { name: 'Draft' } }, resMissingUser);

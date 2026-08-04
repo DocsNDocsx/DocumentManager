@@ -10,7 +10,7 @@ router.post('/project-attachments', projectAttachmentUpload.single('file'), proj
 router.post('/projects', projectController.createProject);
 router.get('/projects', projectController.getProjects);
 router.get('/projects/:id', projectController.getProject);
-router.patch('/projects/:id/activate', requireActiveSubscription, projectController.activateProject);
+router.patch('/projects/:id/activate', projectController.validateActivation, requireActiveSubscription, projectController.activateProject);
 router.patch('/projects/:id/cancel', projectController.cancelProject);
 router.patch('/projects/:id', (req, res, next) => {
   if (req.body?.status === 'active') return requireActiveSubscription(req, res, next);

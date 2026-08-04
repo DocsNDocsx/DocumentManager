@@ -374,7 +374,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     const activationReq = http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1`);
     activationReq.flush({ success: false }, { status: 500, statusText: 'Server Error' });
 
-    expect(component.validationError()).toBe('Your subscription was created, but we could not activate the project. Please try activating it again from your projects page.');
+    expect(component.validationError()).toBe('Your subscription was created, but the project could not be activated: Project activation failed.');
     expect(router.navigate).not.toHaveBeenCalledWith(['/pricing-plan-confirm'], expect.anything());
     expect(component.processing()).toBe(false);
   });

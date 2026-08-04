@@ -140,6 +140,9 @@
         <span class="summary-item-label">Type</span>
         <span class="summary-item-value">{{ projectType() === 'solo' ? 'Solo' : 'Team' }} Projects</span>
       </div>
+      @if (taxEstimateError()) {
+        <div class="validation-error" role="alert">{{ taxEstimateError() }}</div>
+      }
       @if (projects() > 1) {
         <div class="summary-item">
           <span class="summary-item-label">Active projects</span>

@@ -5,6 +5,7 @@ const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
+const { isFutureDeadline } = require('../utils/timezone');
 
 const PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'cancelled']);
 const STATUS_TRANSITIONS = {
@@ -283,14 +284,15 @@ exports.activateProject = async (req, res) => {
     }
 
     const [existing] = await pool.query(
-      `SELECT p.type, p.deadline, p.documents, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName
+      `SELECT p.type, p.deadline, p.documents, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName,
+              u.timezone AS ownerTimezone
        FROM projects p
        JOIN users u ON u.userid = p.user_id
        WHERE p.id = ?`,
       [id]
     );
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
-    if (!existing[0].deadline || new Date(existing[0].deadline) <= new Date()) {
+    if (!isFutureDeadline(existing[0].deadline, existing[0].ownerTimezone)) {
       return res.status(400).json({ success: false, message: 'A future deadline is required before activation' });
     }
     if (parseProject({ documents: existing[0].documents }).documents.length === 0) {
@@ -419,6 +421,33 @@ exports.deleteProject = async (req, res) => {
   } catch (err) {
     console.error('Delete project error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.validateActivation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = await authenticatedUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const [rows] = await pool.query(
+      `SELECT p.id, p.deadline, p.documents, u.timezone AS "ownerTimezone"
+       FROM projects p JOIN users u ON u.userid = p.user_id
+       WHERE p.id = ? AND p.user_id = ?`,
+      [id, userId]
+    );
+    if (rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Only the project owner can activate this project' });
+    }
+    if (!isFutureDeadline(rows[0].deadline, rows[0].ownerTimezone)) {
+      return res.status(400).json({ success: false, message: 'A future deadline is required before activation' });
+    }
+    if (parseProject({ documents: rows[0].documents }).documents.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one required document is needed before activation' });
+    }
+    return next();
+  } catch (err) {
+    console.error('Validate activation error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 

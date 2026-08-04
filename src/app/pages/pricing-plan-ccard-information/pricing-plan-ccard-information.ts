@@ -58,6 +58,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   voucherError = signal('');
   estimatedSalesTax = signal(0);
   taxEstimateLoading = signal(false);
+  taxEstimateError = signal('');
 
   subtotal  = computed(() => this.monthlyBase());
   grossTotal = computed(() => this.subtotal());
@@ -348,12 +349,15 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     this.taxEstimateTimer = null;
 
     const amountCents = Math.round(this.taxableAmount() * 100);
-    if (amountCents <= 0 || !this.zip().trim() || !this.country().trim()) {
+    if (amountCents <= 0 || !this.address1().trim() || !this.city().trim() ||
+        !this.state().trim() || !this.zip().trim() || !this.country().trim()) {
       this.estimatedSalesTax.set(0);
+      this.taxEstimateError.set('');
       this.taxEstimateLoading.set(false);
       return;
     }
 
+    this.taxEstimateError.set('');
     this.taxEstimateLoading.set(true);
     this.stripeService.estimateTax({
       amountCents,
@@ -372,8 +376,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
           this.estimatedSalesTax.set(Number(estimate.taxAmount) || 0);
           this.taxEstimateLoading.set(false);
         },
-        error: () => {
+        error: err => {
           this.estimatedSalesTax.set(0);
+          this.taxEstimateError.set(err?.error?.message ?? 'Sales tax could not be estimated for this address.');
           this.taxEstimateLoading.set(false);
         },
       });
@@ -433,8 +438,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: () => this.navigateToConfirmation(),
-              error: () => {
-                this.validationError.set('Your subscription was created, but we could not activate the project. Please try activating it again from your projects page.');
+              error: err => {
+                const reason = err?.error?.message ?? 'Project activation failed.';
+                this.validationError.set(`Your subscription was created, but the project could not be activated: ${reason}`);
                 this.processing.set(false);
               },
             });

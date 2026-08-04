@@ -20,7 +20,9 @@ router.get('/teams/projects', teamController.getTeamProjects);
 router.get('/teams/projects/:id', teamController.getTeamProject);
 router.post('/teams/projects', teamController.createTeamProject);
 router.patch('/teams/projects/:id', (req, res, next) => {
-  if (req.body?.status === 'active') return requireActiveSubscription(req, res, next);
+  if (req.body?.status === 'active') {
+    return teamController.validateActivation(req, res, () => requireActiveSubscription(req, res, next));
+  }
   return next();
 }, teamController.updateTeamProject);
 router.get('/teams/projects/:id/collaborators', teamController.getProjectCollaborators);

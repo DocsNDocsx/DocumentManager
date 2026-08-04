@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { isFutureDeadline } = require('../utils/timezone');
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
@@ -397,6 +398,17 @@ exports.updateTeamProject = async (req, res) => {
       }
     }
 
+    if (status === 'active' && req.user?.email) {
+      const [timezoneRows] = await pool.query('SELECT timezone FROM users WHERE email = ?', [req.user.email]);
+      const timezone = timezoneRows[0]?.timezone;
+      if (!isFutureDeadline(existing[0].deadline, timezone)) {
+        return res.status(400).json({ success: false, message: 'A future deadline is required before activation' });
+      }
+      if (parseJsonArray(existing[0].documents).length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one required document is needed before activation' });
+      }
+    }
+
     const setClauses = [];
     const values = [];
 
@@ -487,6 +499,28 @@ exports.updateTeamProject = async (req, res) => {
   } catch (err) {
     console.error('Update team project error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.validateActivation = async (req, res, next) => {
+  try {
+    if (!await requireTeamProjectAccess(req, res, true)) return;
+    const [projects] = await pool.query(
+      'SELECT deadline, documents FROM team_projects WHERE id = ?',
+      [req.params.id]
+    );
+    if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    const [users] = await pool.query('SELECT timezone FROM users WHERE email = ?', [req.user?.email]);
+    if (!isFutureDeadline(projects[0].deadline, users[0]?.timezone)) {
+      return res.status(400).json({ success: false, message: 'A future deadline is required before activation' });
+    }
+    if (parseJsonArray(projects[0].documents).length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one required document is needed before activation' });
+    }
+    return next();
+  } catch (err) {
+    console.error('Validate team activation error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
