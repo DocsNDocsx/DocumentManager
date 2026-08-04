@@ -22,6 +22,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
+  readonly isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
   private attachmentUploadService = inject(ProjectAttachmentUploadService);
   dropdownOpen = signal(false);
 

@@ -23,6 +23,7 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly teamsService = inject(TeamsService);
   readonly teamWizardService = inject(TeamProjectWizardService);
+  readonly isActiveProject = computed(() => this.teamWizardService.project()?.status === 'active');
   private readonly attachmentUploadService = inject(ProjectAttachmentUploadService);
 
   dropdownOpen = signal(false);

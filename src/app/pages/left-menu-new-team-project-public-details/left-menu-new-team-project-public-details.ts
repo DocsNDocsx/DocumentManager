@@ -24,6 +24,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly teamWizardService = inject(TeamProjectWizardService);
+  readonly isActiveProject = computed(() => this.teamWizardService.project()?.status === 'active');
   private readonly attachmentUploadService = inject(ProjectAttachmentUploadService);
 
   dropdownOpen = signal(false);
