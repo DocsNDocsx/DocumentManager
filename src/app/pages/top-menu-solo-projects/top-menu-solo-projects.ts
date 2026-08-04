@@ -114,6 +114,11 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     if (!project || !baseline) return;
     const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : project.collaborators.length);
     if (!queryParams) return;
+    const baselineQuery = this.billingEstimate.buildSoloActivationQuery(
+      { ...project, deadline: baseline.deadline, documents: baseline.documents, expectedCollaborators: baseline.expectedCollaborators },
+      project.type === 'public' ? Number(baseline.expectedCollaborators) : baseline.collaborators.length,
+    );
+    queryParams['monthly'] = Math.max(0, Number(queryParams['monthly']) - Number(baselineQuery?.['monthly'] ?? 0)).toFixed(2);
     queryParams['upgrade'] = '1';
     queryParams['extensionDays'] = this.billingEstimate.deadlineExtensionDays(baseline.deadline, project.deadline);
     this.pendingPaymentProject.set(null);

@@ -133,7 +133,7 @@
 
       <div class="usage-badge">
         <i class="fas fa-chart-line" aria-hidden="true"></i>
-        Usage-based billing
+        {{ isUpgrade() ? 'Prorated project upgrade' : 'Usage-based billing' }}
       </div>
 
       <div class="summary-item">
@@ -162,7 +162,7 @@
         <span class="summary-item-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
       </div>
       <div class="summary-item">
-        <span class="summary-item-label">Subtotal</span>
+        <span class="summary-item-label">{{ isUpgrade() ? 'Upgrade amount' : 'Subtotal' }}</span>
         <span class="summary-item-value">${{ subtotal().toFixed(2) }}</span>
       </div>
       <div class="summary-item">
@@ -214,12 +214,16 @@
       </div>
 
       <div class="summary-total">
-        <span class="summary-total-label">Est. Total</span>
+        <span class="summary-total-label">{{ isUpgrade() ? 'Estimated due now' : 'Est. Total' }}</span>
         <span class="summary-total-value">${{ total().toFixed(2) }}</span>
       </div>
 
       <p class="billing-cycle-note">
-        Calculated from the project duration and usage entered before activation. Dates use {{ durationTimeZone() }}. Stripe calculates sales tax from the billing ZIP/address.
+        @if (isUpgrade()) {
+          This shows only the increased project usage. Stripe calculates the final prorated invoice from the time remaining in the current billing period.
+        } @else {
+          Calculated from the project duration and usage entered before activation. Dates use {{ durationTimeZone() }}. Stripe calculates sales tax from the billing ZIP/address.
+        }
       </p>
 
       <div class="trust-row">

@@ -411,7 +411,15 @@ exports.upgradeSubscription = async (req, res) => {
       [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), updated.status, record.id]
     );
     await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
-    return res.json({ success: true, subscriptionId: updated.id, status: updated.status, previousAmountCents, amountCents: unitAmount });
+    const invoice = typeof updated.latest_invoice === 'object' ? updated.latest_invoice : null;
+    return res.json({
+      success: true,
+      subscriptionId: updated.id,
+      status: updated.status,
+      previousAmountCents,
+      amountCents: unitAmount,
+      proratedAmountDueCents: invoice?.amount_due ?? invoice?.amount_paid ?? null,
+    });
   } catch (err) {
     console.error('Upgrade subscription error:', {
       message: err.message,

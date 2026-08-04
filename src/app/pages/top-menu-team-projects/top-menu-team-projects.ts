@@ -87,6 +87,14 @@ export class TopMenuTeamProjectsComponent implements OnInit {
     const collaboratorCount = project.type === 'public' ? project.expectedCollaborators : project.collabUploadCount;
     const queryParams = this.billingEstimate.buildTeamActivationQuery({ id: project.id, deadline: project.deadline, documents, expectedCollaborators: collaboratorCount });
     if (!queryParams) return;
+    const baselineCollaboratorCount = project.type === 'public' ? baseline.expectedCollaborators : baseline.collaborators.length;
+    const baselineQuery = this.billingEstimate.buildTeamActivationQuery({
+      id: project.id,
+      deadline: baseline.deadline,
+      documents: baseline.documents,
+      expectedCollaborators: baselineCollaboratorCount,
+    });
+    queryParams['monthly'] = Math.max(0, Number(queryParams['monthly']) - Number(baselineQuery?.['monthly'] ?? 0)).toFixed(2);
     queryParams['upgrade'] = '1';
     queryParams['extensionDays'] = this.billingEstimate.deadlineExtensionDays(baseline.deadline, project.deadline);
     this.pendingPaymentProject.set(null);
