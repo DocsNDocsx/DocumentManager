@@ -75,6 +75,19 @@ describe('LeftMenuNewSoloProjectPublicDecisionComponent', () => {
     });
   });
 
+  it('shows the backend reason when activation validation fails', () => {
+    wizard.activateProject.mockReturnValueOnce(throwError(() => ({
+      status: 400,
+      error: { message: 'A future deadline is required before activation' },
+    })));
+
+    component.confirmActivation();
+
+    expect(component.toastVisible()).toBe(true);
+    expect(component.toastMsg()).toBe('A future deadline is required before activation');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
   it('cancels and resets project state', () => {
     component.cancelProject();
 

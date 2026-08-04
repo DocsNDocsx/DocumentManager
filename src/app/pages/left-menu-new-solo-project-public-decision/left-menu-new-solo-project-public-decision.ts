@@ -92,7 +92,9 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
               queryParams,
             });
           }
+          return;
         }
+        this.showToast(err?.error?.message ?? 'Project could not be activated. Please review the deadline and required documents.');
       },
     });
   }

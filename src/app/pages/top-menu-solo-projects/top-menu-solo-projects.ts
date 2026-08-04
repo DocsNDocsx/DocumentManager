@@ -159,6 +159,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   onActivate(project: Project, e: Event): void {
     e.stopPropagation();
+    this.actionError.set(null);
     this.logger.info('Activating project', { id: project.id });
     this.http.patch<{ success: boolean; project: Project }>(`${environment.apiUrl}/projects/${project.id}/activate`, {}).subscribe({
       next: res => {
@@ -173,7 +174,9 @@ export class TopMenuSoloProjectsComponent implements OnInit {
           this.router.navigate(['/pricing-plan-ccard-information'], {
             queryParams,
           });
+          return;
         }
+        this.actionError.set(err?.error?.message ?? 'Could not activate the project.');
       },
     });
   }
