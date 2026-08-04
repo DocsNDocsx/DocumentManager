@@ -46,7 +46,7 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   isFormValid = computed(() =>
     this.selectedTeamId() !== '' &&
     this.projectName().trim() !== '' &&
-    isValidProjectDeadline(this.projectDeadline())
+    isValidProjectDeadline(this.projectDeadline()) && this.projectDeadline() >= this.minimumDeadline
   );
 
   ngOnInit(): void {
@@ -71,7 +71,9 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
       this.selectedTeamId.set(proj.teamId);
       this.projectName.set(proj.name);
       this.projectDescription.set(proj.description ?? '');
-      this.projectDeadline.set(proj.deadline ? proj.deadline.split('T')[0] : '');
+      const deadline = proj.deadline ? proj.deadline.split('T')[0] : '';
+      this.projectDeadline.set(deadline);
+      if (proj.status === 'active' && deadline > this.minimumDeadline) this.minimumDeadline = deadline;
       this.uploadedFiles.set(proj.attachments ?? []);
       const name = this.teams().find(t => t.id === proj.teamId)?.name ?? '';
       if (name) this.teamWizardService.teamName.set(name);

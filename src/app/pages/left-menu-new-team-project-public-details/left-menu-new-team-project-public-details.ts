@@ -68,7 +68,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   isFormValid = computed(() =>
     this.selectedTeamId() !== '' &&
     this.projectName().trim() !== '' &&
-    isValidProjectDeadline(this.projectDeadline()) &&
+    isValidProjectDeadline(this.projectDeadline()) && this.projectDeadline() >= this.minimumDeadline &&
     this.expectedCollaborators() !== '' &&
     parseInt(this.expectedCollaborators()) > 0
   );
@@ -95,7 +95,9 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
       this.selectedTeamId.set(proj.teamId);
       this.projectName.set(proj.name);
       this.projectDescription.set(proj.description ?? '');
-      this.projectDeadline.set(proj.deadline ? proj.deadline.split('T')[0] : '');
+      const deadline = proj.deadline ? proj.deadline.split('T')[0] : '';
+      this.projectDeadline.set(deadline);
+      if (proj.status === 'active' && deadline > this.minimumDeadline) this.minimumDeadline = deadline;
       this.expectedCollaborators.set(proj.expectedCollaborators ? String(proj.expectedCollaborators) : '');
       this.uploadedFiles.set(proj.attachments ?? []);
       if (proj.supportStaff) {

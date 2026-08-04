@@ -53,7 +53,8 @@ export class LeftMenuNewSoloProjectPrivateDetailsComponent implements OnInit, On
   isSaving = computed(() => this.wizardService.isSaving());
 
   isFormValid = computed(() =>
-    this.projectName().trim() !== '' && isValidProjectDeadline(this.projectDeadline())
+    this.projectName().trim() !== '' && isValidProjectDeadline(this.projectDeadline()) &&
+    this.projectDeadline() >= this.minimumDeadline
   );
 
   steps = computed(() => {
@@ -81,7 +82,9 @@ export class LeftMenuNewSoloProjectPrivateDetailsComponent implements OnInit, On
     if (proj) {
       this.projectName.set(proj.name);
       this.projectDescription.set(proj.description ?? '');
-      this.projectDeadline.set(proj.deadline ? proj.deadline.split('T')[0] : '');
+      const deadline = proj.deadline ? proj.deadline.split('T')[0] : '';
+      this.projectDeadline.set(deadline);
+      if (proj.status === 'active' && deadline > this.minimumDeadline) this.minimumDeadline = deadline;
       this.uploadedFiles.set(proj.attachments ?? []);
     }
   }
