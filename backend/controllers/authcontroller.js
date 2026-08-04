@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { get } = require('@vercel/blob');
+const { Readable } = require('stream');
 const fs = require('fs');
 const path = require('path');
 const { insertUser } = require('../utils/createUser');
@@ -267,6 +269,7 @@ exports.uploadAvatar = async (req, res) => {
       folder: 'avatars',
       prefix: String(user.userid),
       file: req.file,
+      access: 'private',
     });
 
     await pool.query(
@@ -274,10 +277,13 @@ exports.uploadAvatar = async (req, res) => {
       [avatarPath, req.file.mimetype, req.file.originalname, user.userid]
     );
 
-    res.json({ success: true, avatarPath });
+    res.json({ success: true, avatarPath: `/api/auth/profile/avatar/${user.userid}?v=${Date.now()}` });
   } catch (err) {
     console.error('Avatar upload error:', err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    if (/BLOB_READ_WRITE_TOKEN|blob|store/i.test(String(err?.message ?? ''))) {
+      return res.status(503).json({ success: false, message: 'Profile photo storage is temporarily unavailable. Please contact support.' });
+    }
+    res.status(500).json({ success: false, message: 'Profile photo could not be uploaded' });
   }
 };
 
@@ -285,11 +291,27 @@ exports.getAvatar = async (req, res) => {
   try {
     const { userid } = req.params;
     const [rows] = await pool.query(
-      'SELECT avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
+      'SELECT avatar_url, avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
       [userid]
     );
     const avatar = rows[0];
-    if (!avatar?.avatar_data || !avatar?.avatar_mime_type) {
+    if (!avatar) {
+      return res.status(404).json({ success: false, message: 'Avatar not found' });
+    }
+
+    if (avatar.avatar_url) {
+      const result = await get(avatar.avatar_url, {
+        access: 'private',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      if (!result) return res.status(404).json({ success: false, message: 'Avatar not found' });
+      res.set('Content-Type', result.blob.contentType || avatar.avatar_mime_type || 'application/octet-stream');
+      res.set('Cache-Control', 'private, max-age=300');
+      const stream = typeof result.stream?.pipe === 'function' ? result.stream : Readable.fromWeb(result.stream);
+      return stream.pipe(res);
+    }
+
+    if (!avatar.avatar_data || !avatar.avatar_mime_type) {
       return res.status(404).json({ success: false, message: 'Avatar not found' });
     }
 

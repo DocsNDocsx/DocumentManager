@@ -9,7 +9,7 @@ function safeFileName(fileName = 'file') {
   return `${base || 'file'}${ext}`;
 }
 
-async function uploadToBlob({ folder, file, prefix }) {
+async function uploadToBlob({ folder, file, prefix, access = 'public' }) {
   if (!file?.buffer) {
     throw new Error('File buffer is required for Blob upload');
   }
@@ -29,7 +29,7 @@ async function uploadToBlob({ folder, file, prefix }) {
   }
 
   const blob = await put(pathname, file.buffer, {
-    access: 'public',
+    access,
     contentType: file.mimetype,
     token,
   });

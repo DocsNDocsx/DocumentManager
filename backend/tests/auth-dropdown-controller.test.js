@@ -418,6 +418,7 @@ describe('authcontroller dropdown/account APIs', () => {
     expect(uploadToBlob).toHaveBeenCalledWith({
       folder: 'avatars',
       prefix: '123',
+      access: 'private',
       file: { originalname: 'avatar.png', mimetype: 'image/png', buffer },
     });
     expect(pool.query).toHaveBeenNthCalledWith(
@@ -427,7 +428,7 @@ describe('authcontroller dropdown/account APIs', () => {
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      avatarPath: 'https://blob.example.com/avatars/avatar.png',
+      avatarPath: expect.stringMatching(/^\/api\/auth\/profile\/avatar\/123\?v=\d+$/),
     });
   });
 
@@ -443,7 +444,7 @@ describe('authcontroller dropdown/account APIs', () => {
     await authController.getAvatar({ params: { userid: '123' } }, res);
 
     expect(pool.query).toHaveBeenCalledWith(
-      'SELECT avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
+      'SELECT avatar_url, avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
       ['123'],
     );
     expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/png');

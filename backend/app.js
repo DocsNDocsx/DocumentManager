@@ -52,6 +52,17 @@ app.use('/api', dashboardRoutes);
 app.use('/api', stripeRoutes);
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
+app.use((err, _req, res, next) => {
+  if (!err) return next();
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ success: false, message: 'Profile photo must be 2 MB or smaller' });
+  }
+  if (err.message === 'Only image files are allowed') {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+  return next(err);
+});
+
 app.get('/', (req, res) => {
   res.send('🚀 Welcome to my Node API!');
 });

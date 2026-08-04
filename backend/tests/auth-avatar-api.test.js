@@ -1,5 +1,6 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+const { Readable } = require('stream');
 
 function loadApp() {
   jest.resetModules();
@@ -12,11 +13,15 @@ function loadApp() {
   jest.doMock('../utils/blobStorage', () => ({
     uploadToBlob: jest.fn().mockResolvedValue('https://blob.example.com/avatars/avatar.png'),
   }));
+  jest.doMock('@vercel/blob', () => ({
+    get: jest.fn(),
+  }));
 
   return {
     app: require('../app'),
     pool: require('../utils/sql'),
     blobStorage: require('../utils/blobStorage'),
+    blobClient: require('@vercel/blob'),
   };
 }
 
@@ -24,6 +29,7 @@ describe('POST /api/auth/profile/avatar', () => {
   afterEach(() => {
     jest.dontMock('../utils/sql');
     jest.dontMock('../utils/blobStorage');
+    jest.dontMock('@vercel/blob');
   });
 
   function authHeader() {
@@ -64,13 +70,12 @@ describe('POST /api/auth/profile/avatar', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      success: true,
-      avatarPath: 'https://blob.example.com/avatars/avatar.png',
-    });
+    expect(res.body.success).toBe(true);
+    expect(res.body.avatarPath).toMatch(/^\/api\/auth\/profile\/avatar\/123\?v=\d+$/);
     expect(blobStorage.uploadToBlob).toHaveBeenCalledWith({
       folder: 'avatars',
       prefix: '123',
+      access: 'private',
       file: expect.objectContaining({
         originalname: 'avatar.png',
         mimetype: 'image/png',
@@ -98,8 +103,30 @@ describe('POST /api/auth/profile/avatar', () => {
     expect(res.headers['content-type']).toBe('image/png');
     expect(Buffer.from(res.body)).toEqual(avatar);
     expect(pool.query).toHaveBeenCalledWith(
-      'SELECT avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
+      'SELECT avatar_url, avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
       ['123'],
+    );
+  });
+
+  it('streams a private Blob profile photo through the API URL', async () => {
+    const { app, pool, blobClient } = loadApp();
+    const avatar = Buffer.from('private-avatar');
+    pool.query.mockResolvedValueOnce([[
+      { avatar_url: 'https://store.private.blob.vercel-storage.com/avatars/avatar.png' },
+    ]]);
+    blobClient.get.mockResolvedValueOnce({
+      blob: { contentType: 'image/png' },
+      stream: Readable.from([avatar]),
+    });
+
+    const res = await request(app).get('/api/auth/profile/avatar/123');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('image/png');
+    expect(Buffer.from(res.body)).toEqual(avatar);
+    expect(blobClient.get).toHaveBeenCalledWith(
+      'https://store.private.blob.vercel-storage.com/avatars/avatar.png',
+      { access: 'private', token: process.env.BLOB_READ_WRITE_TOKEN },
     );
   });
 

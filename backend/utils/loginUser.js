@@ -30,7 +30,7 @@ async function loginUser(email, password) {
         firstname: user.firstname,
         lastname: user.lastname,
         email: user.email,
-        avatarUrl: user.avatar_url ?? '',
+        avatarUrl: user.avatar_url ? `/api/auth/profile/avatar/${user.userid}` : '',
         timezone: user.timezone ?? 'UTC-5',
       }
     };
