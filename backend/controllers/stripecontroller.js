@@ -27,6 +27,55 @@ async function isUsableStripeCustomer(customerId) {
   }
 }
 
+function parseJson(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
+function dateIncreaseDays(previousDeadline, currentDeadline) {
+  const previous = /^\d{4}-\d{2}-\d{2}/.exec(String(previousDeadline ?? ''))?.[0];
+  const current = /^\d{4}-\d{2}-\d{2}/.exec(String(currentDeadline ?? ''))?.[0];
+  if (!previous || !current) return 0;
+  return Math.max(0, Math.round((Date.parse(`${current}T00:00:00Z`) - Date.parse(`${previous}T00:00:00Z`)) / 86_400_000));
+}
+
+async function paidUpgradeUsage(projectId, record, requested) {
+  const [pendingRows] = await pool.query('SELECT project_type, snapshot FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
+  const pending = pendingRows?.[0];
+  if (!pending) return null;
+  const baseline = parseJson(pending.snapshot, null);
+  if (!baseline) return null;
+
+  let current;
+  if (pending.project_type === 'team') {
+    const [projects] = await pool.query('SELECT type, deadline, expected_collaborators, documents FROM team_projects WHERE id = ?', [projectId]);
+    if (!projects?.[0]) return null;
+    const [counts] = await pool.query('SELECT COUNT(*) AS count FROM team_project_collaborators WHERE project_id = ?', [projectId]);
+    current = { ...projects[0], collaboratorCount: Number(counts?.[0]?.count ?? 0) };
+  } else {
+    const [projects] = await pool.query('SELECT type, deadline, expected_collaborators, collaborators, documents FROM projects WHERE id = ?', [projectId]);
+    if (!projects?.[0]) return null;
+    current = { ...projects[0], collaboratorCount: parseJson(projects[0].collaborators, []).length };
+  }
+
+  const baselineCollaborators = current.type === 'public'
+    ? Number(baseline.expectedCollaborators ?? 1)
+    : Number(baseline.collaborators?.length ?? 1);
+  const currentCollaborators = current.type === 'public'
+    ? Number(current.expected_collaborators ?? 1)
+    : current.collaboratorCount;
+  const baselineDocuments = Number(baseline.documents?.length ?? 1);
+  const currentDocuments = Number(parseJson(current.documents, []).length || 1);
+
+  return {
+    projects: Math.max(1, Number(record.projects) || Number(requested.projects) || 1),
+    collaborators: Number(record.collaborators) + Math.max(0, currentCollaborators - baselineCollaborators),
+    documents: Number(record.documents) + Math.max(0, currentDocuments - baselineDocuments),
+    days: Number(record.days) + dateIncreaseDays(baseline.deadline, current.deadline),
+  };
+}
+
 /**
  * POST /api/stripe/setup-intent
  * Creates (or reuses) the Stripe Customer for the signed-in user and returns a
@@ -329,8 +378,12 @@ exports.upgradeSubscription = async (req, res) => {
     );
     const record = rows[0];
     if (!record) return res.status(404).json({ success: false, message: 'Active project subscription not found' });
-    const upgradedDays = Math.max(Number(days), Number(record.days) + Math.max(0, Number(extensionDays) || 0));
-    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, documents, days: upgradedDays });
+    const persistedUsage = await paidUpgradeUsage(projectId, record, { projects, collaborators, documents, days, extensionDays });
+    const upgradedProjects = persistedUsage?.projects ?? Number(projects);
+    const upgradedCollaborators = persistedUsage?.collaborators ?? Number(collaborators);
+    const upgradedDocuments = persistedUsage?.documents ?? Number(documents);
+    const upgradedDays = persistedUsage?.days ?? Math.max(Number(days), Number(record.days) + Math.max(0, Number(extensionDays) || 0));
+    const unitAmount = computeMonthlyAmountCents({ projects: upgradedProjects, collaborators: upgradedCollaborators, documents: upgradedDocuments, days: upgradedDays });
     const previousAmountCents = Math.round(Number(record.amount) * 100);
     if (unitAmount <= previousAmountCents) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
 
@@ -350,12 +403,12 @@ exports.upgradeSubscription = async (req, res) => {
       items: [{ id: item.id, price_data: { currency: 'usd', product, unit_amount: unitAmount, recurring: { interval: 'month' } } }],
       proration_behavior: 'always_invoice',
       payment_behavior: 'error_if_incomplete',
-      metadata: { ...subscription.metadata, projects: String(projects), collaborators: String(collaborators), documents: String(documents), days: String(upgradedDays) },
+      metadata: { ...subscription.metadata, projects: String(upgradedProjects), collaborators: String(upgradedCollaborators), documents: String(upgradedDocuments), days: String(upgradedDays) },
       expand: ['latest_invoice.payment_intent'],
     }, { idempotencyKey: `upgrade_${user.userid}_${projectId}_${unitAmount}` });
     await pool.query(
       'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [projects, collaborators, documents, upgradedDays, (unitAmount / 100).toFixed(2), updated.status, record.id]
+      [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), updated.status, record.id]
     );
     await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
     return res.json({ success: true, subscriptionId: updated.id, status: updated.status, previousAmountCents, amountCents: unitAmount });
