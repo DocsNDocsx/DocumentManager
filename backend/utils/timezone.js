@@ -29,14 +29,30 @@ function calendarDateInTimeZone(date, timeZone) {
 }
 
 function deadlineCalendarDate(deadline) {
+  if (deadline instanceof Date) {
+    if (Number.isNaN(deadline.getTime())) return null;
+    return deadline.toISOString().slice(0, 10);
+  }
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(deadline ?? ''));
   return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
 }
 
 function isFutureDeadline(deadline, timeZone, now = new Date()) {
   const dueDate = deadlineCalendarDate(deadline);
-  if (!dueDate) return false;
-  return dueDate > calendarDateInTimeZone(now, timeZone);
+  const resolvedTimeZone = resolveTimeZone(timeZone);
+  const serverDateInOwnerTimeZone = calendarDateInTimeZone(now, resolvedTimeZone);
+  const isFuture = Boolean(dueDate) && dueDate > serverDateInOwnerTimeZone;
+
+  console.info('[activation-deadline-check]', {
+    serverUtc: now.toISOString(),
+    ownerTimeZone: resolvedTimeZone,
+    serverDateInOwnerTimeZone,
+    enteredDeadline: deadline,
+    parsedDeadline: dueDate,
+    accepted: isFuture,
+  });
+
+  return isFuture;
 }
 
 module.exports = { calendarDateInTimeZone, deadlineCalendarDate, isFutureDeadline, resolveTimeZone };

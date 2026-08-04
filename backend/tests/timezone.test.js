@@ -8,6 +8,11 @@ describe('project deadline timezone validation', () => {
     expect(isFutureDeadline('2026-08-04', 'America/Chicago', utcAfterMidnight)).toBe(true);
   });
 
+  it('accepts a database Date object for tomorrow in the owner timezone', () => {
+    const databaseDeadline = new Date('2026-08-04T00:00:00.000Z');
+    expect(isFutureDeadline(databaseDeadline, 'UTC-6', utcAfterMidnight)).toBe(true);
+  });
+
   it('rejects the same calendar day in the user timezone', () => {
     expect(isFutureDeadline('2026-08-03', 'America/Chicago', utcAfterMidnight)).toBe(false);
   });
