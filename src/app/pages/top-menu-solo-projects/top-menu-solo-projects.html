@@ -220,7 +220,7 @@
       <div class="view-modal-header">
         <div>
           <h2 class="view-modal-title">{{ vp.name }}</h2>
-          <p class="view-modal-subtitle">Share these unique links with each collaborator so they can upload their documents.</p>
+          <p class="view-modal-subtitle">Select a collaborator to review their latest document submission.</p>
         </div>
         <button class="view-modal-close" type="button" (click)="closeViewModal()" aria-label="Close modal">
           <i class="fas fa-times" aria-hidden="true"></i>
@@ -237,16 +237,45 @@
             <div class="collab-info">
               <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
               <div class="collab-email">{{ collab.email }}</div>
-              <div class="collab-url">{{ getCollaboratorUrl(vp.id, $index) }}</div>
             </div>
             <button class="copy-btn collab-copy-btn" type="button"
-              (click)="copyToClipboard(getCollaboratorUrl(vp.id, $index), $event.currentTarget)"
-              aria-label="Copy link for {{ collab.firstName }} {{ collab.lastName }}">
-              <i class="fas fa-copy" aria-hidden="true"></i> Copy
+              [disabled]="reviewLoadingIndex() === $index"
+              (click)="openCollaboratorReview(vp, $index)"
+              aria-label="Review submissions from {{ collab.firstName }} {{ collab.lastName }}">
+              <i class="fas" [class.fa-spinner]="reviewLoadingIndex() === $index" [class.fa-spin]="reviewLoadingIndex() === $index" [class.fa-file-circle-check]="reviewLoadingIndex() !== $index" aria-hidden="true"></i>
+              {{ reviewLoadingIndex() === $index ? 'Loading' : 'Review' }}
             </button>
           </div>
         }
       </div>
+      @if (reviewError()) { <div class="review-inline-error" role="alert">{{ reviewError() }}</div> }
+    </div>
+  </div>
+}
+
+@if (reviewingSubmission(); as sub) {
+  <div class="modal-overlay review-overlay" role="dialog" aria-modal="true" aria-labelledby="soloReviewModalTitle">
+    <div class="review-modal-box">
+      <div class="review-modal-header">
+        <div><h2 id="soloReviewModalTitle">Review {{ sub.documentType }}</h2><p>Submitted by {{ sub.collaborator.firstName }} {{ sub.collaborator.lastName }}</p></div>
+        <button type="button" class="view-modal-close" (click)="closeReviewModal()" aria-label="Close review"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="review-modal-body">
+        <section><strong>Collaborator Information</strong><div class="review-value">{{ sub.collaborator.firstName }} {{ sub.collaborator.lastName }} ({{ sub.collaborator.email }})</div></section>
+        <section><strong>Document Type</strong><div class="review-value">{{ sub.documentType }}</div></section>
+        <section><strong>Submission Date</strong><div class="review-value">{{ formatReviewDate(sub.submittedDate) }}</div></section>
+        <section><strong>Document Preview</strong><div class="review-document-preview"><i class="fas fa-file-alt"></i><p>{{ sub.fileName }}</p><button type="button" (click)="downloadReviewDocument()"><i class="fas fa-download"></i> Download Document</button></div></section>
+        <section><strong>Your Decision</strong><div class="review-decisions">
+          <button type="button" class="approve" (click)="chooseReviewDecision('approve')"><i class="fas fa-check"></i> Approve</button>
+          <button type="button" class="revise" (click)="chooseReviewDecision('revise')"><i class="fas fa-redo"></i> Request Revision</button>
+          <button type="button" class="reject" (click)="chooseReviewDecision('reject')"><i class="fas fa-times"></i> Decline Permanently</button>
+        </div></section>
+        @if (reviewDecision()) {
+          <section><label for="soloReviewComments"><strong>Comments {{ reviewDecision() === 'approve' ? '(optional)' : '(required)' }}</strong></label><textarea id="soloReviewComments" rows="4" [value]="reviewComments()" (input)="reviewComments.set($any($event.target).value)"></textarea></section>
+        }
+        @if (reviewError()) { <div class="review-inline-error" role="alert">{{ reviewError() }}</div> }
+      </div>
+      <div class="review-modal-footer"><button type="button" class="cancel" (click)="closeReviewModal()">Close</button>@if (reviewDecision()) { <button type="button" class="confirm" (click)="submitReviewDecision()">Confirm Decision</button> }</div>
     </div>
   </div>
 }

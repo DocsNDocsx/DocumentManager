@@ -5,13 +5,19 @@ import { SharedHeaderComponent } from '../../shared/shared-header/shared-header'
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ProjectListService } from '../../services/project-list.service';
 import { AuthService } from '../../services/auth.service';
-import { Project } from '../../models/project.models';
+import { Project, Submission as DbSubmission } from '../../models/project.models';
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
 import { BillingEstimateService } from '../../services/billing-estimate.service';
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 
 type FilterTab = 'Active' | 'Draft' | 'Completed' | 'Not Completed' | 'Deleted';
+type ReviewDecision = 'approve' | 'revise' | 'reject' | null;
+type ReviewSubmission = {
+  id: string; projectId: string; collaboratorIndex: number; documentIndex: number;
+  collaborator: Project['collaborators'][number]; documentType: string; fileName: string;
+  submittedDate: string; status: 'pending' | 'approved' | 'revision' | 'rejected'; comments: string | null;
+};
 
 @Component({
   selector: 'app-top-menu-solo-projects',
@@ -35,6 +41,11 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   actionError = signal<string | null>(null);
   incompleteProject = signal<Project | null>(null);
   incompleteRequirements = signal<string[]>([]);
+  reviewingSubmission = signal<ReviewSubmission | null>(null);
+  reviewDecision = signal<ReviewDecision>(null);
+  reviewComments = signal('');
+  reviewLoadingIndex = signal<number | null>(null);
+  reviewError = signal<string | null>(null);
   pendingPaymentProject = signal<Project | null>(null);
   private readonly pendingPaymentEffect = effect(() => {
     if (this.listService.isLoading() || this.pendingPaymentProject()) return;
@@ -135,6 +146,69 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   }
 
   closeViewModal(): void { this.viewingProject.set(null); }
+
+  openCollaboratorReview(project: Project, collaboratorIndex: number): void {
+    this.reviewLoadingIndex.set(collaboratorIndex);
+    this.reviewError.set(null);
+    this.http.get<{ success: boolean; submissions: DbSubmission[] }>(`${environment.apiUrl}/projects/${project.id}/submissions`).subscribe({
+      next: response => {
+        const submissions = response.submissions
+          .filter(submission => submission.collaborator_index === collaboratorIndex)
+          .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+        const submission = submissions.find(item => item.status === 'submitted') ?? submissions[0];
+        this.reviewLoadingIndex.set(null);
+        if (!submission) {
+          this.reviewError.set('This collaborator has not submitted a document yet.');
+          return;
+        }
+        this.viewingProject.set(null);
+        this.reviewDecision.set(null);
+        this.reviewComments.set('');
+        this.reviewingSubmission.set({
+          id: submission.id, projectId: project.id, collaboratorIndex, documentIndex: submission.document_index,
+          collaborator: project.collaborators[collaboratorIndex],
+          documentType: project.documents[submission.document_index]?.name ?? 'Document',
+          fileName: submission.file_name, submittedDate: submission.submitted_at,
+          status: submission.status === 'submitted' ? 'pending' : submission.status,
+          comments: submission.feedback,
+        });
+      },
+      error: err => {
+        this.reviewLoadingIndex.set(null);
+        this.reviewError.set(err?.error?.message ?? 'Could not load this collaborator’s submissions.');
+      },
+    });
+  }
+
+  closeReviewModal(): void { this.reviewingSubmission.set(null); this.reviewDecision.set(null); this.reviewComments.set(''); }
+  chooseReviewDecision(decision: Exclude<ReviewDecision, null>): void { this.reviewDecision.set(decision); this.reviewComments.set(''); }
+  submitReviewDecision(): void {
+    const submission = this.reviewingSubmission();
+    const decision = this.reviewDecision();
+    const comments = this.reviewComments().trim();
+    if (!submission || !decision || ((decision === 'revise' || decision === 'reject') && !comments)) return;
+    const status = decision === 'approve' ? 'approved' : decision === 'revise' ? 'revision' : 'rejected';
+    this.http.patch(`${environment.apiUrl}/projects/${submission.projectId}/submissions/${submission.id}`, { status, feedback: comments || null }).subscribe({
+      next: () => { this.closeReviewModal(); this.listService.loadStats([submission.projectId]); },
+      error: err => this.reviewError.set(err?.error?.message ?? 'Could not save the review decision.'),
+    });
+  }
+
+  downloadReviewDocument(): void {
+    const submission = this.reviewingSubmission();
+    if (!submission) return;
+    this.http.get(`${environment.apiUrl}/projects/${submission.projectId}/submissions/${submission.id}/download`, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
+        anchor.href = url; anchor.download = submission.fileName; anchor.click(); URL.revokeObjectURL(url);
+      },
+      error: err => this.reviewError.set(err?.error?.message ?? 'Could not download the document.'),
+    });
+  }
+
+  formatReviewDate(value: string): string {
+    return new Date(value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
 
   onViewModalOverlayClick(e: MouseEvent): void {
     if ((e.target as HTMLElement).classList.contains('modal-overlay')) this.closeViewModal();
