@@ -336,6 +336,13 @@ ALTER TABLE stripe_subscriptions
 CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_userid ON stripe_subscriptions (userid);
 CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_project_id ON stripe_subscriptions (project_id);
 
+CREATE TABLE IF NOT EXISTS pending_project_upgrades (
+  project_id VARCHAR(255) PRIMARY KEY,
+  project_type VARCHAR(20) NOT NULL,
+  snapshot TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE OR REPLACE TRIGGER trg_stripe_subscriptions_updated_at
   BEFORE UPDATE ON stripe_subscriptions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();

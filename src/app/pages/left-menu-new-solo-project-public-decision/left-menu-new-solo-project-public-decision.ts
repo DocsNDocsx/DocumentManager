@@ -106,10 +106,10 @@ export class LeftMenuNewSoloProjectPublicDecisionComponent implements OnDestroy 
   }
 
   finishEditing(): void {
-    const upgradeQuery = this.wizardService.pendingUpgradeQuery();
+    const upgradeQuery = typeof this.wizardService.pendingUpgradeQuery === 'function' ? this.wizardService.pendingUpgradeQuery() : null;
     this.wizardService.reset();
-    this.router.navigate(upgradeQuery ? ['/pricing-plan-ccard-information'] : ['/top-menu-solo-projects'],
-      upgradeQuery ? { queryParams: upgradeQuery } : undefined);
+    if (upgradeQuery) this.router.navigate(['/pricing-plan-ccard-information'], { queryParams: upgradeQuery });
+    else this.router.navigate(['/top-menu-solo-projects']);
   }
 
   closeProject(): void {

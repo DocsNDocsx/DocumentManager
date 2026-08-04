@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
@@ -35,6 +35,12 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   actionError = signal<string | null>(null);
   incompleteProject = signal<Project | null>(null);
   incompleteRequirements = signal<string[]>([]);
+  pendingPaymentProject = signal<Project | null>(null);
+  private readonly pendingPaymentEffect = effect(() => {
+    if (this.listService.isLoading() || this.pendingPaymentProject()) return;
+    const pending = this.listService.projects().find(project => project.status === 'active' && project.pendingBillingUpgrade);
+    if (pending) this.pendingPaymentProject.set(pending);
+  });
 
   private nonCancelledProjects = computed(() => this.listService.projects().filter(p => p.status !== 'cancelled'));
   private activeOnlyProjects   = computed(() => this.nonCancelledProjects().filter(p => p.status === 'active' && this.daysFromNow(p.deadline) >= 0));
@@ -91,6 +97,27 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   ngOnInit(): void {
     this.listService.load();
+  }
+
+  discardUnpaidChanges(): void {
+    const project = this.pendingPaymentProject();
+    if (!project) return;
+    this.http.post(`${environment.apiUrl}/projects/${project.id}/discard-pending-upgrade`, {}).subscribe({
+      next: () => { this.pendingPaymentProject.set(null); this.listService.load(); },
+      error: err => this.actionError.set(err?.error?.message ?? 'Could not discard the unpaid changes.'),
+    });
+  }
+
+  payForPendingChanges(): void {
+    const project = this.pendingPaymentProject();
+    const baseline = project?.pendingBillingUpgrade;
+    if (!project || !baseline) return;
+    const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : project.collaborators.length);
+    if (!queryParams) return;
+    queryParams['upgrade'] = '1';
+    queryParams['extensionDays'] = this.billingEstimate.deadlineExtensionDays(baseline.deadline, project.deadline);
+    this.pendingPaymentProject.set(null);
+    this.router.navigate(['/pricing-plan-ccard-information'], { queryParams });
   }
 
   applyFilter(f: FilterTab): void { this.activeFilter.set(f); }

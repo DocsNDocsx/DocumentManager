@@ -1,15 +1,19 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { TeamProjectsService } from '../../services/team-projects.service';
 import { TeamProjectItem } from '../../models/team.models';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { BillingEstimateService } from '../../services/billing-estimate.service';
+import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 
 type ProjectStatus = TeamProjectItem['status'];
 
 @Component({
   selector: 'app-top-menu-team-projects',
-  imports: [SharedHeaderComponent, RouterLink, SharedSidebarComponent],
+  imports: [SharedHeaderComponent, RouterLink, SharedSidebarComponent, ConfirmModalComponent],
   templateUrl: './top-menu-team-projects.html',
   styleUrl: './top-menu-team-projects.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +24,14 @@ type ProjectStatus = TeamProjectItem['status'];
 export class TopMenuTeamProjectsComponent implements OnInit {
   readonly teamProjectsService = inject(TeamProjectsService);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
+  private readonly billingEstimate = inject(BillingEstimateService);
+  pendingPaymentProject = signal<TeamProjectItem | null>(null);
+  private readonly pendingPaymentEffect = effect(() => {
+    if (this.teamProjectsService.isLoading() || this.pendingPaymentProject()) return;
+    const pending = this.teamProjectsService.projects().find(project => project.status === 'active' && project.userRole === 'host' && project.pendingBillingUpgrade);
+    if (pending) this.pendingPaymentProject.set(pending);
+  });
 
   dropdownOpen = signal(false);
   activeStatus = signal<ProjectStatus>('active');
@@ -59,6 +71,26 @@ export class TopMenuTeamProjectsComponent implements OnInit {
 
   ngOnInit(): void {
     this.teamProjectsService.load();
+  }
+
+  discardUnpaidChanges(): void {
+    const project = this.pendingPaymentProject();
+    if (!project) return;
+    this.http.post(`${environment.apiUrl}/teams/projects/${project.id}/discard-pending-upgrade`, {}).subscribe({ next: () => { this.pendingPaymentProject.set(null); this.teamProjectsService.load(); } });
+  }
+
+  payForPendingChanges(): void {
+    const project = this.pendingPaymentProject();
+    const baseline = project?.pendingBillingUpgrade;
+    if (!project || !baseline) return;
+    const documents = Array.from({ length: project.documentCount }, () => ({ name: '', fileTypes: [], maxSize: '', sizeUnit: '', templateName: '' }));
+    const collaboratorCount = project.type === 'public' ? project.expectedCollaborators : project.collabUploadCount;
+    const queryParams = this.billingEstimate.buildTeamActivationQuery({ id: project.id, deadline: project.deadline, documents, expectedCollaborators: collaboratorCount });
+    if (!queryParams) return;
+    queryParams['upgrade'] = '1';
+    queryParams['extensionDays'] = this.billingEstimate.deadlineExtensionDays(baseline.deadline, project.deadline);
+    this.pendingPaymentProject.set(null);
+    this.router.navigate(['/pricing-plan-ccard-information'], { queryParams });
   }
 
   toggleDropdown(event: Event): void {

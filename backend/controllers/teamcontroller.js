@@ -65,6 +65,10 @@ function parseProjectRow(p) {
   const staff = p.support_staff == null
     ? null
     : typeof p.support_staff === 'string' ? JSON.parse(p.support_staff) : p.support_staff;
+  let pendingBillingUpgrade = null;
+  if (p.pending_billing_snapshot) {
+    try { pendingBillingUpgrade = typeof p.pending_billing_snapshot === 'string' ? JSON.parse(p.pending_billing_snapshot) : p.pending_billing_snapshot; } catch { pendingBillingUpgrade = null; }
+  }
   return {
     id: p.id,
     teamId: p.team_id,
@@ -81,6 +85,7 @@ function parseProjectRow(p) {
     supportStaff: staff,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
+    pendingBillingUpgrade,
   };
 }
 
@@ -94,6 +99,14 @@ function parseJsonArray(value) {
   } catch {
     return [];
   }
+}
+
+async function preservePaidTeamConfiguration(row) {
+  const [pending] = await pool.query('SELECT project_id FROM pending_project_upgrades WHERE project_id = ?', [row.id]);
+  if (pending.length > 0) return;
+  const [collaborators] = await pool.query('SELECT first_name AS "firstName", last_name AS "lastName", email, affiliation, role FROM team_project_collaborators WHERE project_id = ? ORDER BY created_at ASC', [row.id]);
+  const snapshot = { deadline: row.deadline, expectedCollaborators: row.expected_collaborators, documents: parseJsonArray(row.documents), collaborators };
+  await pool.query('INSERT INTO pending_project_upgrades (project_id, project_type, snapshot) VALUES (?, ?, ?)', [row.id, 'team', JSON.stringify(snapshot)]);
 }
 
 function parseTeamRow(row, role) {
@@ -395,6 +408,13 @@ exports.updateTeamProject = async (req, res) => {
         deadlineCalendarDate(deadline) < deadlineCalendarDate(existing[0].deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
     }
+    const teamBillingIncreased = existing[0].status === 'active' && (
+      (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(existing[0].deadline)) ||
+      (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(existing[0].expected_collaborators ?? 0))
+    );
+    if (teamBillingIncreased) {
+      await preservePaidTeamConfiguration(existing[0]);
+    }
     if (status !== undefined) {
       if (!TEAM_PROJECT_STATUSES.has(status)) return res.status(400).json({ success: false, message: 'Invalid project status' });
       if (!TEAM_STATUS_TRANSITIONS[existing[0].status]?.has(status)) {
@@ -534,8 +554,12 @@ exports.saveProjectCollaborators = async (req, res) => {
     const { collaborators } = req.body;
     if (!await requireTeamProjectAccess(req, res, true)) return;
 
-    const [existing] = await pool.query('SELECT id FROM team_projects WHERE id = ?', [id]);
+    const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (existing[0].status === 'active' && Array.isArray(collaborators)) {
+      const [currentCollaborators] = await pool.query('SELECT COUNT(*) AS count FROM team_project_collaborators WHERE project_id = ?', [id]);
+      if (collaborators.length > Number(currentCollaborators[0]?.count ?? 0)) await preservePaidTeamConfiguration(existing[0]);
+    }
 
     await pool.query('DELETE FROM team_project_collaborators WHERE project_id = ?', [id]);
 
@@ -585,8 +609,11 @@ exports.saveProjectDocuments = async (req, res) => {
     const { documents } = req.body;
     if (!await requireTeamProjectAccess(req, res, true)) return;
 
-    const [existing] = await pool.query('SELECT id FROM team_projects WHERE id = ?', [id]);
+    const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (existing[0].status === 'active' && Array.isArray(documents) && documents.length > parseJsonArray(existing[0].documents).length) {
+      await preservePaidTeamConfiguration(existing[0]);
+    }
 
     await pool.query(
       'UPDATE team_projects SET documents = ?, completed_step = GREATEST(completed_step, 3) WHERE id = ?',
@@ -649,6 +676,26 @@ exports.deleteTeamProject = async (req, res) => {
   }
 };
 
+exports.discardPendingUpgrade = async (req, res) => {
+  try {
+    if (!await requireTeamProjectAccess(req, res, true)) return;
+    const [pending] = await pool.query("SELECT snapshot FROM pending_project_upgrades WHERE project_id = ? AND project_type = 'team'", [req.params.id]);
+    if (pending.length === 0) return res.status(404).json({ success: false, message: 'No unpaid project changes were found' });
+    const snapshot = typeof pending[0].snapshot === 'string' ? JSON.parse(pending[0].snapshot) : pending[0].snapshot;
+    await pool.query('UPDATE team_projects SET deadline = ?, expected_collaborators = ?, documents = ? WHERE id = ?', [snapshot.deadline, snapshot.expectedCollaborators, JSON.stringify(snapshot.documents ?? []), req.params.id]);
+    await pool.query('DELETE FROM team_project_collaborators WHERE project_id = ?', [req.params.id]);
+    for (const collaborator of snapshot.collaborators ?? []) {
+      await pool.query('INSERT INTO team_project_collaborators (id, project_id, first_name, last_name, email, affiliation, role) VALUES (?, ?, ?, ?, ?, ?, ?)', [randomUUID(), req.params.id, collaborator.firstName ?? '', collaborator.lastName ?? '', collaborator.email ?? '', collaborator.affiliation ?? '', collaborator.role ?? 'contributor']);
+    }
+    await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [req.params.id]);
+    const [rows] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [req.params.id]);
+    return res.json({ success: true, project: parseProjectRow(rows[0]) });
+  } catch (err) {
+    console.error('Discard pending team upgrade error:', err);
+    return res.status(500).json({ success: false, message: 'Could not discard unpaid changes' });
+  }
+};
+
 exports.getTeamProjects = async (req, res) => {
   try {
     const { userid } = req.query;
@@ -688,6 +735,7 @@ exports.getTeamProjects = async (req, res) => {
          tp.type,
          tp.status,
          tp.deadline,
+         tp.expected_collaborators AS "expectedCollaborators",
          tp.project_code  AS "projectCode",
          tp.created_at    AS "createdAt",
          tp.updated_at    AS "updatedAt",
@@ -708,6 +756,7 @@ exports.getTeamProjects = async (req, res) => {
       type: row.type,
       status: row.status,
       deadline: row.deadline ?? null,
+      expectedCollaborators: row.expectedCollaborators == null ? null : Number(row.expectedCollaborators),
       projectCode: row.projectCode ?? null,
       collaboratorCount: Number(row.collaboratorCount),
       documentCount: Number(row.documentCount),
@@ -785,6 +834,14 @@ exports.getTeamProjects = async (req, res) => {
         projects.push(mapProjectRow(row));
         seenIds.add(row.id);
       }
+    }
+
+    if (projects.length > 0) {
+      const placeholders = projects.map(() => '?').join(', ');
+      const pendingResult = await pool.query(`SELECT project_id, snapshot FROM pending_project_upgrades WHERE project_id IN (${placeholders})`, projects.map(project => project.id));
+      const pendingRows = Array.isArray(pendingResult?.[0]) ? pendingResult[0] : [];
+      const pendingByProject = new Map(pendingRows.map(row => [String(row.project_id), typeof row.snapshot === 'string' ? JSON.parse(row.snapshot) : row.snapshot]));
+      projects = projects.map(project => ({ ...project, pendingBillingUpgrade: pendingByProject.get(String(project.id)) ?? null }));
     }
 
     const needsCode = projects.filter(p => p.status === 'active' && !p.projectCode);

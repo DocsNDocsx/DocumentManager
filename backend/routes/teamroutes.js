@@ -25,6 +25,7 @@ router.patch('/teams/projects/:id', (req, res, next) => {
   }
   return next();
 }, teamController.updateTeamProject);
+router.post('/teams/projects/:id/discard-pending-upgrade', teamController.discardPendingUpgrade);
 router.get('/teams/projects/:id/collaborators', teamController.getProjectCollaborators);
 router.post('/teams/projects/:id/collaborators', teamController.saveProjectCollaborators);
 router.post('/teams/projects/:id/documents', teamController.saveProjectDocuments);

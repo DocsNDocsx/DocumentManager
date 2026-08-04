@@ -357,6 +357,7 @@ exports.upgradeSubscription = async (req, res) => {
       'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [projects, collaborators, documents, upgradedDays, (unitAmount / 100).toFixed(2), updated.status, record.id]
     );
+    await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
     return res.json({ success: true, subscriptionId: updated.id, status: updated.status, previousAmountCents, amountCents: unitAmount });
   } catch (err) {
     console.error('Upgrade subscription error:', {

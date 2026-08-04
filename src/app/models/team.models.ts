@@ -77,6 +77,7 @@ export interface TeamProject {
   type: 'private' | 'public';
   status: 'active' | 'draft' | 'completed' | 'pending';
   deadline: string | null;
+  expectedCollaborators: number | null;
   collaboratorCount: number;
   documentCount: number;
 }
@@ -107,6 +108,7 @@ export interface TeamProjectItem {
   type: 'private' | 'public';
   status: 'active' | 'draft' | 'completed' | 'not_completed' | 'deleted';
   deadline: string | null;
+  expectedCollaborators: number | null;
   projectCode: string | null;
   collaboratorCount: number;
   documentCount: number;
@@ -116,6 +118,12 @@ export interface TeamProjectItem {
   createdAt: string;
   updatedAt: string;
   myCollaboratorId: string | null;
+  pendingBillingUpgrade?: {
+    deadline: string | null;
+    expectedCollaborators: number | null;
+    documents: TeamProjectDocumentRequirement[];
+    collaborators: TeamProjectCollaboratorInput[];
+  } | null;
 }
 
 export interface TeamProjectsApiResponse {
@@ -176,6 +184,7 @@ export interface TeamProjectDraft {
   supportStaff: { firstName: string; lastName: string; email: string; affiliation: string } | null;
   createdAt: string;
   updatedAt: string;
+  pendingBillingUpgrade?: TeamProjectItem['pendingBillingUpgrade'];
 }
 
 export interface TeamProjectDraftApiResponse {

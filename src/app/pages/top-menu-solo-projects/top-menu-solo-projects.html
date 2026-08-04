@@ -269,3 +269,17 @@
     <p>Completing the project now will close it with these requirements unfinished.</p>
   </app-confirm-modal>
 }
+
+@if (pendingPaymentProject(); as project) {
+  <app-confirm-modal
+    title="Unpaid Project Changes"
+    confirmLabel="Make Payment"
+    cancelLabel="Discard Changes"
+    confirmIcon="fas fa-credit-card"
+    modalId="pendingProjectPaymentModalTitle"
+    (confirm)="payForPendingChanges()"
+    (cancel)="discardUnpaidChanges()">
+    <p><strong>{{ project.name }}</strong> has changes to its deadline, document count, or collaborator count that have not been paid for.</p>
+    <p>Make the prorated payment to keep these changes, or discard them and restore the last paid configuration.</p>
+  </app-confirm-modal>
+}

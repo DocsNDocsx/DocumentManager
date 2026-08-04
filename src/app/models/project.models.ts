@@ -52,6 +52,13 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   ownerName?: string | null;
+  pendingBillingUpgrade?: {
+    deadline: string | null;
+    collaborators: ProjectCollaborator[];
+    documents: ProjectDocument[];
+    assignments: ProjectAssignments;
+    expectedCollaborators: number | null;
+  } | null;
 }
 
 export interface ProjectApiResponse {

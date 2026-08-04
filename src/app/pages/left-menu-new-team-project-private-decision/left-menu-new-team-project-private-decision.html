@@ -100,9 +100,6 @@
       </div>
       @if (isActiveProject()) {
         <div class="btn-group-right">
-          <button class="btn-action btn-draft" type="button" (click)="closeProject()" [disabled]="wizardService.isSaving()">
-            <i class="fas fa-folder-closed" aria-hidden="true"></i> Close Project
-          </button>
           <button class="btn-action btn-activate" type="button" (click)="finishEditing()">
             <i class="fas fa-check" aria-hidden="true"></i> Done
           </button>

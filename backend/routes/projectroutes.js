@@ -12,6 +12,7 @@ router.get('/projects', projectController.getProjects);
 router.get('/projects/:id', projectController.getProject);
 router.patch('/projects/:id/activate', projectController.validateActivation, requireActiveSubscription, projectController.activateProject);
 router.patch('/projects/:id/cancel', projectController.cancelProject);
+router.post('/projects/:id/discard-pending-upgrade', projectController.discardPendingUpgrade);
 router.patch('/projects/:id', (req, res, next) => {
   if (req.body?.status === 'active') return requireActiveSubscription(req, res, next);
   return next();

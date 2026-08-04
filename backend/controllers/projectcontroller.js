@@ -47,6 +47,10 @@ function parseProject(row) {
     }
   }
 
+  let pendingBillingUpgrade = null;
+  if (parsed.pending_billing_snapshot) {
+    try { pendingBillingUpgrade = typeof parsed.pending_billing_snapshot === 'string' ? JSON.parse(parsed.pending_billing_snapshot) : parsed.pending_billing_snapshot; } catch { pendingBillingUpgrade = null; }
+  }
   return {
     id: parsed.id,
     userId: String(parsed.user_id),
@@ -65,7 +69,19 @@ function parseProject(row) {
     staff: parsed.staff ?? null,
     createdAt: parsed.created_at,
     updatedAt: parsed.updated_at,
+    pendingBillingUpgrade,
   };
+}
+
+async function preservePaidSoloConfiguration(row) {
+  const [pending] = await pool.query('SELECT project_id FROM pending_project_upgrades WHERE project_id = ?', [row.id]);
+  if (pending.length > 0) return;
+  const snapshot = {
+    deadline: row.deadline, collaborators: parseProject(row).collaborators,
+    documents: parseProject(row).documents, assignments: parseProject(row).assignments,
+    expectedCollaborators: row.expected_collaborators,
+  };
+  await pool.query('INSERT INTO pending_project_upgrades (project_id, project_type, snapshot) VALUES (?, ?, ?)', [row.id, 'solo', JSON.stringify(snapshot)]);
 }
 
 exports.createProject = async (req, res) => {
@@ -130,7 +146,7 @@ exports.getProjects = async (req, res) => {
     );
 
     const [ownedRows] = await pool.query(
-      "SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT p.*, ppu.snapshot AS pending_billing_snapshot FROM projects p LEFT JOIN pending_project_upgrades ppu ON ppu.project_id = p.id WHERE p.user_id = ? ORDER BY p.created_at DESC",
       [userid]
     );
     const [userRows] = await pool.query(
@@ -202,13 +218,23 @@ exports.updateProject = async (req, res) => {
     let ownedProject = null;
     if (req.user?.email) {
       const userId = await authenticatedUserId(req);
-      const [owned] = await pool.query('SELECT id, status, deadline FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+      const [owned] = await pool.query('SELECT * FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
       if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can update this project' });
       ownedProject = owned[0];
     }
     if (ownedProject?.status === 'active' && deadline !== undefined &&
         deadlineCalendarDate(deadline) < deadlineCalendarDate(ownedProject.deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
+    }
+    const currentSolo = ownedProject ? parseProject(ownedProject) : null;
+    const soloBillingIncreased = ownedProject?.status === 'active' && (
+      (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(ownedProject.deadline)) ||
+      (collaborators !== undefined && collaborators.length > currentSolo.collaborators.length) ||
+      (documents !== undefined && documents.length > currentSolo.documents.length) ||
+      (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(ownedProject.expected_collaborators ?? 0))
+    );
+    if (soloBillingIncreased) {
+      await preservePaidSoloConfiguration(ownedProject);
     }
     if (status !== undefined) {
       if (!PROJECT_STATUSES.has(status)) {
@@ -437,6 +463,24 @@ exports.deleteProject = async (req, res) => {
   } catch (err) {
     console.error('Delete project error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.discardPendingUpgrade = async (req, res) => {
+  try {
+    const userId = await authenticatedUserId(req);
+    const [projects] = await pool.query('SELECT * FROM projects WHERE id = ? AND user_id = ?', [req.params.id, userId]);
+    if (projects.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can discard these changes' });
+    const [pending] = await pool.query("SELECT snapshot FROM pending_project_upgrades WHERE project_id = ? AND project_type = 'solo'", [req.params.id]);
+    if (pending.length === 0) return res.status(404).json({ success: false, message: 'No unpaid project changes were found' });
+    const snapshot = typeof pending[0].snapshot === 'string' ? JSON.parse(pending[0].snapshot) : pending[0].snapshot;
+    await pool.query('UPDATE projects SET deadline = ?, collaborators = ?, documents = ?, assignments = ?, expected_collaborators = ? WHERE id = ?', [snapshot.deadline, JSON.stringify(snapshot.collaborators ?? []), JSON.stringify(snapshot.documents ?? []), JSON.stringify(snapshot.assignments ?? {}), snapshot.expectedCollaborators, req.params.id]);
+    await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [req.params.id]);
+    const [rows] = await pool.query('SELECT * FROM projects WHERE id = ?', [req.params.id]);
+    return res.json({ success: true, project: parseProject(rows[0]) });
+  } catch (err) {
+    console.error('Discard pending project upgrade error:', err);
+    return res.status(500).json({ success: false, message: 'Could not discard unpaid changes' });
   }
 };
 
