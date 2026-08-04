@@ -43,13 +43,14 @@ export class SignInComponent {
     this.logger.debug('Sign-in form submitted', { email });
 
     this.authService.login(email!, password!).subscribe({
-      next: ({ token, userid, firstname, lastname, email, avatarPath }) => {
+      next: ({ token, userid, firstname, lastname, email, avatarPath, timezone }) => {
         this.authService.saveToken(token);
         this.authService.saveUserId(userid);
         this.authService.saveUserFirstname(firstname);
         this.authService.saveUserLastname(lastname);
         this.authService.saveUserEmail(email);
         this.authService.saveUserAvatar(avatarPath);
+        this.authService.saveUserTimezone(timezone ?? 'UTC-5');
         this.isLoading.set(false);
         this.logger.info('User signed in, navigating to dashboard');
         this.router.navigate(['/dashboard']);

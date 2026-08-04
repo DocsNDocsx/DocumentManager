@@ -31,6 +31,7 @@ async function loginUser(email, password) {
         lastname: user.lastname,
         email: user.email,
         avatarUrl: user.avatar_url ?? '',
+        timezone: user.timezone ?? 'UTC-5',
       }
     };
   } catch (err) {

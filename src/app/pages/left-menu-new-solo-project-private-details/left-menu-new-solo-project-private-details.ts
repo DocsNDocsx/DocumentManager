@@ -6,6 +6,7 @@ import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sideb
 import { ProjectWizardService } from '../../services/project-wizard.service';
 import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 import { ProjectAttachment } from '../../models/project.models';
+import { isValidProjectDeadline, minimumProjectDeadline } from '../../utils/deadline-validation';
 
 @Component({
   selector: 'app-left-menu-new-solo-project-private-details',
@@ -42,6 +43,7 @@ export class LeftMenuNewSoloProjectPrivateDetailsComponent implements OnInit, On
   projectName = signal('');
   projectDescription = signal('');
   projectDeadline = signal('');
+  minimumDeadline = minimumProjectDeadline();
   uploadedFiles = signal<ProjectAttachment[]>([]);
   isDragOver = signal(false);
   isUploading = signal(false);
@@ -50,7 +52,7 @@ export class LeftMenuNewSoloProjectPrivateDetailsComponent implements OnInit, On
   isSaving = computed(() => this.wizardService.isSaving());
 
   isFormValid = computed(() =>
-    this.projectName().trim() !== '' && this.projectDeadline() !== ''
+    this.projectName().trim() !== '' && isValidProjectDeadline(this.projectDeadline())
   );
 
   steps = computed(() => {

@@ -7,6 +7,7 @@ import { TeamsService } from '../../services/teams.service';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
 import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 import { ProjectAttachment } from '../../models/project.models';
+import { isValidProjectDeadline, minimumProjectDeadline } from '../../utils/deadline-validation';
 
 @Component({
   selector: 'app-left-menu-new-team-project-public-details',
@@ -46,6 +47,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   projectName = signal('');
   projectDescription = signal('');
   projectDeadline = signal('');
+  minimumDeadline = minimumProjectDeadline();
   expectedCollaborators = signal('');
   uploadedFiles = signal<ProjectAttachment[]>([]);
   isDragOver = signal(false);
@@ -65,7 +67,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   isFormValid = computed(() =>
     this.selectedTeamId() !== '' &&
     this.projectName().trim() !== '' &&
-    this.projectDeadline() !== '' &&
+    isValidProjectDeadline(this.projectDeadline()) &&
     this.expectedCollaborators() !== '' &&
     parseInt(this.expectedCollaborators()) > 0
   );

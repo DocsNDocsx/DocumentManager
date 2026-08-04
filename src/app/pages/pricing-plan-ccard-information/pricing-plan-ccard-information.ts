@@ -78,6 +78,18 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     const voucher = VOUCHERS[this.appliedVoucherCode()];
     return voucher ? `${voucher.label} (${voucher.percentOff}% off)` : '';
   });
+  durationTimeZone = computed(() => {
+    const saved = this.auth.currentUserTimezone();
+    const labels: Record<string, string> = {
+      'UTC-5': 'Eastern Time', 'America/New_York': 'Eastern Time',
+      'UTC-6': 'Central Time', 'America/Chicago': 'Central Time',
+      'UTC-7': 'Mountain Time', 'America/Denver': 'Mountain Time',
+      'UTC-8': 'Pacific Time', 'America/Los_Angeles': 'Pacific Time',
+      'UTC+0': 'UTC', UTC: 'UTC',
+      'UTC+1': 'Central European Time', 'Europe/Paris': 'Central European Time',
+    };
+    return labels[saved] ?? saved;
+  });
 
   firstName = signal('');
   lastName  = signal('');

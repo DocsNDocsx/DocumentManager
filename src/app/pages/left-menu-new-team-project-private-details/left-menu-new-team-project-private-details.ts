@@ -6,6 +6,7 @@ import { TeamsService } from '../../services/teams.service';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
 import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 import { ProjectAttachment } from '../../models/project.models';
+import { isValidProjectDeadline, minimumProjectDeadline } from '../../utils/deadline-validation';
 
 @Component({
   selector: 'app-left-menu-new-team-project-private-details',
@@ -30,6 +31,7 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   projectName = signal('');
   projectDescription = signal('');
   projectDeadline = signal('');
+  minimumDeadline = minimumProjectDeadline();
   uploadedFiles = signal<ProjectAttachment[]>([]);
   dragOver = signal(false);
   isUploading = signal(false);
@@ -43,7 +45,7 @@ export class LeftMenuNewTeamProjectPrivateDetailsComponent implements OnInit {
   isFormValid = computed(() =>
     this.selectedTeamId() !== '' &&
     this.projectName().trim() !== '' &&
-    this.projectDeadline() !== ''
+    isValidProjectDeadline(this.projectDeadline())
   );
 
   ngOnInit(): void {

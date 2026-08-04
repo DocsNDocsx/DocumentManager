@@ -305,6 +305,7 @@ describe('authcontroller dropdown/account APIs', () => {
         firstname: 'Mridul',
         lastname: 'Mishra',
         phone: '555-0100',
+        organization: 'DocsNDocs',
         timezone: 'America/New_York',
         notifPref: 'email',
       },
@@ -312,8 +313,8 @@ describe('authcontroller dropdown/account APIs', () => {
 
     expect(pool.query).toHaveBeenNthCalledWith(
       2,
-      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, timezone = ?, notif_pref = ? WHERE email = ?',
-      ['Mridul', 'Mishra', '555-0100', 'America/New_York', 'email', 'user@example.com'],
+      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ? WHERE email = ?',
+      ['Mridul', 'Mishra', '555-0100', 'DocsNDocs', 'America/New_York', 'email', 'user@example.com'],
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -359,6 +360,7 @@ describe('authcontroller dropdown/account APIs', () => {
         firstname: 'Mridul',
         lastname: 'Mishra',
         phone: '',
+        organization: '',
         timezone: 'UTC',
         notifPref: 'none',
         currentPw: 'current-password',
@@ -369,8 +371,8 @@ describe('authcontroller dropdown/account APIs', () => {
     expect(bcrypt.compare).toHaveBeenCalledWith('current-password', 'hashed-current');
     expect(pool.query).toHaveBeenNthCalledWith(
       2,
-      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, timezone = ?, notif_pref = ?, password = ? WHERE email = ?',
-      ['Mridul', 'Mishra', '', 'UTC', 'none', 'hashed-new-password', 'user@example.com'],
+      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, password = ? WHERE email = ?',
+      ['Mridul', 'Mishra', '', '', 'UTC', 'none', 'hashed-new-password', 'user@example.com'],
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -379,6 +381,25 @@ describe('authcontroller dropdown/account APIs', () => {
 
     bcrypt.compare.mockRestore();
     bcrypt.hash.mockRestore();
+  });
+
+  it('loads the authenticated user profile including timezone', async () => {
+    pool.query.mockResolvedValueOnce([[{ 
+      firstname: 'Mridul', lastname: 'Mishra', email: 'user@example.com',
+      phone: '555-0100', organization: 'DocsNDocs', timezone: 'UTC+1', notif_pref: 'email',
+    }]]);
+    const res = mockResponse();
+
+    await authController.getProfile({ user: { email: 'user@example.com' } }, res);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref FROM users WHERE email = ?',
+      ['user@example.com'],
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      profile: expect.objectContaining({ timezone: 'UTC+1', organization: 'DocsNDocs' }),
+    });
   });
 
   it('uploads avatar metadata for the profile API', async () => {

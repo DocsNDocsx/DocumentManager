@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { HttpHeaders } from '@angular/common/http';
-import { DeleteAccountResponse, ForgotPasswordResponse, LoginResponse, RegisterResponse, ResetPasswordResponse, UpdateProfileRequest, UpdateProfileResponse, UploadAvatarResponse, VerifyOtpResponse } from '../models/auth.models';
+import { DeleteAccountResponse, ForgotPasswordResponse, LoginResponse, ProfileResponse, RegisterResponse, ResetPasswordResponse, UpdateProfileRequest, UpdateProfileResponse, UploadAvatarResponse, VerifyOtpResponse } from '../models/auth.models';
 import { LoggingService } from './logging.service';
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +16,7 @@ export class AuthService {
   currentUserLastname = signal<string>(localStorage.getItem('user_lastname') ?? '');
   currentUserEmail = signal<string>(localStorage.getItem('user_email') ?? '');
   currentUserAvatar = signal<string>(localStorage.getItem('user_avatar') ?? '');
+  currentUserTimezone = signal<string>(localStorage.getItem('user_timezone') ?? 'UTC-5');
 
   login(email: string, password: string) {
     this.logger.debug('Login attempt', { email });
@@ -150,10 +151,24 @@ export class AuthService {
     this.logger.debug('Updating profile');
     return this.http.put<UpdateProfileResponse>(`${environment.apiUrl}/auth/profile`, data).pipe(
       tap({
-        next: () => this.logger.info('Profile updated successfully'),
+        next: () => {
+          this.saveUserTimezone(data.timezone);
+          this.logger.info('Profile updated successfully');
+        },
         error: err => this.logger.error('Profile update failed', err),
       }),
     );
+  }
+
+  getProfile() {
+    return this.http.get<ProfileResponse>(`${environment.apiUrl}/auth/profile`).pipe(
+      tap(response => this.saveUserTimezone(response.profile.timezone)),
+    );
+  }
+
+  saveUserTimezone(timezone: string) {
+    localStorage.setItem('user_timezone', timezone);
+    this.currentUserTimezone.set(timezone);
   }
 
   saveUserEmail(email: string) {
@@ -179,10 +194,12 @@ export class AuthService {
     localStorage.removeItem('user_id');
     localStorage.removeItem('user_email');
     localStorage.removeItem('user_avatar');
+    localStorage.removeItem('user_timezone');
     this.currentUserId.set('');
     this.currentUserFirstname.set('');
     this.currentUserLastname.set('');
     this.currentUserEmail.set('');
     this.currentUserAvatar.set('');
+    this.currentUserTimezone.set('UTC-5');
   }
 }

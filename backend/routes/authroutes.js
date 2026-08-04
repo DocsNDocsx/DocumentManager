@@ -19,6 +19,7 @@ router.post('/auth/register', authLimiter, authController.register);
 router.post('/auth/password/forgot', authLimiter, authController.passForgot);
 router.post('/verify-otp', authLimiter, authController.verifyOtp);
 router.post('/auth/password/reset', authController.updatePass);
+router.get('/auth/profile', verifyJwt, authController.getProfile);
 router.put('/auth/profile', verifyJwt, authController.updateProfile);
 router.get('/auth/profile/avatar/:userid', authController.getAvatar);
 router.post('/auth/profile/avatar', verifyJwt, upload.single('avatar'), authController.uploadAvatar);

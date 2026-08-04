@@ -94,6 +94,7 @@ describe('PricingPlanCcardInformationComponent', () => {
             currentUserFirstname: signal('Mridul'),
             currentUserLastname: signal('Mishra'),
             currentUserEmail: signal('mridul@example.com'),
+            currentUserTimezone: signal('UTC+1'),
           },
         },
         { provide: StripeService, useValue: stripeService },

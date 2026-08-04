@@ -155,7 +155,7 @@
         <span class="summary-item-value">{{ documents() }}</span>
       </div>
       <div class="summary-item">
-        <span class="summary-item-label">Duration (ET)</span>
+        <span class="summary-item-label">Duration ({{ durationTimeZone() }})</span>
         <span class="summary-item-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
       </div>
       <div class="summary-item">
@@ -216,7 +216,7 @@
       </div>
 
       <p class="billing-cycle-note">
-        Calculated from the project duration and usage entered before activation. Dates use Eastern Time (ET). Stripe calculates sales tax from the billing ZIP/address.
+        Calculated from the project duration and usage entered before activation. Dates use {{ durationTimeZone() }}. Stripe calculates sales tax from the billing ZIP/address.
       </p>
 
       <div class="trust-row">

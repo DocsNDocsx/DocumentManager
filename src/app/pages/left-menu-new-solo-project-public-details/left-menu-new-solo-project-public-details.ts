@@ -6,6 +6,7 @@ import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sideb
 import { ProjectWizardService } from '../../services/project-wizard.service';
 import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 import { ProjectAttachment } from '../../models/project.models';
+import { isValidProjectDeadline, minimumProjectDeadline } from '../../utils/deadline-validation';
 
 @Component({
   selector: 'app-left-menu-new-solo-project-public-details',
@@ -42,7 +43,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   projectName = signal('');
   projectDescription = signal('');
   projectDeadline = signal('');
-  minimumDeadline = this.tomorrowDate();
+  minimumDeadline = minimumProjectDeadline();
   expectedCollaborators = signal('');
   uploadedFiles = signal<ProjectAttachment[]>([]);
   isDragOver = signal(false);
@@ -58,19 +59,10 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
 
   isFormValid = computed(() =>
     this.projectName().trim() !== '' &&
-    this.projectDeadline() >= this.minimumDeadline &&
+    isValidProjectDeadline(this.projectDeadline()) &&
     this.expectedCollaborators() !== '' &&
     parseInt(this.expectedCollaborators()) > 0
   );
-
-  private tomorrowDate(): string {
-    const date = new Date();
-    date.setDate(date.getDate() + 1);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
 
   steps = computed(() => {
     const done = this.wizardService.completedStep();

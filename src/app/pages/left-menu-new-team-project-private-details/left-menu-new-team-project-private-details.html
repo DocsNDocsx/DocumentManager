@@ -94,9 +94,10 @@
         <input
           type="date"
           id="projectDeadline"
-          class="form-control"
-          [value]="projectDeadline()"
-          (change)="onDeadlineChange($event)"
+         class="form-control"
+         [value]="projectDeadline()"
+         [min]="minimumDeadline"
+         (change)="onDeadlineChange($event)"
           required
           aria-required="true"
           aria-describedby="deadlineHelp"

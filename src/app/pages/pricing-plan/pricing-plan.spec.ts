@@ -39,6 +39,20 @@ describe('PricingPlanComponent', () => {
     expect(component.fmt(component.monthlyEstimate())).toBe('$18.00');
   });
 
+  it('labels the duration as project days and supports up to one year', () => {
+    component.days.set(45);
+    fixture.detectChanges();
+
+    const slider = fixture.nativeElement.querySelector('#days-slider') as HTMLInputElement;
+    const label = fixture.nativeElement.querySelector('label[for="days-slider"]') as HTMLElement;
+    const value = slider.closest('.slider-row')?.querySelector('.slider-val') as HTMLElement;
+
+    expect(label.textContent?.trim()).toBe('Project duration');
+    expect(slider.max).toBe('365');
+    expect(slider.getAttribute('aria-label')).toBe('Project duration in days');
+    expect(value.textContent?.trim()).toBe('45 days');
+  });
+
   it('reads team and subscription-required query params', () => {
     queryParams$.next({ type: 'team', subscriptionRequired: '1' });
     component.ngOnInit();

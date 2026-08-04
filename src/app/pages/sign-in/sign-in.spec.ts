@@ -22,6 +22,7 @@ describe('SignInComponent', () => {
       saveUserLastname: vi.fn(),
       saveUserEmail: vi.fn(),
       saveUserAvatar: vi.fn(),
+      saveUserTimezone: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -59,6 +60,7 @@ describe('SignInComponent', () => {
       lastname: 'Mishra',
       email: 'mridul@example.com',
       avatarPath: 'https://blob.example.com/avatar.png',
+      timezone: 'UTC+1',
     }));
     component.form.setValue({ email: 'mridul@example.com', password: 'Secret123!' });
 
@@ -71,6 +73,7 @@ describe('SignInComponent', () => {
     expect(authService.saveUserLastname).toHaveBeenCalledWith('Mishra');
     expect(authService.saveUserEmail).toHaveBeenCalledWith('mridul@example.com');
     expect(authService.saveUserAvatar).toHaveBeenCalledWith('https://blob.example.com/avatar.png');
+    expect(authService.saveUserTimezone).toHaveBeenCalledWith('UTC+1');
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     expect(component.isLoading()).toBe(false);
   });

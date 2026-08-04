@@ -19,6 +19,13 @@ describe('DropDownProfileComponent', () => {
       currentUserEmail: signal('cypress@example.com'),
       currentUserAvatar: signal(''),
       uploadAvatar: vi.fn(),
+      getProfile: vi.fn(() => of({
+        success: true,
+        profile: {
+          firstname: 'Cypress', lastname: 'Tester', email: 'cypress@example.com',
+          phone: '', organization: '', timezone: 'UTC-5', notifPref: 'daily',
+        },
+      })),
       saveUserAvatar: vi.fn(),
       updateProfile: vi.fn(),
       saveUserFirstname: vi.fn(),
@@ -116,6 +123,7 @@ describe('DropDownProfileComponent', () => {
       firstname: 'Mridul',
       lastname: 'Mishra',
       phone: '555-0100',
+      organization: '',
       timezone: 'UTC',
       notifPref: 'email',
     });
@@ -124,6 +132,24 @@ describe('DropDownProfileComponent', () => {
     expect(component.isSaving()).toBe(false);
     expect(component.toastError()).toBe(false);
     expect(component.toastMsg()).toBe('Profile saved successfully.');
+  });
+
+  it('loads and retains the saved timezone when the profile opens', () => {
+    authService.getProfile.mockReturnValueOnce(of({
+      success: true,
+      profile: {
+        firstname: 'Cypress', lastname: 'Tester', email: 'cypress@example.com',
+        phone: '555-0100', organization: 'DocsNDocs',
+        timezone: 'UTC+1', notifPref: 'email',
+      },
+    }));
+
+    component.ngOnInit();
+
+    expect(component.timezone()).toBe('UTC+1');
+    expect(component.phone()).toBe('555-0100');
+    expect(component.org()).toBe('DocsNDocs');
+    expect(component.notifPref()).toBe('email');
   });
 
   it('blocks profile save when new password confirmation does not match', () => {

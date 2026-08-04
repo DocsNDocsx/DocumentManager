@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -13,7 +13,7 @@ import { LoggingService } from '../../services/logging.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:click)': 'closeDropdown()' },
 })
-export class DropDownProfileComponent implements OnDestroy {
+export class DropDownProfileComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private logger = inject(LoggingService);
 
@@ -46,6 +46,24 @@ export class DropDownProfileComponent implements OnDestroy {
   toastVisible = signal(false);
 
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  ngOnInit(): void {
+    this.authService.getProfile().subscribe({
+      next: ({ profile }) => {
+        this.firstName.set(profile.firstname);
+        this.lastName.set(profile.lastname);
+        this.email.set(profile.email);
+        this.phone.set(profile.phone);
+        this.org.set(profile.organization);
+        this.timezone.set(profile.timezone);
+        this.notifPref.set(profile.notifPref);
+      },
+      error: err => {
+        this.logger.error('Profile load failed', err);
+        this.showToast(err?.error?.message ?? 'Failed to load profile.', true);
+      },
+    });
+  }
 
   toggleDropdown(e: MouseEvent): void {
     e.stopPropagation();
@@ -84,6 +102,7 @@ export class DropDownProfileComponent implements OnDestroy {
       firstname: this.firstName(),
       lastname: this.lastName(),
       phone: this.phone(),
+      organization: this.org(),
       timezone: this.timezone(),
       notifPref: this.notifPref(),
       ...(this.newPw() ? { currentPw: this.currentPw(), newPw: this.newPw() } : {}),

@@ -10,6 +10,7 @@ export interface LoginResponse {
   lastname: string;
   email: string;
   avatarPath: string;
+  timezone: string;
 }
 
 export interface UploadAvatarResponse {
@@ -42,10 +43,24 @@ export interface UpdateProfileRequest {
   firstname: string;
   lastname: string;
   phone: string;
+  organization: string;
   timezone: string;
   notifPref: string;
   currentPw?: string;
   newPw?: string;
+}
+
+export interface ProfileResponse {
+  success: boolean;
+  profile: {
+    firstname: string;
+    lastname: string;
+    email: string;
+    phone: string;
+    organization: string;
+    timezone: string;
+    notifPref: string;
+  };
 }
 
 export interface UpdateProfileResponse {

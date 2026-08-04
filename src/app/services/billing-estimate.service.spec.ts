@@ -1,17 +1,35 @@
 import { TestBed } from '@angular/core/testing';
 
 import { BillingEstimateService } from './billing-estimate.service';
+import { AuthService } from './auth.service';
+import { signal } from '@angular/core';
 
 describe('BillingEstimateService', () => {
   let service: BillingEstimateService;
   let nowSpy: ReturnType<typeof vi.spyOn>;
+  let timezone: ReturnType<typeof signal<string>>;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    timezone = signal('UTC-5');
+    TestBed.configureTestingModule({
+      providers: [{ provide: AuthService, useValue: { currentUserTimezone: timezone } }],
+    });
     service = TestBed.inject(BillingEstimateService);
     nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-07-30T12:00:00Z').getTime());
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-30T12:00:00Z'));
+  });
+
+  it('calculates duration using the saved profile timezone', () => {
+    vi.setSystemTime(new Date('2026-07-30T04:30:00Z'));
+    timezone.set('UTC-8');
+
+    const query = service.buildSoloActivationQuery({
+      id: 'timezone-project', deadline: '2026-07-31', documents: [{}], expectedCollaborators: 1,
+    } as any);
+
+    expect(query?.['days']).toBe(2);
+    expect(service.billingTimeZone()).toBe('America/Los_Angeles');
   });
 
   afterEach(() => {

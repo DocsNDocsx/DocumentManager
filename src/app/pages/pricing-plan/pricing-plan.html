@@ -36,8 +36,8 @@
       </div>
       <div class="formula-op" aria-hidden="true">×</div>
       <div class="formula-part">
-        <div class="formula-val">days</div>
-        <div class="formula-lbl">in billing period</div>
+        <div class="formula-val">duration</div>
+        <div class="formula-lbl">project days</div>
       </div>
       <div class="formula-badge" aria-label="No tiers or seat licenses">
         <i class="fas fa-tag" aria-hidden="true"></i> No tiers. No seats.
@@ -111,18 +111,18 @@
       <!-- Days slider -->
       <div class="slider-row">
         <div class="slider-top">
-          <label class="slider-name" for="days-slider">Active days per month</label>
-          <span class="slider-val" aria-live="polite">{{ days() }}</span>
+          <label class="slider-name" for="days-slider">Project duration</label>
+          <span class="slider-val" aria-live="polite">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
         </div>
         <input
           id="days-slider"
           type="range"
           min="1"
-          max="31"
+          max="365"
           step="1"
           [value]="days()"
           (input)="setDays($event)"
-          aria-label="Active days per month"
+          aria-label="Project duration in days"
         >
       </div>
 

@@ -79,9 +79,10 @@
         <input
           type="date"
           class="form-control"
-          id="projectDeadline"
-          [value]="projectDeadline()"
-          (change)="projectDeadline.set($any($event.target).value)"
+         id="projectDeadline"
+         [value]="projectDeadline()"
+         [min]="minimumDeadline"
+         (change)="projectDeadline.set($any($event.target).value)"
           required
           aria-required="true"
         />

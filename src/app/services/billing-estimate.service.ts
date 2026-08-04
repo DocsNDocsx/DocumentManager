@@ -2,16 +2,27 @@ import { Injectable } from '@angular/core';
 import { Params } from '@angular/router';
 import { Project } from '../models/project.models';
 import { TeamProjectDraft } from '../models/team.models';
+import { AuthService } from './auth.service';
+import { inject } from '@angular/core';
 
 const RATE = 0.09;
 const DEFAULT_COLLABORATORS = 1;
 const DEFAULT_DOCUMENTS = 1;
-const BILLING_TIME_ZONE = 'America/New_York';
+const LEGACY_TIME_ZONES: Record<string, string> = {
+  'UTC-5': 'America/New_York',
+  'UTC-6': 'America/Chicago',
+  'UTC-7': 'America/Denver',
+  'UTC-8': 'America/Los_Angeles',
+  'UTC+0': 'UTC',
+  'UTC+1': 'Europe/Paris',
+};
 
 type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'>;
 
 @Injectable({ providedIn: 'root' })
 export class BillingEstimateService {
+  private auth = inject(AuthService);
+
   buildSoloActivationQuery(project: BillingProject, collaboratorCount?: number): Params | null {
     return this.buildActivationQuery('solo', project, collaboratorCount);
   }
@@ -56,7 +67,7 @@ export class BillingEstimateService {
   private activeDays(deadline: string | null | undefined): number | null {
     if (!deadline) return null;
 
-    const today = this.datePartsToUtcDay(this.getEasternDateParts(new Date(Date.now())));
+    const today = this.datePartsToUtcDay(this.getTimeZoneDateParts(new Date(Date.now())));
 
     const dueDate = this.parseDeadlineToUtcDay(deadline);
     if (dueDate === null) return null;
@@ -79,12 +90,12 @@ export class BillingEstimateService {
     const parsed = new Date(deadline);
     if (Number.isNaN(parsed.getTime())) return null;
 
-    return this.datePartsToUtcDay(this.getEasternDateParts(parsed));
+    return this.datePartsToUtcDay(this.getTimeZoneDateParts(parsed));
   }
 
-  private getEasternDateParts(date: Date): { year: number; month: number; day: number } {
+  private getTimeZoneDateParts(date: Date): { year: number; month: number; day: number } {
     const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: BILLING_TIME_ZONE,
+      timeZone: this.billingTimeZone(),
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -95,6 +106,11 @@ export class BillingEstimateService {
       month: Number(parts.find(part => part.type === 'month')?.value),
       day: Number(parts.find(part => part.type === 'day')?.value),
     };
+  }
+
+  billingTimeZone(): string {
+    const saved = this.auth.currentUserTimezone();
+    return LEGACY_TIME_ZONES[saved] ?? saved ?? 'America/New_York';
   }
 
   private datePartsToUtcDay(parts: { year: number; month: number; day: number }): number {

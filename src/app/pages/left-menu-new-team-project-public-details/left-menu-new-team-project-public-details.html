@@ -94,6 +94,7 @@
           class="form-control"
           id="projectDeadline"
           [value]="projectDeadline()"
+          [min]="minimumDeadline"
           (change)="projectDeadline.set($any($event.target).value)"
           required
           aria-required="true"

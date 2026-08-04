@@ -82,7 +82,7 @@ exports.login = async (req, res) => {
     { expiresIn: process.env.JWT_EXPIRATION || '1h' }
   );
 
-  res.json({ token, userid: result.user.id, firstname: result.user.firstname, lastname: result.user.lastname, email: result.user.email, avatarPath: result.user.avatarUrl });
+  res.json({ token, userid: result.user.id, firstname: result.user.firstname, lastname: result.user.lastname, email: result.user.email, avatarPath: result.user.avatarUrl, timezone: result.user.timezone });
 };
 
 exports.register = async (req, res) => {
@@ -308,9 +308,12 @@ exports.getAvatar = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { email, firstname, lastname, phone, timezone, notifPref, currentPw, newPw } = req.body;
+    const { email, firstname, lastname, phone, organization, timezone, notifPref, currentPw, newPw } = req.body;
 
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+    if (req.user?.email && String(req.user.email).toLowerCase() !== String(email).toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'You can only update your own profile' });
+    }
 
 
     const [rows] = await pool.query('SELECT password FROM users WHERE email = ?', [email]);
@@ -323,13 +326,13 @@ exports.updateProfile = async (req, res) => {
 
       const hashedPassword = await bcrypt.hash(newPw, 10);
       await pool.query(
-        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, timezone = ?, notif_pref = ?, password = ? WHERE email = ?',
-        [firstname, lastname, phone, timezone, notifPref, hashedPassword, email]
+        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, password = ? WHERE email = ?',
+        [firstname, lastname, phone, organization, timezone, notifPref, hashedPassword, email]
       );
     } else {
       await pool.query(
-        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, timezone = ?, notif_pref = ? WHERE email = ?',
-        [firstname, lastname, phone, timezone, notifPref, email]
+        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ? WHERE email = ?',
+        [firstname, lastname, phone, organization, timezone, notifPref, email]
       );
     }
 
@@ -337,6 +340,34 @@ exports.updateProfile = async (req, res) => {
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const email = req.user?.email;
+    if (!email) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const [rows] = await pool.query(
+      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref FROM users WHERE email = ?',
+      [email]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+    const user = rows[0];
+    return res.json({
+      success: true,
+      profile: {
+        firstname: user.firstname ?? '',
+        lastname: user.lastname ?? '',
+        email: user.email,
+        phone: user.phone ?? '',
+        organization: user.organization ?? '',
+        timezone: user.timezone ?? 'UTC-5',
+        notifPref: user.notif_pref ?? 'daily',
+      },
+    });
+  } catch (err) {
+    console.error('Get profile error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
