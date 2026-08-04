@@ -73,6 +73,16 @@ export class StripeService {
       );
   }
 
+  upgradeSubscription(data: CreateSubscriptionRequest) {
+    return this.http.post<CreateSubscriptionResponse>(`${environment.apiUrl}/stripe/subscription/upgrade`, data);
+  }
+
+  getBillingProfile() {
+    return this.http.get<{ success: boolean; billingAddress: CreateSubscriptionRequest['billingAddress'] | null }>(
+      `${environment.apiUrl}/stripe/billing-profile`,
+    );
+  }
+
   estimateTax(data: EstimateTaxRequest) {
     this.logger.debug('Estimating Stripe tax', {
       amountCents: data.amountCents,

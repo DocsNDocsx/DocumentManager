@@ -65,6 +65,27 @@ exports.createSetupIntent = async (req, res) => {
   }
 };
 
+exports.getBillingProfile = async (req, res) => {
+  try {
+    if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!user.stripe_customer_id) return res.json({ success: true, billingAddress: null });
+    const customer = await stripe.customers.retrieve(user.stripe_customer_id);
+    const address = customer.deleted ? null : customer.address;
+    return res.json({
+      success: true,
+      billingAddress: address ? {
+        line1: address.line1 ?? '', line2: address.line2 ?? '', city: address.city ?? '',
+        state: address.state ?? '', postalCode: address.postal_code ?? '', country: address.country ?? 'US',
+      } : null,
+    });
+  } catch (err) {
+    console.error('Get billing profile error:', err.message);
+    return res.status(500).json({ success: false, message: 'Could not load billing address' });
+  }
+};
+
 /**
  * POST /api/stripe/tax-estimate
  * Uses Stripe Tax to estimate sales tax from the billing address before the
@@ -291,5 +312,53 @@ exports.createSubscription = async (req, res) => {
       message: isStripeError ? err.message : 'Could not create subscription',
       code: err.code || null,
     });
+  }
+};
+
+exports.upgradeSubscription = async (req, res) => {
+  try {
+    if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const { paymentMethodId, projectId, projects = 1, collaborators = 1, documents = 1, days = 1, billingAddress = {} } = req.body ?? {};
+    if (!paymentMethodId || !projectId) return res.status(400).json({ success: false, message: 'paymentMethodId and projectId are required' });
+
+    const [rows] = await pool.query(
+      "SELECT * FROM stripe_subscriptions WHERE userid = ? AND project_id = ? AND status IN ('active', 'trialing') ORDER BY created_at DESC LIMIT 1",
+      [user.userid, projectId]
+    );
+    const record = rows[0];
+    if (!record) return res.status(404).json({ success: false, message: 'Active project subscription not found' });
+    const unitAmount = computeMonthlyAmountCents({ projects, collaborators, documents, days });
+    const previousAmountCents = Math.round(Number(record.amount) * 100);
+    if (unitAmount <= previousAmountCents) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
+
+    const customerUpdate = { invoice_settings: { default_payment_method: paymentMethodId } };
+    if (billingAddress.postalCode && billingAddress.country) customerUpdate.address = {
+      line1: billingAddress.line1 || undefined, line2: billingAddress.line2 || undefined,
+      city: billingAddress.city || undefined, state: billingAddress.state || undefined,
+      postal_code: billingAddress.postalCode, country: billingAddress.country,
+    };
+    await stripe.customers.update(record.stripe_customer_id, customerUpdate);
+    const subscription = await stripe.subscriptions.retrieve(record.stripe_subscription_id);
+    const item = subscription.items?.data?.[0];
+    if (!item) return res.status(409).json({ success: false, message: 'Subscription item not found' });
+    const product = await getProductId();
+    const updated = await stripe.subscriptions.update(record.stripe_subscription_id, {
+      default_payment_method: paymentMethodId,
+      items: [{ id: item.id, price_data: { currency: 'usd', product, unit_amount: unitAmount, recurring: { interval: 'month' } } }],
+      proration_behavior: 'always_invoice',
+      payment_behavior: 'error_if_incomplete',
+      metadata: { ...subscription.metadata, projects: String(projects), collaborators: String(collaborators), documents: String(documents), days: String(days) },
+      expand: ['latest_invoice.payment_intent'],
+    }, { idempotencyKey: `upgrade_${user.userid}_${projectId}_${unitAmount}` });
+    await pool.query(
+      'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [projects, collaborators, documents, days, (unitAmount / 100).toFixed(2), updated.status, record.id]
+    );
+    return res.json({ success: true, subscriptionId: updated.id, status: updated.status, previousAmountCents, amountCents: unitAmount });
+  } catch (err) {
+    console.error('Upgrade subscription error:', err.message);
+    return res.status(err?.statusCode ? 400 : 500).json({ success: false, message: err?.statusCode ? err.message : 'Could not upgrade subscription' });
   }
 };

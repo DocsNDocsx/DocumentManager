@@ -53,6 +53,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   days          = signal(20);
   monthlyBase   = signal(0);
   activationProjectId = signal('');
+  isUpgrade = signal(false);
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
@@ -127,6 +128,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
         this.activationProjectId.set(String(params['projectId'] || ''));
+        this.isUpgrade.set(params['upgrade'] === '1');
         const voucherCode = this.normalizeVoucherCode(params['voucherCode']);
         if (voucherCode && VOUCHERS[voucherCode]) {
           this.voucherCode.set(voucherCode);
@@ -138,6 +140,18 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     if (this.auth.currentUserFirstname()) this.firstName.set(this.auth.currentUserFirstname());
     if (this.auth.currentUserLastname()) this.lastName.set(this.auth.currentUserLastname());
     if (this.auth.currentUserEmail()) this.email.set(this.auth.currentUserEmail());
+    const billingProfile$ = this.stripeService.getBillingProfile?.();
+    billingProfile$?.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: ({ billingAddress }) => {
+        if (!billingAddress) return;
+        this.address1.set(billingAddress.line1 ?? '');
+        this.address2.set(billingAddress.line2 ?? '');
+        this.city.set(billingAddress.city ?? '');
+        this.state.set(billingAddress.state ?? '');
+        this.zip.set(billingAddress.postalCode ?? '');
+        this.country.set(billingAddress.country ?? 'US');
+        this.queueTaxEstimate();
+      }, error: () => {} });
 
     // If we're returning from a 3-D Secure redirect, finalize the subscription.
     const returningSecret = this.route.snapshot.queryParamMap.get('setup_intent_client_secret');
@@ -409,8 +423,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
 
   /** Tells the backend to create the recurring subscription, then advances to confirmation. */
   private createSubscriptionAndContinue(paymentMethodId: string): void {
-    this.stripeService
-      .createSubscription({
+    const request = {
         userid: this.auth.currentUserId(),
         customerId: this.customerId,
         paymentMethodId,
@@ -430,10 +443,18 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
           postalCode: this.zip(),
           country: this.country(),
         },
-      })
+      };
+    const subscriptionRequest = this.isUpgrade()
+      ? this.stripeService.upgradeSubscription(request)
+      : this.stripeService.createSubscription(request);
+    subscriptionRequest
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          if (this.isUpgrade()) {
+            this.navigateToConfirmation();
+            return;
+          }
           this.activateProjectAfterSubscription()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
@@ -446,7 +467,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
             });
         },
         error: () => {
-          this.validationError.set('Your card was saved but we could not start your subscription. Please contact support.');
+          this.validationError.set(this.isUpgrade()
+            ? 'Your card was saved but the prorated project upgrade could not be charged. No additional billing was applied.'
+            : 'Your card was saved but we could not start your subscription. Please contact support.');
           this.processing.set(false);
         },
       });
@@ -497,6 +520,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       customerId: this.customerId,
     });
     if (this.activationProjectId()) params.set('projectId', this.activationProjectId());
+    if (this.isUpgrade()) params.set('upgrade', '1');
     if (this.appliedVoucherCode()) params.set('voucherCode', this.appliedVoucherCode());
     return `${base}?${params.toString()}`;
   }

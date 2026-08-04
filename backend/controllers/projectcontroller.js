@@ -5,7 +5,7 @@ const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
-const { isFutureDeadline } = require('../utils/timezone');
+const { deadlineCalendarDate, isFutureDeadline } = require('../utils/timezone');
 
 const PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'cancelled']);
 const STATUS_TRANSITIONS = {
@@ -202,9 +202,13 @@ exports.updateProject = async (req, res) => {
     let ownedProject = null;
     if (req.user?.email) {
       const userId = await authenticatedUserId(req);
-      const [owned] = await pool.query('SELECT id, status FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+      const [owned] = await pool.query('SELECT id, status, deadline FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
       if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can update this project' });
       ownedProject = owned[0];
+    }
+    if (ownedProject?.status === 'active' && deadline !== undefined &&
+        deadlineCalendarDate(deadline) < deadlineCalendarDate(ownedProject.deadline)) {
+      return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
     }
     if (status !== undefined) {
       if (!PROJECT_STATUSES.has(status)) {

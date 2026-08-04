@@ -1,9 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, finalize, map, tap, throwError } from 'rxjs';
+import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { LoggingService } from './logging.service';
+import { BillingEstimateService } from './billing-estimate.service';
 import {
   Project,
   ProjectApiResponse,
@@ -19,6 +21,8 @@ export class ProjectWizardService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private logger = inject(LoggingService);
+  private router = inject(Router);
+  private billingEstimate = inject(BillingEstimateService);
 
   project = signal<Project | null>(null);
   isSaving = signal(false);
@@ -179,6 +183,7 @@ export class ProjectWizardService {
   }
 
   private runSave(req$: Observable<ProjectApiResponse>, context = 'step'): Observable<Project> {
+    const previousProject = this.project();
     this.isSaving.set(true);
     this.saveError.set(null);
     this.logger.debug(`Saving ${context}...`);
@@ -187,6 +192,19 @@ export class ProjectWizardService {
         tap(res => {
           this.project.set(res.project);
           this.logger.info(`Saved ${context}`, { projectId: res.project.id });
+          if (previousProject?.status === 'active') {
+            const previous = this.billingEstimate.buildSoloActivationQuery(previousProject, previousProject.collaborators?.length);
+            const current = this.billingEstimate.buildSoloActivationQuery(res.project, res.project.collaborators?.length);
+            if (previous && current && Number(current['monthly']) > Number(previous['monthly'])) {
+              setTimeout(() => this.router.navigate(['/pricing-plan-ccard-information'], {
+                queryParams: {
+                  ...current,
+                  monthly: (Number(current['monthly']) - Number(previous['monthly'])).toFixed(2),
+                  upgrade: '1',
+                },
+              }));
+            }
+          }
         }),
         catchError(err => {
           const msg = err?.error?.message ?? 'Something went wrong';

@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { isFutureDeadline } = require('../utils/timezone');
+const { deadlineCalendarDate, isFutureDeadline } = require('../utils/timezone');
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
@@ -391,6 +391,10 @@ exports.updateTeamProject = async (req, res) => {
 
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (existing[0].status === 'active' && deadline !== undefined &&
+        deadlineCalendarDate(deadline) < deadlineCalendarDate(existing[0].deadline)) {
+      return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
+    }
     if (status !== undefined) {
       if (!TEAM_PROJECT_STATUSES.has(status)) return res.status(400).json({ success: false, message: 'Invalid project status' });
       if (!TEAM_STATUS_TRANSITIONS[existing[0].status]?.has(status)) {
