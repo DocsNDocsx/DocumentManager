@@ -223,6 +223,7 @@ exports.updateProject = async (req, res) => {
     const values = [];
 
     if (status === 'completed') {
+      const forceComplete = req.body?.forceComplete === true;
       const [projectRows] = await pool.query(
         'SELECT type, collaborators, documents, assignments, expected_collaborators FROM projects WHERE id = ?',
         [id]
@@ -230,9 +231,9 @@ exports.updateProject = async (req, res) => {
       if (projectRows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
       const project = parseProject(projectRows[0]);
       const collaboratorsCount = project.collaborators.length;
-      if (project.type === 'public' && collaboratorsCount < Number(project.expectedCollaborators ?? 0)) {
-        return res.status(409).json({ success: false, message: 'Expected collaborators have not all joined' });
-      }
+      const missingCollaborators = project.type === 'public'
+        ? Math.max(0, Number(project.expectedCollaborators ?? 0) - collaboratorsCount)
+        : 0;
       const requiredSlots = project.type === 'public'
         ? collaboratorsCount * project.documents.length
         : Object.values(project.assignments).reduce((sum, docs) => sum + docs.length, 0);
@@ -240,8 +241,19 @@ exports.updateProject = async (req, res) => {
         "SELECT COUNT(*) AS approved_count FROM submissions WHERE project_id = ? AND status = 'approved'",
         [id]
       );
-      if (requiredSlots === 0 || Number(approvedRows[0]?.approved_count ?? 0) < requiredSlots) {
-        return res.status(409).json({ success: false, message: 'All required documents must be approved before completing the project' });
+      const approvedSlots = Number(approvedRows[0]?.approved_count ?? 0);
+      const missingApprovals = Math.max(0, requiredSlots - approvedSlots);
+      if (!forceComplete && (missingCollaborators > 0 || requiredSlots === 0 || missingApprovals > 0)) {
+        const requirements = [];
+        if (missingCollaborators > 0) requirements.push(`${missingCollaborators} expected collaborator${missingCollaborators === 1 ? '' : 's'} have not joined`);
+        if (requiredSlots === 0) requirements.push('no required document assignments exist');
+        else if (missingApprovals > 0) requirements.push(`${missingApprovals} required document${missingApprovals === 1 ? '' : 's'} ${missingApprovals === 1 ? 'is' : 'are'} not approved`);
+        return res.status(409).json({
+          success: false,
+          code: 'INCOMPLETE_REQUIREMENTS',
+          message: requirements.join('; '),
+          requirements: { missingCollaborators, missingApprovals, requiredSlots, approvedSlots },
+        });
       }
     }
 

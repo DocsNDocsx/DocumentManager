@@ -185,12 +185,21 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     e.stopPropagation();
     this.actionError.set(null);
     this.logger.info('Marking project complete', { id: project.id });
-    this.http.patch<{ success: boolean; project: Project }>(`${environment.apiUrl}/projects/${project.id}`, { status: 'completed' }).subscribe({
+    this.completeProject(project, false);
+  }
+
+  private completeProject(project: Project, forceComplete: boolean): void {
+    this.http.patch<{ success: boolean; project: Project }>(`${environment.apiUrl}/projects/${project.id}`, { status: 'completed', forceComplete }).subscribe({
       next: () => {
         this.logger.info('Project marked complete', { id: project.id });
         this.listService.updateOne(project.id, { status: 'completed' });
       },
       error: err => {
+        if (!forceComplete && err?.status === 409 && err?.error?.code === 'INCOMPLETE_REQUIREMENTS') {
+          const confirmed = confirm(`This project still has incomplete requirements:\n\n${err.error.message}\n\nMark it complete anyway?`);
+          if (confirmed) this.completeProject(project, true);
+          return;
+        }
         this.actionError.set(err?.error?.message ?? 'Could not complete the project.');
         this.logger.error('Failed to mark project complete', err);
       },

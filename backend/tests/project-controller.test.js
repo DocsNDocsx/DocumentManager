@@ -311,7 +311,14 @@ describe('projectcontroller', () => {
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: 'All required documents must be approved before completing the project',
+      code: 'INCOMPLETE_REQUIREMENTS',
+      message: '1 required document is not approved',
+      requirements: {
+        missingCollaborators: 0,
+        missingApprovals: 1,
+        requiredSlots: 2,
+        approvedSlots: 1,
+      },
     });
   });
 
