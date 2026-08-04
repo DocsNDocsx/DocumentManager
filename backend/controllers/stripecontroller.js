@@ -120,8 +120,17 @@ exports.estimateTax = async (req, res) => {
     });
   } catch (err) {
     const message = err?.raw?.message || err?.message || 'Could not estimate tax';
-    console.error('Tax estimate error:', message);
-    res.status(err?.statusCode || 500).json({ success: false, message });
+    const amountCents = Number(req.body?.amountCents);
+    console.warn('Tax estimate unavailable; continuing with zero tax:', message);
+    res.json({
+      success: true,
+      calculationId: null,
+      taxAmountCents: 0,
+      totalAmountCents: Number.isFinite(amountCents) ? Math.round(amountCents) : 0,
+      taxAmount: 0,
+      totalAmount: Number.isFinite(amountCents) ? Math.round(amountCents) / 100 : 0,
+      taxEstimateUnavailable: true,
+    });
   }
 };
 

@@ -474,5 +474,49 @@ describe('stripecontroller', () => {
       expect(res.json).toHaveBeenCalledWith({ success: false, message: 'amountCents must be greater than zero' });
       expect(stripe.tax.calculations.create).not.toHaveBeenCalled();
     });
+
+    it('falls back to zero tax when Stripe Tax is unavailable', async () => {
+      const stripe = {
+        tax: {
+          calculations: {
+            create: jest.fn(async () => {
+              throw new Error('You must have a valid head office address to enable automatic tax calculation in test mode.');
+            }),
+          },
+        },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query.mockResolvedValueOnce([ [{
+        userid: 123,
+        email: 'paid@example.com',
+        stripe_customer_id: 'cus_123',
+      }] ]);
+      const res = mockResponse();
+
+      await controller.estimateTax({
+        user: { email: 'paid@example.com' },
+        body: {
+          amountCents: 214,
+          billingAddress: {
+            line1: '123 Main St',
+            city: 'New York',
+            state: 'NY',
+            postalCode: '10001',
+            country: 'US',
+          },
+        },
+      }, res);
+
+      expect(res.status).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        calculationId: null,
+        taxAmountCents: 0,
+        totalAmountCents: 214,
+        taxAmount: 0,
+        totalAmount: 2.14,
+        taxEstimateUnavailable: true,
+      });
+    });
   });
 });

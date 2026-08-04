@@ -64,5 +64,6 @@ export interface EstimateTaxResponse {
   totalAmount: number;
   taxAmountCents: number;
   totalAmountCents: number;
-  calculationId: string;
+  calculationId: string | null;
+  taxEstimateUnavailable?: boolean;
 }
