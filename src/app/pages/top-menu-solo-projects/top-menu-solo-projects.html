@@ -284,15 +284,33 @@
       <div class="review-modal-body">
         @if (reviewSubmissions().length > 1) {
           <section class="review-document-selector" aria-label="Submitted documents">
-            <strong>Submitted Documents ({{ reviewSubmissions().length }})</strong>
-            <div class="review-document-tabs">
-              @for (document of reviewSubmissions(); track document.id) {
-                <button type="button" [class.active]="document.id === sub.id" (click)="selectReviewSubmission(document)">
-                  <span>{{ document.documentType }}</span>
-                  <small [attr.data-status]="document.status">{{ reviewStatusLabel(document.status) }}</small>
-                </button>
+            <div class="review-selector-heading">
+              <strong>Submitted Documents ({{ reviewSubmissions().length }})</strong>
+              @if (reviewSubmissions().length > 3) {
+                <span>{{ reviewedSubmissionCount() }} reviewed · {{ pendingSubmissionCount() }} pending</span>
               }
             </div>
+            @if (reviewSubmissions().length <= 3) {
+              <div class="review-document-tabs">
+                @for (document of reviewSubmissions(); track document.id) {
+                  <button type="button" [class.active]="document.id === sub.id" (click)="selectReviewSubmission(document)">
+                    <span>{{ document.documentType }}</span>
+                    <small [attr.data-status]="document.status">{{ reviewStatusLabel(document.status) }}</small>
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="review-document-queue">
+                @for (document of reviewSubmissions(); track document.id; let position = $index) {
+                  <button type="button" [class.active]="document.id === sub.id" (click)="selectReviewSubmission(document)">
+                    <span class="document-position">{{ position + 1 }}</span>
+                    <span class="document-name">{{ document.documentType }}</span>
+                    <small [attr.data-status]="document.status">{{ reviewStatusLabel(document.status) }}</small>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                  </button>
+                }
+              </div>
+            }
           </section>
         }
         <section><strong>Collaborator Information</strong><div class="review-value">{{ sub.collaborator.firstName }} {{ sub.collaborator.lastName }} ({{ sub.collaborator.email }})</div></section>

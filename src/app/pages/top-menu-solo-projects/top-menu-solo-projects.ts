@@ -224,6 +224,14 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     return ({ pending: 'Pending review', approved: 'Approved', revision: 'Revision required', rejected: 'Declined' })[status];
   }
 
+  reviewedSubmissionCount(): number {
+    return this.reviewSubmissions().filter(item => item.status !== 'pending').length;
+  }
+
+  pendingSubmissionCount(): number {
+    return this.reviewSubmissions().filter(item => item.status === 'pending').length;
+  }
+
   closeReviewModal(): void { this.reviewingSubmission.set(null); this.reviewSubmissions.set([]); this.reviewDecision.set(null); this.reviewComments.set(''); }
   chooseReviewDecision(decision: Exclude<ReviewDecision, null>): void { this.reviewDecision.set(decision); this.reviewComments.set(''); }
   submitReviewDecision(): void {
