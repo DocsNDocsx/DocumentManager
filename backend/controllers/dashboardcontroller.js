@@ -1,12 +1,36 @@
 const { randomUUID } = require('crypto');
+const { list } = require('@vercel/blob');
 const pool = require('../utils/sql');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonLen = col => isMySQL ? `JSON_LENGTH(${col})` : `jsonb_array_length(${col}::jsonb)`;
-const interval7Days = isMySQL ? 'INTERVAL 7 DAY' : "INTERVAL '7 days'";
 
 const STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024;
 const STORAGE_STATUSES = ['active', 'draft', 'completed', 'not_completed', 'deleted'];
+
+async function existingSubmissionBlobUrls() {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token || process.env.USE_LOCAL_FILE_STORAGE === 'true') return null;
+
+  try {
+    const urls = new Set();
+    let cursor;
+    do {
+      const page = await list({ prefix: 'submissions/', limit: 1000, cursor, token });
+      for (const blob of page.blobs) urls.add(blob.url);
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return urls;
+  } catch (err) {
+    console.warn('Could not reconcile dashboard with Blob storage; using submission metadata:', err.message);
+    return null;
+  }
+}
+
+function existingSubmissions(rows, blobUrls) {
+  if (!blobUrls) return rows;
+  return rows.filter(row => !String(row.file_path ?? '').includes('.blob.vercel-storage.com') || blobUrls.has(row.file_path));
+}
 
 function emptyStorageStatus() {
   return { projects: 0, documents: 0, bytes: 0 };
@@ -87,11 +111,9 @@ exports.getDashboardStats = async (req, res) => {
     const [
       [soloActiveRows],
       [teamActiveRows],
-      [soloDocsRows],
-      [teamDocsRows],
-      [docsThisWeekRows],
+      [soloSubmissionRows],
+      [teamSubmissionRows],
       [collaboratorsRows],
-      [storageRows],
     ] = await Promise.all([
       pool.query(
         'SELECT COUNT(*) AS cnt FROM projects WHERE user_id = ? AND status = ?',
@@ -105,22 +127,18 @@ exports.getDashboardStats = async (req, res) => {
         [userid, 'active']
       ),
       pool.query(
-        `SELECT COALESCE(SUM(${jsonLen('documents')}), 0) AS cnt
-         FROM projects WHERE user_id = ? AND status = ?`,
-        [userid, 'active']
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(${jsonLen('tp.documents')}), 0) AS cnt
-         FROM team_projects tp
-         JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ?
-         WHERE tp.status = ? AND tp.documents IS NOT NULL`,
-        [userid, 'active']
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt
+        `SELECT s.file_path, s.file_size, s.submitted_at, p.status AS project_status
          FROM submissions s
          JOIN projects p ON p.id = s.project_id
-         WHERE p.user_id = ? AND s.submitted_at >= NOW() - ${interval7Days}`,
+         WHERE p.user_id = ?`,
+        [userid]
+      ),
+      pool.query(
+        `SELECT DISTINCT tps.id, tps.file_path, tps.file_size, tps.submitted_at, tp.status AS project_status
+         FROM team_project_submissions tps
+         JOIN team_projects tp ON tp.id = tps.project_id
+         JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ?
+        `,
         [userid]
       ),
       pool.query(
@@ -128,37 +146,25 @@ exports.getDashboardStats = async (req, res) => {
          FROM projects WHERE user_id = ? AND status = ?`,
         [userid, 'active']
       ),
-      pool.query(
-        `SELECT COALESCE(SUM(total_bytes), 0) AS total_bytes
-         FROM (
-           SELECT COALESCE(SUM(s.file_size), 0) AS total_bytes
-           FROM submissions s
-           JOIN projects p ON p.id = s.project_id
-           WHERE p.user_id = ?
-           UNION ALL
-           SELECT COALESCE(SUM(tps.file_size), 0) AS total_bytes
-           FROM team_project_submissions tps
-           JOIN team_projects tp ON tp.id = tps.project_id
-           JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ?
-         ) storage_totals`,
-        [userid, userid]
-      ),
     ]);
+
+    const blobUrls = await existingSubmissionBlobUrls();
+    const submissions = existingSubmissions([...soloSubmissionRows, ...teamSubmissionRows], blobUrls);
+    const activeSubmissions = submissions.filter(row => row.project_status === 'active');
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     const soloProjects = Number(soloActiveRows[0].cnt);
     const teamProjects = Number(teamActiveRows[0].cnt);
-    const soloDocs = Number(soloDocsRows[0].cnt);
-    const teamDocs = Number(teamDocsRows[0].cnt);
-    const documentsThisWeek = Number(docsThisWeekRows[0].cnt);
+    const documentsThisWeek = submissions.filter(row => new Date(row.submitted_at).getTime() >= weekAgo).length;
     const activeCollaborators = Number(collaboratorsRows[0].cnt);
-    const totalBytes = Number(storageRows[0].total_bytes);
+    const totalBytes = submissions.reduce((sum, row) => sum + (Number(row.file_size) || 0), 0);
 
     res.json({
       success: true,
       activeProjects: soloProjects + teamProjects,
       soloProjects,
       teamProjects,
-      documentsCollected: soloDocs + teamDocs,
+      documentsCollected: activeSubmissions.length,
       documentsThisWeek,
       activeCollaborators,
       storageUsedPercent: storageLimitPercent(totalBytes),

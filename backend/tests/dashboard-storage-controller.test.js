@@ -1,8 +1,12 @@
 jest.mock('../utils/sql', () => ({
   query: jest.fn(),
 }));
+jest.mock('@vercel/blob', () => ({
+  list: jest.fn(),
+}));
 
 const pool = require('../utils/sql');
+const { list } = require('@vercel/blob');
 const dashboardController = require('../controllers/dashboardcontroller');
 
 function mockResponse() {
@@ -88,5 +92,36 @@ describe('dashboardcontroller.getStorageSummary', () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Internal server error' });
     console.error.mockRestore();
+  });
+});
+
+describe('dashboardcontroller.getDashboardStats Blob reconciliation', () => {
+  const originalToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+  afterEach(() => {
+    process.env.BLOB_READ_WRITE_TOKEN = originalToken;
+  });
+
+  it('excludes submission metadata when the backing blobs were deleted externally', async () => {
+    process.env.BLOB_READ_WRITE_TOKEN = 'vercel_blob_rw_test';
+    list.mockResolvedValueOnce({ blobs: [], hasMore: false });
+    pool.query
+      .mockResolvedValueOnce([[{ cnt: 1 }]])
+      .mockResolvedValueOnce([[{ cnt: 0 }]])
+      .mockResolvedValueOnce([[
+        { file_path: 'https://store.private.blob.vercel-storage.com/submissions/solo/project-1/file.pdf', file_size: 4096, submitted_at: new Date(), project_status: 'active' },
+      ]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ cnt: 1 }]]);
+    const res = mockResponse();
+
+    await dashboardController.getDashboardStats({ query: { userid: '123' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      documentsCollected: 0,
+      documentsThisWeek: 0,
+      storageUsedLabel: '0 B',
+      storageUsedPercent: 0,
+    }));
   });
 });
