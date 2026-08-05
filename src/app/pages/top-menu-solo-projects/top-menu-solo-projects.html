@@ -262,6 +262,14 @@
           </div>
         }
       </div>
+      @if (reviewEmptyIndex() !== null) {
+        <div class="review-empty-state" role="status">
+          <div><strong>No document has been submitted yet.</strong><span> Upload the required document before attempting a review.</span></div>
+          <button class="copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, reviewEmptyIndex()!)">
+            <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
+          </button>
+        </div>
+      }
       @if (reviewError()) { <div class="review-inline-error" role="alert">{{ reviewError() }}</div> }
     </div>
   </div>

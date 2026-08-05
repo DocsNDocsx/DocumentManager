@@ -46,6 +46,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   reviewComments = signal('');
   reviewLoadingIndex = signal<number | null>(null);
   reviewError = signal<string | null>(null);
+  reviewEmptyIndex = signal<number | null>(null);
   pendingPaymentProject = signal<Project | null>(null);
   private readonly pendingPaymentEffect = effect(() => {
     if (this.listService.isLoading() || this.pendingPaymentProject()) return;
@@ -142,10 +143,12 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   onView(project: Project, e: Event): void {
     e.stopPropagation();
+    this.reviewError.set(null);
+    this.reviewEmptyIndex.set(null);
     this.viewingProject.set(project);
   }
 
-  closeViewModal(): void { this.viewingProject.set(null); }
+  closeViewModal(): void { this.viewingProject.set(null); this.reviewEmptyIndex.set(null); }
 
   isProjectOwner(project: Project): boolean {
     return String(project.userId) === String(this.auth.currentUserId());
@@ -166,6 +169,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   openCollaboratorReview(project: Project, collaboratorIndex: number): void {
     this.reviewLoadingIndex.set(collaboratorIndex);
     this.reviewError.set(null);
+    this.reviewEmptyIndex.set(null);
     this.http.get<{ success: boolean; submissions: DbSubmission[] }>(`${environment.apiUrl}/projects/${project.id}/submissions?collabIndex=${collaboratorIndex}`).subscribe({
       next: response => {
         const submissions = response.submissions
@@ -174,7 +178,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
         const submission = submissions.find(item => item.status === 'submitted') ?? submissions[0];
         this.reviewLoadingIndex.set(null);
         if (!submission) {
-          this.reviewError.set('This collaborator has not submitted a document yet.');
+          this.reviewEmptyIndex.set(collaboratorIndex);
           return;
         }
         this.viewingProject.set(null);
@@ -191,6 +195,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
       },
       error: err => {
         this.reviewLoadingIndex.set(null);
+        this.reviewEmptyIndex.set(null);
         this.reviewError.set(err?.error?.message ?? 'Could not load this collaborator’s submissions.');
       },
     });
