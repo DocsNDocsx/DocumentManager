@@ -93,9 +93,7 @@ exports.createSubmission = async (req, res) => {
     }
     if (req.user?.email) {
       const isCollaborator = String(collaborators[collabIdx].email ?? '').toLowerCase() === String(req.user.email).toLowerCase();
-      const authenticatedOwnerId = isCollaborator ? null : await ownerIdForEmail(req.user.email);
-      const isOwner = authenticatedOwnerId != null && String(project.user_id) === authenticatedOwnerId;
-      if (!isCollaborator && !isOwner) {
+      if (!isCollaborator) {
         return res.status(403).json({ success: false, message: 'Unauthorized collaborator' });
       }
     }

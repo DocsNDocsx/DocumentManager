@@ -221,7 +221,7 @@
         <div>
           <h2 class="view-modal-title">{{ vp.name }}</h2>
           <p class="view-modal-subtitle">
-            {{ isProjectOwner(vp) ? 'Review submissions or upload documents on behalf of a collaborator.' : 'View your documents, upload files, and submit them for review.' }}
+            {{ isProjectOwner(vp) ? 'Review document submissions from each collaborator.' : 'View your documents, upload files, and submit them for review.' }}
           </p>
         </div>
         <button class="view-modal-close" type="button" (click)="closeViewModal()" aria-label="Close modal">
@@ -250,9 +250,11 @@
                   <i class="fas" [class.fa-spinner]="reviewLoadingIndex() === entry.index" [class.fa-spin]="reviewLoadingIndex() === entry.index" [class.fa-file-circle-check]="reviewLoadingIndex() !== entry.index" aria-hidden="true"></i>
                   {{ reviewLoadingIndex() === entry.index ? 'Loading' : 'Review' }}
                 </button>
-                <button class="copy-btn collab-copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, entry.index)">
-                  <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
-                </button>
+                @if (isCurrentUserCollaborator(vp, entry.index)) {
+                  <button class="copy-btn collab-copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, entry.index)">
+                    <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
+                  </button>
+                }
               } @else {
                 <button class="copy-btn collab-copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, entry.index)">
                   <i class="fas fa-folder-open" aria-hidden="true"></i> View &amp; Submit
@@ -265,9 +267,11 @@
       @if (reviewEmptyIndex() !== null) {
         <div class="review-empty-state" role="status">
           <div><strong>No document has been submitted yet.</strong><span> Upload the required document before attempting a review.</span></div>
-          <button class="copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, reviewEmptyIndex()!)">
-            <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
-          </button>
+          @if (isCurrentUserCollaborator(vp, reviewEmptyIndex()!)) {
+            <button class="copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, reviewEmptyIndex()!)">
+              <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
+            </button>
+          }
         </div>
       }
       @if (reviewError()) { <div class="review-inline-error" role="alert">{{ reviewError() }}</div> }

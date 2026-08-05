@@ -72,9 +72,7 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
         if (!Number.isInteger(collabIndex) || !collaborators[collabIndex]) throw new Error('Invalid collaborator');
         if (!Number.isInteger(docIndex) || !documents[docIndex]) throw new Error('Invalid document');
         const isCollaborator = String(collaborators[collabIndex]?.email ?? '').toLowerCase() === String(req.user?.email ?? '').toLowerCase();
-        const [users] = isCollaborator ? [[]] : await pool.query('SELECT userid FROM users WHERE email = ?', [req.user?.email]);
-        const isOwner = users[0]?.userid != null && String(users[0].userid) === String(projects[0].user_id);
-        if (!isOwner && !isCollaborator) {
+        if (!isCollaborator) {
           throw new Error('Unauthorized collaborator');
         }
         const expectedPrefix = `submissions/solo/${projectId}/${collabIndex}/doc-${docIndex}-`;

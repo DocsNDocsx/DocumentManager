@@ -89,10 +89,8 @@ describe('private Blob client token route', () => {
     expect(response.body.message).toBe('Invalid collaborator');
   });
 
-  it('allows the project owner to upload for a collaborator', async () => {
-    pool.query
-      .mockResolvedValueOnce([[{ ...projectRow(), user_id: 'owner-1', collaborators: JSON.stringify([{ email: 'bob@example.com' }]) }]])
-      .mockResolvedValueOnce([[{ userid: 'owner-1' }]]);
+  it('does not allow the project owner to upload for another collaborator', async () => {
+    pool.query.mockResolvedValueOnce([[{ ...projectRow(), user_id: 'owner-1', collaborators: JSON.stringify([{ email: 'bob@example.com' }]) }]]);
 
     const response = await request(app())
       .post('/api/projects/project-1/submissions/upload-token')
@@ -105,8 +103,8 @@ describe('private Blob client token route', () => {
         },
       });
 
-    expect(response.status).toBe(200);
-    expect(response.body.clientToken).toBe('client-token');
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe('You are not authorized to upload for this collaborator.');
   });
 
   it('returns a service error when private Blob is not configured', async () => {

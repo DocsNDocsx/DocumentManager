@@ -154,6 +154,10 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     return String(project.userId) === String(this.auth.currentUserId());
   }
 
+  isCurrentUserCollaborator(project: Project, collaboratorIndex: number): boolean {
+    return project.collaborators[collaboratorIndex]?.email.trim().toLowerCase() === this.auth.currentUserEmail().trim().toLowerCase();
+  }
+
   visibleCollaborators(project: Project): { collaborator: Project['collaborators'][number]; index: number }[] {
     const entries = project.collaborators.map((collaborator, index) => ({ collaborator, index }));
     if (this.isProjectOwner(project)) return entries;

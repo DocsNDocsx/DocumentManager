@@ -125,6 +125,22 @@ describe('submissioncontroller', () => {
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'collabIndex and docIndex are required' });
   });
 
+  it('does not allow an owner to submit for another collaborator', async () => {
+    pool.query.mockResolvedValueOnce([[uploadProjectRow()]]);
+    const res = mockResponse();
+
+    await submissionController.createSubmission({
+      params: { projectId: 'project-1' },
+      user: { email: 'owner@example.com' },
+      body: { collabIndex: '0', docIndex: '1' },
+      file: { ...uploadFile(), mimetype: 'application/pdf' },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Unauthorized collaborator' });
+    expect(uploadToBlob).not.toHaveBeenCalled();
+  });
+
   it('returns 404 when creating a submission for a missing project', async () => {
     pool.query.mockResolvedValueOnce([[]]);
     const res = mockResponse();
