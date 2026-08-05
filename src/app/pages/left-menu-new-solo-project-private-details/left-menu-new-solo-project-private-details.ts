@@ -212,7 +212,7 @@ export class LeftMenuNewSoloProjectPrivateDetailsComponent implements OnInit, On
       attachments: this.uploadedFiles(),
     }).subscribe({
       next: () => this.router.navigate(['../collaborators'], { relativeTo: this.route }),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to save project details — please try again'),
     });
   }
 

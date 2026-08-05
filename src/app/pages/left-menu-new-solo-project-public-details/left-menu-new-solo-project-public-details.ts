@@ -244,7 +244,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
       staff,
     }).subscribe({
       next: project => this.router.navigate(['/new-solo-project/public', project.id, 'documents']),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to save project details — please try again'),
     });
   }
 

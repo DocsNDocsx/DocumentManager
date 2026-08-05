@@ -248,7 +248,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
       supportStaff,
     }).subscribe({
       next: () => this.router.navigate(['/new-team-project/public/documents']),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to save project details — please try again'),
     });
   }
 

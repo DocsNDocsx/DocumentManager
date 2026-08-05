@@ -51,7 +51,6 @@ export class ProjectWizardService {
       ...data,
       completedStep: this.stepProgress(1),
       type: 'private',
-      status: this.project()?.status ?? 'draft',
     };
 
     const req$ = this.projectId()
@@ -105,7 +104,6 @@ export class ProjectWizardService {
       expectedCollaborators: parseInt(data.expectedCollaborators) || null,
       completedStep: this.stepProgress(1),
       type: 'public',
-      status: this.project()?.status ?? 'draft',
     };
     const req$ = this.projectId()
       ? this.http.patch<ProjectApiResponse>(`${environment.apiUrl}/projects/${this.projectId()}`, body)
