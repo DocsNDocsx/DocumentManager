@@ -86,6 +86,22 @@ describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
     expect(component.formsGenerated()).toBe(false);
   });
 
+  it('preserves existing document data when increasing the document count', () => {
+    const existing = [
+      { name: 'Resume', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: 'resume-template.pdf' },
+      { name: 'Cover Letter', fileTypes: ['DOCX'], maxSize: '5', sizeUnit: 'MB', templateName: '' },
+    ];
+    component.documents.set(existing);
+    component.documentCount.set(4);
+
+    component.generateForms();
+
+    expect(component.documents().slice(0, 2)).toEqual(existing);
+    expect(component.documents()).toHaveLength(4);
+    expect(component.documents()[2].name).toBe('');
+    expect(component.documents()[3].name).toBe('');
+  });
+
   it('saves valid documents and navigates to assignments', () => {
     component.documents.set([
       { name: 'Resume', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },

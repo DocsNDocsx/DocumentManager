@@ -48,6 +48,7 @@ export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, O
   }
 
   documentCount = signal(1);
+  minimumDocumentCount = signal(1);
   documents = signal<TeamPublicDocumentRequirement[]>([]);
   formsGenerated = signal(false);
 
@@ -76,9 +77,10 @@ export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, O
 
   generateForms(): void {
     const n = this.documentCount();
-    if (n < 1 || n > 50) return;
+    if (n < this.minimumDocumentCount() || n > 50) return;
+    const existing = this.documents();
     this.documents.set(
-      Array.from({ length: n }, () => ({
+      Array.from({ length: n }, (_, index) => existing[index] ?? ({
         name: '', fileTypes: [], maxSize: '', sizeUnit: 'MB', templateName: '',
       }))
     );
@@ -146,7 +148,7 @@ export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, O
   }
 
   removeDocument(index: number): void {
-    if (this.documents().length <= 1) return;
+    if (this.documents().length <= this.minimumDocumentCount()) return;
     this.documents.update(list => list.filter((_, i) => i !== index));
     this.documentCount.set(this.documents().length);
   }
@@ -158,6 +160,15 @@ export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, O
   ngOnInit(): void {
     if (!this.teamWizardService.projectId()) {
       this.router.navigate(['/new-team-project/public/details']);
+      return;
+    }
+    const project = this.teamWizardService.project();
+    const existing = project?.documents ?? [];
+    if (existing.length > 0) {
+      this.documents.set(existing);
+      this.documentCount.set(existing.length);
+      this.minimumDocumentCount.set(project?.status === 'active' ? existing.length : 1);
+      this.formsGenerated.set(true);
     }
   }
 

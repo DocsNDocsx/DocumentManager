@@ -233,6 +233,9 @@ exports.updateProject = async (req, res) => {
     if (ownedProject?.status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(ownedProject.expected_collaborators ?? 0)) {
       return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
     }
+    if (ownedProject?.status === 'active' && documents !== undefined && documents.length < currentSolo.documents.length) {
+      return res.status(409).json({ success: false, message: 'The document count of an active project cannot be reduced' });
+    }
     const soloBillingIncreased = ownedProject?.status === 'active' && (
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(ownedProject.deadline)) ||
       (collaborators !== undefined && collaborators.length > currentSolo.collaborators.length) ||

@@ -82,6 +82,29 @@ describe('LeftMenuNewSoloProjectPrivateCollaboratorsComponent', () => {
     expect(component.isFormValid()).toBe(true);
   });
 
+  it('preserves existing collaborator data when an active project increases the count', () => {
+    const existing = [
+      { firstName: 'Alice', lastName: 'Morgan', email: 'alice@example.com', affiliation: 'University A' },
+      { firstName: 'Bob', lastName: 'Chen', email: 'bob@example.com', affiliation: 'University B' },
+    ];
+    wizard.project.set({ status: 'active', collaborators: existing });
+    component.ngOnInit();
+
+    expect(component.minimumCollaboratorCount()).toBe(2);
+    component.collaboratorCount.set(4);
+    component.generateForms();
+
+    expect(component.collaborators()).toEqual([
+      ...existing,
+      { firstName: '', lastName: '', email: '', affiliation: '' },
+      { firstName: '', lastName: '', email: '', affiliation: '' },
+    ]);
+
+    component.collaboratorCount.set(1);
+    component.generateForms();
+    expect(component.collaborators()).toHaveLength(4);
+  });
+
   it('removes collaborators but keeps the last remaining form', () => {
     component.collaborators.set([
       { firstName: 'A', lastName: 'A', email: 'a@example.com', affiliation: '' },

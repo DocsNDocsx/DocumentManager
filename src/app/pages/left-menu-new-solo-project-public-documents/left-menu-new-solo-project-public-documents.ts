@@ -48,6 +48,7 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
   }
 
   documentCount = signal(1);
+  minimumDocumentCount = signal(1);
   documents = signal<PublicDocumentRequirement[]>([]);
   formsGenerated = signal(false);
 
@@ -59,6 +60,7 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
     if (proj && proj.documents.length > 0) {
       this.documents.set(proj.documents);
       this.documentCount.set(proj.documents.length);
+      this.minimumDocumentCount.set(proj.status === 'active' ? proj.documents.length : 1);
       this.formsGenerated.set(true);
     }
   }
@@ -86,9 +88,10 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
 
   generateForms(): void {
     const n = this.documentCount();
-    if (n < 1 || n > 50) return;
+    if (n < this.minimumDocumentCount() || n > 50) return;
+    const existing = this.documents();
     this.documents.set(
-      Array.from({ length: n }, () => ({
+      Array.from({ length: n }, (_, index) => existing[index] ?? ({
         name: '', fileTypes: [], maxSize: '', sizeUnit: 'MB', templateName: '',
       }))
     );
@@ -156,7 +159,7 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
   }
 
   removeDocument(index: number): void {
-    if (this.documents().length <= 1) return;
+    if (this.documents().length <= this.minimumDocumentCount()) return;
     this.documents.update(list => list.filter((_, i) => i !== index));
     this.documentCount.set(this.documents().length);
   }

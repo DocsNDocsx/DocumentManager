@@ -67,4 +67,18 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
     expect(component.isFormValid()).toBe(false);
     expect(wizard.savePublicDocuments).not.toHaveBeenCalled();
   });
+
+  it('preserves existing document data when adding more forms', () => {
+    const existing = [
+      { name: 'Resume', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },
+      { name: 'Cover Letter', fileTypes: ['DOCX'], maxSize: '5', sizeUnit: 'MB', templateName: '' },
+    ];
+    component.documents.set(existing);
+    component.documentCount.set(4);
+
+    component.generateForms();
+
+    expect(component.documents().slice(0, 2)).toEqual(existing);
+    expect(component.documents()).toHaveLength(4);
+  });
 });

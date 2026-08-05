@@ -54,7 +54,7 @@
             type="number"
             class="form-control"
             id="documentCount"
-            min="1"
+            [min]="minimumDocumentCount()"
             max="50"
             [ngModel]="documentCount()"
             (ngModelChange)="documentCount.set(+$event)"
@@ -74,7 +74,7 @@
               <div class="doc-card-header">
                 <span class="doc-card-number">Document {{ i + 1 }}</span>
                 @if (documents().length > 1) {
-                  <button class="btn-remove-doc" type="button" (click)="removeDocument(i)" [attr.aria-label]="'Remove document ' + (i + 1)">
+                  <button class="btn-remove-doc" type="button" (click)="removeDocument(i)" [disabled]="documents().length <= minimumDocumentCount()" [attr.aria-label]="'Remove document ' + (i + 1)">
                     <i class="fas fa-trash" aria-hidden="true"></i> Remove
                   </button>
                 }

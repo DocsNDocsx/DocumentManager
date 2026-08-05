@@ -404,6 +404,9 @@ exports.updateTeamProject = async (req, res) => {
 
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (existing[0].status === 'active' && Array.isArray(documents) && documents.length < parseJsonArray(existing[0].documents).length) {
+      return res.status(409).json({ success: false, message: 'The document count of an active project cannot be reduced' });
+    }
     if (existing[0].status === 'active' && deadline !== undefined &&
         deadlineCalendarDate(deadline) < deadlineCalendarDate(existing[0].deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
