@@ -3,6 +3,13 @@ const { stripe, computeMonthlyAmountCents, getProductId, getVoucher, normalizeVo
 const { sendPaymentReceiptEmail } = require('../utils/paymentreceipt');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
+const STRIPE_CARD_PERCENT_FEE = 0.029;
+const STRIPE_CARD_FIXED_FEE_CENTS = 30;
+
+function stripeProcessingFeeCents(amountCents) {
+  if (amountCents <= 0) return 0;
+  return Math.round(amountCents * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE_CENTS);
+}
 
 // The JWT only carries the user's email, so we resolve the authoritative user
 // (and userid) from it here rather than trusting any id sent in the request body.
@@ -387,6 +394,8 @@ exports.upgradeSubscription = async (req, res) => {
     const previousAmountCents = Math.round(Number(record.amount) * 100);
     const upgradeChargeCents = unitAmount - previousAmountCents;
     if (upgradeChargeCents <= 0) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
+    const processingFeeCents = stripeProcessingFeeCents(upgradeChargeCents);
+    const totalChargeCents = upgradeChargeCents + processingFeeCents;
 
     const customerUpdate = { invoice_settings: { default_payment_method: paymentMethodId } };
     if (billingAddress.postalCode && billingAddress.country) customerUpdate.address = {
@@ -408,9 +417,9 @@ exports.upgradeSubscription = async (req, res) => {
     await stripe.invoiceItems.create({
       customer: record.stripe_customer_id,
       invoice: invoice.id,
-      amount: upgradeChargeCents,
+      amount: totalChargeCents,
       currency: 'usd',
-      description: `Project upgrade (${previousAmountCents} cents to ${unitAmount} cents)`,
+      description: `Project upgrade (${upgradeChargeCents} cents) and processing fee (${processingFeeCents} cents)`,
     }, { idempotencyKey: `upgrade_item_${record.id}_${unitAmount}` });
     await stripe.invoices.finalizeInvoice(invoice.id, { auto_advance: false });
     const paidInvoice = await stripe.invoices.pay(invoice.id, { payment_method: paymentMethodId });
@@ -425,7 +434,7 @@ exports.upgradeSubscription = async (req, res) => {
     }, { idempotencyKey: `upgrade_${user.userid}_${projectId}_${unitAmount}` });
     await pool.query(
       'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, last_charge_amount = ?, last_invoice_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), (upgradeChargeCents / 100).toFixed(2), paidInvoice.id, updated.status, record.id]
+      [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), (totalChargeCents / 100).toFixed(2), paidInvoice.id, updated.status, record.id]
     );
     await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
     return res.json({
@@ -435,6 +444,8 @@ exports.upgradeSubscription = async (req, res) => {
       previousAmountCents,
       amountCents: unitAmount,
       proratedAmountDueCents: upgradeChargeCents,
+      processingFeeCents,
+      totalChargedCents: totalChargeCents,
       invoiceId: paidInvoice.id,
     });
   } catch (err) {
@@ -469,7 +480,15 @@ exports.previewSubscriptionUpgrade = async (req, res) => {
     const previousAmountCents = Math.round(Number(record.amount) * 100);
     if (unitAmount <= previousAmountCents) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
     const proratedAmountDueCents = unitAmount - previousAmountCents;
-    return res.json({ success: true, proratedAmountDueCents, newRecurringAmountCents: unitAmount });
+    const processingFeeCents = stripeProcessingFeeCents(proratedAmountDueCents);
+    return res.json({
+      success: true,
+      previousAmountCents,
+      proratedAmountDueCents,
+      processingFeeCents,
+      totalDueCents: proratedAmountDueCents + processingFeeCents,
+      newRecurringAmountCents: unitAmount,
+    });
   } catch (err) {
     console.error('Preview subscription upgrade error:', { message: err.message, type: err.type, code: err.code, statusCode: err.statusCode });
     return res.status(err?.statusCode ? 400 : 500).json({ success: false, message: err?.statusCode ? err.message : 'Could not preview the prorated upgrade' });

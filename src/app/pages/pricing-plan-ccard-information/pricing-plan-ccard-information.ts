@@ -57,6 +57,8 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   isUpgrade = signal(false);
   extensionDays = signal(0);
   proratedUpgradeAmount = signal<number | null>(null);
+  previousPaidProjectCost = signal<number | null>(null);
+  updatedProjectCost = signal<number | null>(null);
   upgradePreviewLoading = signal(false);
   upgradePreviewError = signal('');
   voucherCode = signal('');
@@ -75,7 +77,6 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   });
   subtotalAfterDiscount = computed(() => Math.max(0, this.grossTotal() - this.voucherDiscount()));
   stripeProcessingFee = computed(() => {
-    if (this.isUpgrade()) return 0;
     const amount = this.subtotalAfterDiscount();
     if (amount <= 0) return 0;
     return Math.round((amount * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE) * 100) / 100;
@@ -181,6 +182,8 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: preview => {
         this.proratedUpgradeAmount.set(preview.proratedAmountDueCents / 100);
+        this.previousPaidProjectCost.set(preview.previousAmountCents / 100);
+        this.updatedProjectCost.set(preview.newRecurringAmountCents / 100);
         this.upgradePreviewLoading.set(false);
         this.queueTaxEstimate();
       },

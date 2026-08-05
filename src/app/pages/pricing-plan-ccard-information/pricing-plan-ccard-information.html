@@ -161,13 +161,34 @@
         <span class="summary-item-label">Duration ({{ durationTimeZone() }})</span>
         <span class="summary-item-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
       </div>
-      <div class="summary-item">
-        <span class="summary-item-label">{{ isUpgrade() ? 'Upgrade amount' : 'Subtotal' }}</span>
-        <span class="summary-item-value">
-          @if (isUpgrade() && upgradePreviewLoading()) { Calculating... }
-          @else { ${{ subtotal().toFixed(2) }} }
-        </span>
-      </div>
+      @if (isUpgrade()) {
+        <div class="summary-item">
+          <span class="summary-item-label">Previous paid project cost</span>
+          <span class="summary-item-value">
+            @if (upgradePreviewLoading() || previousPaidProjectCost() === null) { Calculating... }
+            @else { ${{ (previousPaidProjectCost() ?? 0).toFixed(2) }} }
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-item-label">Updated project cost</span>
+          <span class="summary-item-value">
+            @if (upgradePreviewLoading() || updatedProjectCost() === null) { Calculating... }
+            @else { ${{ (updatedProjectCost() ?? 0).toFixed(2) }} }
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-item-label">Prorated amount to pay</span>
+          <span class="summary-item-value">
+            @if (upgradePreviewLoading()) { Calculating... }
+            @else { ${{ subtotal().toFixed(2) }} }
+          </span>
+        </div>
+      } @else {
+        <div class="summary-item">
+          <span class="summary-item-label">Subtotal</span>
+          <span class="summary-item-value">${{ subtotal().toFixed(2) }}</span>
+        </div>
+      }
       @if (upgradePreviewError()) {
         <div class="validation-error" role="alert">{{ upgradePreviewError() }}</div>
       }
@@ -216,12 +237,10 @@
           <span class="summary-item-value">-${{ voucherDiscount().toFixed(2) }}</span>
         </div>
       }
-      @if (!isUpgrade()) {
       <div class="summary-item">
         <span class="summary-item-label">Stripe processing fee</span>
         <span class="summary-item-value">${{ stripeProcessingFee().toFixed(2) }}</span>
       </div>
-      }
 
       <div class="summary-total">
         <span class="summary-total-label">{{ isUpgrade() ? 'Estimated due now' : 'Est. Total' }}</span>
@@ -230,7 +249,7 @@
 
       <p class="billing-cycle-note">
         @if (isUpgrade()) {
-          This shows only the difference between the last paid project configuration and the updated configuration. That exact difference is charged immediately.
+          You are charged only the prorated increase plus the processing fee and applicable sales tax. The updated project cost becomes the baseline for future changes.
         } @else {
           Calculated from the project duration and usage entered before activation. Dates use {{ durationTimeZone() }}. Stripe calculates sales tax from the billing ZIP/address.
         }

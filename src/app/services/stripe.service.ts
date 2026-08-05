@@ -78,7 +78,7 @@ export class StripeService {
   }
 
   previewSubscriptionUpgrade(data: Partial<CreateSubscriptionRequest> & { projectId: string }) {
-    return this.http.post<{ success: boolean; proratedAmountDueCents: number; newRecurringAmountCents: number }>(
+    return this.http.post<{ success: boolean; previousAmountCents: number; proratedAmountDueCents: number; processingFeeCents: number; totalDueCents: number; newRecurringAmountCents: number }>(
       `${environment.apiUrl}/stripe/subscription/upgrade-preview`, data,
     );
   }

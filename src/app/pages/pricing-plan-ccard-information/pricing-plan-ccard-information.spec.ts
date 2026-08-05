@@ -210,6 +210,19 @@ describe('PricingPlanCcardInformationComponent', () => {
     expect(component.voucherError()).toBe('Voucher code is not valid.');
   });
 
+  it('includes the Stripe processing fee in an active-project upgrade total', () => {
+    component.isUpgrade.set(true);
+    component.previousPaidProjectCost.set(12.00);
+    component.updatedProjectCost.set(19.20);
+    component.proratedUpgradeAmount.set(7.20);
+
+    expect(component.previousPaidProjectCost()).toBe(12.00);
+    expect(component.updatedProjectCost()).toBe(19.20);
+    expect(component.subtotal()).toBe(7.20);
+    expect(component.stripeProcessingFee()).toBe(0.51);
+    expect(component.total()).toBe(7.71);
+  });
+
   it('updates sales tax and total after billing address changes', async () => {
     vi.useFakeTimers();
     try {
