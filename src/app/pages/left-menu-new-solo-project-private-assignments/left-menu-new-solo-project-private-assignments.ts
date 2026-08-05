@@ -167,6 +167,10 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
     this.router.navigate(['../documents'], { relativeTo: this.route });
   }
 
+  cancel(): void {
+    this.router.navigate(['/left-menu-new-solo-project-landing']);
+  }
+
   saveAsDraft(): void {
     this.showToast('Project saved as draft');
     this.wizardService.saveDraft().subscribe({

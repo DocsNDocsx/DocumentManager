@@ -89,6 +89,10 @@ export class LeftMenuNewSoloProjectPrivateStaffComponent implements OnInit, OnDe
     this.router.navigate(['/new-solo-project/private/assignments']);
   }
 
+  cancel(): void {
+    this.router.navigate(['/left-menu-new-solo-project-landing']);
+  }
+
   saveAsDraft(): void {
     this.showToast('Project saved as draft');
     this.wizardService.saveDraft().subscribe({

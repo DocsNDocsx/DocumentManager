@@ -164,8 +164,8 @@
 
     <div class="action-buttons">
       <div class="btn-group-left">
-        <button class="btn-action btn-cancel" type="button">
-          <i class="fas fa-times" aria-hidden="true"></i> Cancel
+        <button class="btn-action btn-cancel" type="button" (click)="cancel()">
+          <i class="fas fa-times" aria-hidden="true"></i> {{ isActiveProject() ? 'Discard Changes' : 'Cancel' }}
         </button>
         <button
           class="btn-action btn-draft"
