@@ -25,6 +25,7 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
 
   dropdownOpen = signal(false);
   collaboratorCount = signal(1);
+  minimumCollaboratorCount = signal(1);
   collaborators = signal<TeamProjectCollaboratorInput[]>([]);
   formsGenerated = signal(false);
 
@@ -54,6 +55,7 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
         if (res.collaborators.length > 0) {
           this.collaborators.set(res.collaborators);
           this.collaboratorCount.set(res.collaborators.length);
+          this.minimumCollaboratorCount.set(this.isActiveProject() ? res.collaborators.length : 1);
           this.formsGenerated.set(true);
         }
       },
@@ -71,14 +73,15 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
 
   onCountInput(e: Event): void {
     const v = parseInt((e.target as HTMLInputElement).value, 10);
-    if (!isNaN(v) && v > 0) this.collaboratorCount.set(v);
+    if (!isNaN(v) && v >= this.minimumCollaboratorCount()) this.collaboratorCount.set(v);
   }
 
   generateForms(): void {
     const n = this.collaboratorCount();
-    if (n < 1) return;
+    if (n < this.minimumCollaboratorCount()) return;
+    const existing = this.collaborators();
     this.collaborators.set(
-      Array.from({ length: n }, () => ({
+      Array.from({ length: n }, (_, index) => existing[index] ?? ({
         firstName: '',
         lastName: '',
         email: '',
@@ -98,6 +101,7 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
   }
 
   removeCollab(index: number): void {
+    if (this.collaborators().length <= this.minimumCollaboratorCount()) return;
     this.collaborators.update(list => list.filter((_, i) => i !== index));
     this.collaboratorCount.set(this.collaborators().length);
   }

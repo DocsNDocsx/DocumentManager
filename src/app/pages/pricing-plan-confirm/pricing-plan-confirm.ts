@@ -9,11 +9,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 @Component({
   selector: 'app-pricing-plan-confirm',
   imports: [RouterLink],
@@ -32,8 +27,7 @@ export class PricingPlanConfirmComponent implements OnInit {
   days          = signal(20);
   amountCharged = signal('0.00');
   customerName  = signal('Customer');
-  confirmationNumber = signal('');
-  nextBillingText    = signal('');
+  projectId = signal('Not available');
 
   ngOnInit(): void {
     this.route.queryParams
@@ -48,15 +42,7 @@ export class PricingPlanConfirmComponent implements OnInit {
         this.days.set(+params['days'] || 20);
         this.amountCharged.set(params['total'] || '0.00');
         this.customerName.set(params['name'] || 'Customer');
-
-        const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-        this.confirmationNumber.set('DN-2026-' + suffix);
-
-        const next = new Date();
-        next.setDate(next.getDate() + 30);
-        this.nextBillingText.set(
-          `Your next billing date is ${MONTHS[next.getMonth()]} ${String(next.getDate()).padStart(2, '0')}, ${next.getFullYear()}.`
-        );
+        this.projectId.set(params['projectId'] || 'Not available');
       });
   }
 }

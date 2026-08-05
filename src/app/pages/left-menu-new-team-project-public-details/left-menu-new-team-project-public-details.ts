@@ -50,6 +50,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   projectDeadline = signal('');
   minimumDeadline = minimumProjectDeadline();
   expectedCollaborators = signal('');
+  minimumCollaborators = signal(1);
   uploadedFiles = signal<ProjectAttachment[]>([]);
   isDragOver = signal(false);
   isUploading = signal(false);
@@ -70,7 +71,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
     this.projectName().trim() !== '' &&
     isValidProjectDeadline(this.projectDeadline()) && this.projectDeadline() >= this.minimumDeadline &&
     this.expectedCollaborators() !== '' &&
-    parseInt(this.expectedCollaborators()) > 0
+    parseInt(this.expectedCollaborators()) >= this.minimumCollaborators()
   );
 
   ngOnInit(): void {
@@ -99,6 +100,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
       this.projectDeadline.set(deadline);
       if (proj.status === 'active' && deadline > this.minimumDeadline) this.minimumDeadline = deadline;
       this.expectedCollaborators.set(proj.expectedCollaborators ? String(proj.expectedCollaborators) : '');
+      this.minimumCollaborators.set(proj.status === 'active' ? Number(proj.expectedCollaborators ?? 1) : 1);
       this.uploadedFiles.set(proj.attachments ?? []);
       if (proj.supportStaff) {
         this.supportFirstName.set(proj.supportStaff.firstName ?? '');

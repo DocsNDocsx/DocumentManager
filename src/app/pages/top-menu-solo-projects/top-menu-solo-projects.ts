@@ -147,10 +147,26 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   closeViewModal(): void { this.viewingProject.set(null); }
 
+  isProjectOwner(project: Project): boolean {
+    return String(project.userId) === String(this.auth.currentUserId());
+  }
+
+  visibleCollaborators(project: Project): { collaborator: Project['collaborators'][number]; index: number }[] {
+    const entries = project.collaborators.map((collaborator, index) => ({ collaborator, index }));
+    if (this.isProjectOwner(project)) return entries;
+    const email = this.auth.currentUserEmail().trim().toLowerCase();
+    return entries.filter(entry => entry.collaborator.email.trim().toLowerCase() === email);
+  }
+
+  openCollaboratorWorkspace(project: Project, collaboratorIndex: number): void {
+    this.closeViewModal();
+    this.router.navigate(['/collaborator-view', project.id, collaboratorIndex]);
+  }
+
   openCollaboratorReview(project: Project, collaboratorIndex: number): void {
     this.reviewLoadingIndex.set(collaboratorIndex);
     this.reviewError.set(null);
-    this.http.get<{ success: boolean; submissions: DbSubmission[] }>(`${environment.apiUrl}/projects/${project.id}/submissions`).subscribe({
+    this.http.get<{ success: boolean; submissions: DbSubmission[] }>(`${environment.apiUrl}/projects/${project.id}/submissions?collabIndex=${collaboratorIndex}`).subscribe({
       next: response => {
         const submissions = response.submissions
           .filter(submission => submission.collaborator_index === collaboratorIndex)

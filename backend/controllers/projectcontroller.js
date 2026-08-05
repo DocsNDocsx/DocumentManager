@@ -227,6 +227,12 @@ exports.updateProject = async (req, res) => {
       return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
     }
     const currentSolo = ownedProject ? parseProject(ownedProject) : null;
+    if (ownedProject?.status === 'active' && collaborators !== undefined && collaborators.length < currentSolo.collaborators.length) {
+      return res.status(409).json({ success: false, message: 'The collaborator count of an active project cannot be reduced' });
+    }
+    if (ownedProject?.status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(ownedProject.expected_collaborators ?? 0)) {
+      return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
+    }
     const soloBillingIncreased = ownedProject?.status === 'active' && (
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(ownedProject.deadline)) ||
       (collaborators !== undefined && collaborators.length > currentSolo.collaborators.length) ||

@@ -77,7 +77,7 @@ exports.createSubmission = async (req, res) => {
     }
 
     const [projects] = await pool.query(
-      'SELECT id, type, collaborators, documents, assignments, deadline, status FROM projects WHERE id = ?',
+      'SELECT id, user_id, type, collaborators, documents, assignments, deadline, status FROM projects WHERE id = ?',
       [projectId]
     );
     if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -91,8 +91,13 @@ exports.createSubmission = async (req, res) => {
     if (!Number.isInteger(collabIdx) || !collaborators[collabIdx]) {
       return res.status(400).json({ success: false, message: 'Invalid collaborator' });
     }
-    if (req.user?.email && String(collaborators[collabIdx].email ?? '').toLowerCase() !== String(req.user.email).toLowerCase()) {
-      return res.status(403).json({ success: false, message: 'Unauthorized collaborator' });
+    if (req.user?.email) {
+      const isCollaborator = String(collaborators[collabIdx].email ?? '').toLowerCase() === String(req.user.email).toLowerCase();
+      const authenticatedOwnerId = isCollaborator ? null : await ownerIdForEmail(req.user.email);
+      const isOwner = authenticatedOwnerId != null && String(project.user_id) === authenticatedOwnerId;
+      if (!isCollaborator && !isOwner) {
+        return res.status(403).json({ success: false, message: 'Unauthorized collaborator' });
+      }
     }
     if (!Number.isInteger(docIdx) || !document) {
       return res.status(400).json({ success: false, message: 'Invalid document' });

@@ -45,6 +45,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
   }
 
   collaboratorCount = signal(1);
+  minimumCollaboratorCount = signal(1);
   collaborators = signal<Collaborator[]>([]);
   formsGenerated = signal(false);
   isSaving = computed(() => this.wizardService.isSaving());
@@ -72,6 +73,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
     if (proj && proj.collaborators.length > 0) {
       this.collaborators.set(proj.collaborators);
       this.collaboratorCount.set(proj.collaborators.length);
+      this.minimumCollaboratorCount.set(proj.status === 'active' ? proj.collaborators.length : 1);
       this.formsGenerated.set(true);
     }
   }
@@ -98,10 +100,11 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
 
   generateForms(): void {
     const n = this.collaboratorCount();
-    if (n < 1) return;
-    this.collaborators.set(
-      Array.from({ length: n }, () => ({ firstName: '', lastName: '', email: '', affiliation: '' }))
-    );
+    if (n < this.minimumCollaboratorCount()) return;
+    const existing = this.collaborators();
+    this.collaborators.set(Array.from({ length: n }, (_, index) =>
+      existing[index] ?? { firstName: '', lastName: '', email: '', affiliation: '' }
+    ));
     this.formsGenerated.set(true);
   }
 
@@ -114,7 +117,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
   }
 
   removeCollaborator(index: number): void {
-    if (this.collaborators().length <= 1) return;
+    if (this.collaborators().length <= this.minimumCollaboratorCount()) return;
     this.collaborators.update(list => list.filter((_, i) => i !== index));
     this.collaboratorCount.set(this.collaborators().length);
   }

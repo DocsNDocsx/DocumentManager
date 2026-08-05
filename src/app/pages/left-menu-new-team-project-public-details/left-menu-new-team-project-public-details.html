@@ -112,7 +112,7 @@
           class="form-control"
           id="expectedCollaborators"
           placeholder="e.g., 50"
-          min="1"
+          [min]="minimumCollaborators()"
           [ngModel]="expectedCollaborators()"
           (ngModelChange)="expectedCollaborators.set($event)"
           required

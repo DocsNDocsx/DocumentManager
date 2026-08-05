@@ -19,6 +19,7 @@ describe('LeftMenuNewTeamProjectPrivateCollaboratorsComponent', () => {
   beforeEach(async () => {
     wizard = {
       projectId: signal('team-project-1'),
+      project: signal({ status: 'draft' }),
       isSaving: signal(false),
       saveCollaborators: vi.fn(() => of({})),
       reset: vi.fn(),
@@ -78,6 +79,25 @@ describe('LeftMenuNewTeamProjectPrivateCollaboratorsComponent', () => {
 
     expect(wizard.saveCollaborators).toHaveBeenCalledWith(component.collaborators());
     expect(router.navigate).toHaveBeenCalledWith(['/new-team-project/private/documents']);
+  });
+
+  it('does not reduce collaborators while editing an active project', () => {
+    wizard.project.set({ status: 'active' });
+    http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1/collaborators`).flush({
+      success: true,
+      collaborators: [
+        { firstName: 'Alice', lastName: 'Morgan', email: 'alice@example.com', affiliation: '', role: 'contributor' },
+        { firstName: 'Bob', lastName: 'Chen', email: 'bob@example.com', affiliation: '', role: 'contributor' },
+      ],
+    });
+
+    component.removeCollab(1);
+    component.onCountInput({ target: { value: '1' } } as unknown as Event);
+    component.generateForms();
+
+    expect(component.minimumCollaboratorCount()).toBe(2);
+    expect(component.collaborators()).toHaveLength(2);
+    expect(component.collaboratorCount()).toBe(2);
   });
 
   it('redirects to details when project id is missing', async () => {

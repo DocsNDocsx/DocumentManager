@@ -408,6 +408,9 @@ exports.updateTeamProject = async (req, res) => {
         deadlineCalendarDate(deadline) < deadlineCalendarDate(existing[0].deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
     }
+    if (existing[0].status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(existing[0].expected_collaborators ?? 0)) {
+      return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
+    }
     const teamBillingIncreased = existing[0].status === 'active' && (
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(existing[0].deadline)) ||
       (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(existing[0].expected_collaborators ?? 0))
@@ -558,6 +561,9 @@ exports.saveProjectCollaborators = async (req, res) => {
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
     if (existing[0].status === 'active' && Array.isArray(collaborators)) {
       const [currentCollaborators] = await pool.query('SELECT COUNT(*) AS count FROM team_project_collaborators WHERE project_id = ?', [id]);
+      if (collaborators.length < Number(currentCollaborators[0]?.count ?? 0)) {
+        return res.status(409).json({ success: false, message: 'The collaborator count of an active project cannot be reduced' });
+      }
       if (collaborators.length > Number(currentCollaborators[0]?.count ?? 0)) await preservePaidTeamConfiguration(existing[0]);
     }
 

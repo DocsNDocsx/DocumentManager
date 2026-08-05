@@ -482,6 +482,7 @@
 
 .collab-copy-btn { flex-shrink: 0; white-space: nowrap; }
 .collab-copy-btn:disabled { opacity: 0.65; cursor: wait; }
+.collab-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .55rem; }
 .review-inline-error { margin: 0 1.75rem 1rem; padding: 0.75rem 1rem; color: #991b1b; background: #fdecea; border-radius: 8px; }
 
 .review-overlay { background: rgba(0,0,0,0.62); backdrop-filter: blur(3px); z-index: 2100; }

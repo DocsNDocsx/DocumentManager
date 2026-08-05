@@ -220,7 +220,9 @@
       <div class="view-modal-header">
         <div>
           <h2 class="view-modal-title">{{ vp.name }}</h2>
-          <p class="view-modal-subtitle">Select a collaborator to review their latest document submission.</p>
+          <p class="view-modal-subtitle">
+            {{ isProjectOwner(vp) ? 'Review submissions or upload documents on behalf of a collaborator.' : 'View your documents, upload files, and submit them for review.' }}
+          </p>
         </div>
         <button class="view-modal-close" type="button" (click)="closeViewModal()" aria-label="Close modal">
           <i class="fas fa-times" aria-hidden="true"></i>
@@ -231,20 +233,32 @@
         @if (vp.collaborators.length === 0) {
           <p class="no-collabs-msg">This project has no collaborators yet.</p>
         }
-        @for (collab of vp.collaborators; track collab.email) {
+        @for (entry of visibleCollaborators(vp); track entry.collaborator.email) {
+          @let collab = entry.collaborator;
           <div class="collab-link-row">
             <div class="collab-avatar">{{ getInitials(collab.firstName, collab.lastName) }}</div>
             <div class="collab-info">
               <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
               <div class="collab-email">{{ collab.email }}</div>
             </div>
-            <button class="copy-btn collab-copy-btn" type="button"
-              [disabled]="reviewLoadingIndex() === $index"
-              (click)="openCollaboratorReview(vp, $index)"
-              aria-label="Review submissions from {{ collab.firstName }} {{ collab.lastName }}">
-              <i class="fas" [class.fa-spinner]="reviewLoadingIndex() === $index" [class.fa-spin]="reviewLoadingIndex() === $index" [class.fa-file-circle-check]="reviewLoadingIndex() !== $index" aria-hidden="true"></i>
-              {{ reviewLoadingIndex() === $index ? 'Loading' : 'Review' }}
-            </button>
+            <div class="collab-actions">
+              @if (isProjectOwner(vp)) {
+                <button class="copy-btn collab-copy-btn" type="button"
+                  [disabled]="reviewLoadingIndex() === entry.index"
+                  (click)="openCollaboratorReview(vp, entry.index)"
+                  aria-label="Review submissions from {{ collab.firstName }} {{ collab.lastName }}">
+                  <i class="fas" [class.fa-spinner]="reviewLoadingIndex() === entry.index" [class.fa-spin]="reviewLoadingIndex() === entry.index" [class.fa-file-circle-check]="reviewLoadingIndex() !== entry.index" aria-hidden="true"></i>
+                  {{ reviewLoadingIndex() === entry.index ? 'Loading' : 'Review' }}
+                </button>
+                <button class="copy-btn collab-copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, entry.index)">
+                  <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
+                </button>
+              } @else {
+                <button class="copy-btn collab-copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, entry.index)">
+                  <i class="fas fa-folder-open" aria-hidden="true"></i> View &amp; Submit
+                </button>
+              }
+            </div>
           </div>
         }
       </div>

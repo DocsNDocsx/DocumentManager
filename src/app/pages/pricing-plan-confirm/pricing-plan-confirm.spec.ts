@@ -11,8 +11,6 @@ describe('PricingPlanConfirmComponent', () => {
 
   beforeEach(async () => {
     queryParams$ = new BehaviorSubject<Record<string, string>>({});
-    vi.spyOn(Math, 'random').mockReturnValue(0.123456);
-
     await TestBed.configureTestingModule({
       imports: [PricingPlanConfirmComponent, RouterModule.forRoot([])],
       providers: [
@@ -39,8 +37,7 @@ describe('PricingPlanConfirmComponent', () => {
     expect(component.days()).toBe(20);
     expect(component.amountCharged()).toBe('0.00');
     expect(component.customerName()).toBe('Customer');
-    expect(component.confirmationNumber()).toMatch(/^DN-2026-/);
-    expect(component.nextBillingText()).toContain('Your next billing date is');
+    expect(component.projectId()).toBe('Not available');
   });
 
   it('reads billing confirmation details from query params', () => {
@@ -52,6 +49,7 @@ describe('PricingPlanConfirmComponent', () => {
       days: '30',
       total: '94.50',
       name: 'Mridul Mishra',
+      projectId: 'project-123',
     });
     component.ngOnInit();
 
@@ -62,5 +60,6 @@ describe('PricingPlanConfirmComponent', () => {
     expect(component.days()).toBe(30);
     expect(component.amountCharged()).toBe('94.50');
     expect(component.customerName()).toBe('Mridul Mishra');
+    expect(component.projectId()).toBe('project-123');
   });
 });

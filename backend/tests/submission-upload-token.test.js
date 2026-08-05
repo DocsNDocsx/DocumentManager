@@ -89,6 +89,26 @@ describe('private Blob client token route', () => {
     expect(response.body.message).toBe('Invalid collaborator');
   });
 
+  it('allows the project owner to upload for a collaborator', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ ...projectRow(), user_id: 'owner-1', collaborators: JSON.stringify([{ email: 'bob@example.com' }]) }]])
+      .mockResolvedValueOnce([[{ userid: 'owner-1' }]]);
+
+    const response = await request(app())
+      .post('/api/projects/project-1/submissions/upload-token')
+      .send({
+        type: 'blob.generate-client-token',
+        payload: {
+          pathname: 'submissions/solo/project-1/0/doc-0-resume.pdf',
+          clientPayload: JSON.stringify({ collabIndex: 0, docIndex: 0 }),
+          multipart: true,
+        },
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.clientToken).toBe('client-token');
+  });
+
   it('returns a service error when private Blob is not configured', async () => {
     delete process.env.BLOB_READ_WRITE_TOKEN;
 

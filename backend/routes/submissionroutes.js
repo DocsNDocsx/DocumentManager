@@ -59,7 +59,7 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
       request: req,
       body: req.body,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        const [projects] = await pool.query('SELECT id, status, deadline, collaborators, documents FROM projects WHERE id = ?', [projectId]);
+        const [projects] = await pool.query('SELECT id, user_id, status, deadline, collaborators, documents FROM projects WHERE id = ?', [projectId]);
         if (projects.length === 0) throw new Error('Project not found');
         if (projects[0].status !== 'active' || (projects[0].deadline && new Date(projects[0].deadline) < new Date())) {
           throw new Error('Project is not accepting submissions');
@@ -71,7 +71,10 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
         const documents = parseArray(projects[0].documents);
         if (!Number.isInteger(collabIndex) || !collaborators[collabIndex]) throw new Error('Invalid collaborator');
         if (!Number.isInteger(docIndex) || !documents[docIndex]) throw new Error('Invalid document');
-        if (String(collaborators[collabIndex]?.email ?? '').toLowerCase() !== String(req.user?.email ?? '').toLowerCase()) {
+        const isCollaborator = String(collaborators[collabIndex]?.email ?? '').toLowerCase() === String(req.user?.email ?? '').toLowerCase();
+        const [users] = isCollaborator ? [[]] : await pool.query('SELECT userid FROM users WHERE email = ?', [req.user?.email]);
+        const isOwner = users[0]?.userid != null && String(users[0].userid) === String(projects[0].user_id);
+        if (!isOwner && !isCollaborator) {
           throw new Error('Unauthorized collaborator');
         }
         const expectedPrefix = `submissions/solo/${projectId}/${collabIndex}/doc-${docIndex}-`;

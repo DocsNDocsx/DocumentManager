@@ -52,7 +52,7 @@
             class="count-input"
             [value]="collaboratorCount()"
             (input)="onCountInput($event)"
-            min="1"
+            [min]="minimumCollaboratorCount()"
             aria-describedby="planNote"
           />
         </div>
@@ -80,6 +80,7 @@
                   class="btn-remove"
                   type="button"
                   (click)="removeCollab(i)"
+                  [disabled]="collaborators().length <= minimumCollaboratorCount()"
                   [attr.aria-label]="'Remove collaborator ' + (i + 1)">
                   <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
