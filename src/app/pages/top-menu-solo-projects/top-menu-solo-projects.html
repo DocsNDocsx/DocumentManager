@@ -252,7 +252,7 @@
                 </button>
                 @if (isCurrentUserCollaborator(vp, entry.index)) {
                   <button class="copy-btn collab-copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, entry.index)">
-                    <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
+                    <i class="fas fa-upload" aria-hidden="true"></i> Upload
                   </button>
                 }
               } @else {
@@ -266,12 +266,7 @@
       </div>
       @if (reviewEmptyIndex() !== null) {
         <div class="review-empty-state" role="status">
-          <div><strong>No document has been submitted yet.</strong><span> Upload the required document before attempting a review.</span></div>
-          @if (isCurrentUserCollaborator(vp, reviewEmptyIndex()!)) {
-            <button class="copy-btn" type="button" (click)="openCollaboratorWorkspace(vp, reviewEmptyIndex()!)">
-              <i class="fas fa-upload" aria-hidden="true"></i> Upload &amp; Submit
-            </button>
-          }
+          <div><strong>No document has been submitted yet.</strong><span> A document must be submitted before it can be reviewed.</span></div>
         </div>
       }
       @if (reviewError()) { <div class="review-inline-error" role="alert">{{ reviewError() }}</div> }
