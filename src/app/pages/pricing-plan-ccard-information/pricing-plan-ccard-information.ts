@@ -485,7 +485,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
           this.activateProjectAfterSubscription()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-              next: () => this.navigateToConfirmation(),
+              next: response => this.navigateToConfirmation((response as any)?.project?.projectCode ?? null),
               error: err => {
                 const reason = err?.error?.message ?? 'Project activation failed.';
                 this.validationError.set(`Your subscription was created, but the project could not be activated: ${reason}`);
@@ -519,7 +519,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     return this.http.patch(`${environment.apiUrl}/projects/${projectId}/activate`, {});
   }
 
-  private navigateToConfirmation(): void {
+  private navigateToConfirmation(activatedProjectCode: string | null = null): void {
     this.processing.set(false);
     this.teardownPaymentElement();
     this.router.navigate(['/pricing-plan-confirm'], {
@@ -532,6 +532,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         total: this.total().toFixed(2),
         voucherCode: this.appliedVoucherCode() || null,
         projectId: this.activationProjectId() || null,
+        projectCode: activatedProjectCode || this.route.snapshot.queryParamMap.get('projectCode') || null,
         name: `${this.firstName()} ${this.lastName()}`,
       },
     });
@@ -550,6 +551,8 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       customerId: this.customerId,
     });
     if (this.activationProjectId()) params.set('projectId', this.activationProjectId());
+    const projectCode = this.route.snapshot.queryParamMap.get('projectCode');
+    if (projectCode) params.set('projectCode', projectCode);
     if (this.isUpgrade()) params.set('upgrade', '1');
     if (this.extensionDays()) params.set('extensionDays', String(this.extensionDays()));
     if (this.appliedVoucherCode()) params.set('voucherCode', this.appliedVoucherCode());

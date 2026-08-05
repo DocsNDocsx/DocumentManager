@@ -28,6 +28,7 @@ export class PricingPlanConfirmComponent implements OnInit {
   amountCharged = signal('0.00');
   customerName  = signal('Customer');
   projectId = signal('Not available');
+  projectCode = signal('');
 
   ngOnInit(): void {
     this.route.queryParams
@@ -43,6 +44,7 @@ export class PricingPlanConfirmComponent implements OnInit {
         this.amountCharged.set(params['total'] || '0.00');
         this.customerName.set(params['name'] || 'Customer');
         this.projectId.set(params['projectId'] || 'Not available');
+        this.projectCode.set(params['projectCode'] || '');
       });
   }
 }

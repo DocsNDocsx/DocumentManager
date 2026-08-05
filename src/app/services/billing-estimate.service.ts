@@ -17,7 +17,9 @@ const LEGACY_TIME_ZONES: Record<string, string> = {
   'UTC+1': 'Europe/Paris',
 };
 
-type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'>;
+type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'> & {
+  projectCode?: string | null;
+};
 
 @Injectable({ providedIn: 'root' })
 export class BillingEstimateService {
@@ -58,6 +60,7 @@ export class BillingEstimateService {
       subscriptionRequired: '1',
       type,
       projectId: project.id,
+      ...(project.projectCode ? { projectCode: project.projectCode } : {}),
       projects,
       collaborators,
       documents,

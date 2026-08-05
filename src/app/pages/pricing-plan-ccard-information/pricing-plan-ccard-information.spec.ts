@@ -326,7 +326,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     const activationReq = http.expectOne(`${environment.apiUrl}/teams/projects/team-project-1`);
     expect(activationReq.request.method).toBe('PATCH');
     expect(activationReq.request.body).toEqual({ status: 'active', completedStep: 5 });
-    activationReq.flush({ success: true, project: { id: 'team-project-1', status: 'active' } });
+    activationReq.flush({ success: true, project: { id: 'team-project-1', status: 'active', projectCode: 'PRJ-2TJS-FYD7' } });
     expect(stripe.confirmCardSetup).toHaveBeenCalledWith(
       'seti_secret',
       expect.objectContaining({
@@ -344,6 +344,7 @@ describe('PricingPlanCcardInformationComponent', () => {
         total: '21.14',
         voucherCode: 'LAUNCH25',
         projectId: 'team-project-1',
+        projectCode: 'PRJ-2TJS-FYD7',
         name: 'Mridul Mishra',
       }),
     });

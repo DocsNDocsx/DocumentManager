@@ -52,7 +52,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
 
   steps = computed(() => {
     const done = this.wizardService.completedStep();
-    const labels = ['Details', 'Collaborators', 'Documents', 'Assignments', 'Staff', 'Decision'];
+    const labels = ['Details', 'Collaborators', 'Documents', 'Assignments', 'Staff', 'Decision', 'Payment'];
     return labels.map((label, i) => ({
       label,
       state: i === 1 ? 'active' : i < done ? 'completed' : 'locked',

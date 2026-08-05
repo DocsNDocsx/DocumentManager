@@ -56,7 +56,7 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
 
   steps = computed(() => {
     const done = this.wizardService.completedStep();
-    const labels = ['Details', 'Collaborators', 'Documents', 'Assignments', 'Staff', 'Decision'];
+    const labels = ['Details', 'Collaborators', 'Documents', 'Assignments', 'Staff', 'Decision', 'Payment'];
     return labels.map((label, i) => ({
       label,
       state: i === 2 ? 'active' : i < done ? 'completed' : 'locked',

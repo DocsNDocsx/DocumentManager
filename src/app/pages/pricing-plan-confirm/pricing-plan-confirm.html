@@ -34,8 +34,8 @@
       <span class="detail-value">${{ amountCharged() }}</span>
     </div>
     <div class="detail-row">
-      <span class="detail-label">Project ID</span>
-      <span class="detail-value">{{ projectId() }}</span>
+      <span class="detail-label">{{ projectCode() ? 'Project Code' : 'Project ID' }}</span>
+      <span class="detail-value">{{ projectCode() || projectId() }}</span>
     </div>
   </div>
 

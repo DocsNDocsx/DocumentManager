@@ -44,7 +44,7 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
 
   steps = computed(() => {
     const done = this.wizardService.completedStep();
-    const labels = ['Details', 'Collaborators', 'Documents', 'Assignments', 'Staff', 'Decision'];
+    const labels = ['Details', 'Collaborators', 'Documents', 'Assignments', 'Staff', 'Decision', 'Payment'];
     return labels.map((label, i) => ({
       label,
       state: i === 5 ? 'active' : i < done ? 'completed' : 'locked',

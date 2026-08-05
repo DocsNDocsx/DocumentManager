@@ -50,6 +50,7 @@ describe('PricingPlanConfirmComponent', () => {
       total: '94.50',
       name: 'Mridul Mishra',
       projectId: 'project-123',
+      projectCode: 'PRJ-2TJS-FYD7',
     });
     component.ngOnInit();
 
@@ -61,5 +62,6 @@ describe('PricingPlanConfirmComponent', () => {
     expect(component.amountCharged()).toBe('94.50');
     expect(component.customerName()).toBe('Mridul Mishra');
     expect(component.projectId()).toBe('project-123');
+    expect(component.projectCode()).toBe('PRJ-2TJS-FYD7');
   });
 });
