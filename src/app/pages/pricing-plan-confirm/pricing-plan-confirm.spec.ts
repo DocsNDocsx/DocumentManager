@@ -64,4 +64,15 @@ describe('PricingPlanConfirmComponent', () => {
     expect(component.projectId()).toBe('project-123');
     expect(component.projectCode()).toBe('PRJ-2TJS-FYD7');
   });
+
+  it('does not display the internal project id for a solo private confirmation', () => {
+    queryParams$.next({ type: 'solo', visibility: 'private', projectId: 'private-project-uuid' });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(component.projectVisibility()).toBe('private');
+    expect(text).not.toContain('Project ID');
+    expect(text).not.toContain('private-project-uuid');
+  });
 });

@@ -33,10 +33,17 @@
       <span class="detail-label">Est. amount charged</span>
       <span class="detail-value">${{ amountCharged() }}</span>
     </div>
-    <div class="detail-row">
-      <span class="detail-label">{{ projectCode() ? 'Project Code' : 'Project ID' }}</span>
-      <span class="detail-value">{{ projectCode() || projectId() }}</span>
-    </div>
+    @if (projectCode()) {
+      <div class="detail-row">
+        <span class="detail-label">Project Code</span>
+        <span class="detail-value">{{ projectCode() }}</span>
+      </div>
+    } @else if (!(projectType() === 'Solo' && projectVisibility() === 'private')) {
+      <div class="detail-row">
+        <span class="detail-label">Project ID</span>
+        <span class="detail-value">{{ projectId() }}</span>
+      </div>
+    }
   </div>
 
   <div class="receipt-info">

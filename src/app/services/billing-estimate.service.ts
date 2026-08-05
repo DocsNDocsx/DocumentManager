@@ -19,6 +19,7 @@ const LEGACY_TIME_ZONES: Record<string, string> = {
 
 type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'> & {
   projectCode?: string | null;
+  type?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -61,6 +62,7 @@ export class BillingEstimateService {
       type,
       projectId: project.id,
       ...(project.projectCode ? { projectCode: project.projectCode } : {}),
+      ...(project.type ? { visibility: project.type } : {}),
       projects,
       collaborators,
       documents,

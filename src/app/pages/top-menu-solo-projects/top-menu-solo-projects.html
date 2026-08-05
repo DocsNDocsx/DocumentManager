@@ -282,6 +282,19 @@
         <button type="button" class="view-modal-close" (click)="closeReviewModal()" aria-label="Close review"><i class="fas fa-times"></i></button>
       </div>
       <div class="review-modal-body">
+        @if (reviewSubmissions().length > 1) {
+          <section class="review-document-selector" aria-label="Submitted documents">
+            <strong>Submitted Documents ({{ reviewSubmissions().length }})</strong>
+            <div class="review-document-tabs">
+              @for (document of reviewSubmissions(); track document.id) {
+                <button type="button" [class.active]="document.id === sub.id" (click)="selectReviewSubmission(document)">
+                  <span>{{ document.documentType }}</span>
+                  <small [attr.data-status]="document.status">{{ reviewStatusLabel(document.status) }}</small>
+                </button>
+              }
+            </div>
+          </section>
+        }
         <section><strong>Collaborator Information</strong><div class="review-value">{{ sub.collaborator.firstName }} {{ sub.collaborator.lastName }} ({{ sub.collaborator.email }})</div></section>
         <section><strong>Document Type</strong><div class="review-value">{{ sub.documentType }}</div></section>
         <section><strong>Submission Date</strong><div class="review-value">{{ formatReviewDate(sub.submittedDate) }}</div></section>

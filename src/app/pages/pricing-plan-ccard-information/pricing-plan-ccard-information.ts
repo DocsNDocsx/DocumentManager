@@ -53,6 +53,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   days          = signal(20);
   monthlyBase   = signal(0);
   activationProjectId = signal('');
+  projectVisibility = signal('');
   isUpgrade = signal(false);
   extensionDays = signal(0);
   proratedUpgradeAmount = signal<number | null>(null);
@@ -133,6 +134,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
         this.activationProjectId.set(String(params['projectId'] || ''));
+        this.projectVisibility.set(String(params['visibility'] || ''));
         this.isUpgrade.set(params['upgrade'] === '1');
         this.extensionDays.set(Math.max(0, Number(params['extensionDays']) || 0));
         if (this.isUpgrade() && this.activationProjectId()) this.loadUpgradePreview();
@@ -533,6 +535,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         voucherCode: this.appliedVoucherCode() || null,
         projectId: this.activationProjectId() || null,
         projectCode: activatedProjectCode || this.route.snapshot.queryParamMap.get('projectCode') || null,
+        visibility: this.projectVisibility() || null,
         name: `${this.firstName()} ${this.lastName()}`,
       },
     });
@@ -551,6 +554,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       customerId: this.customerId,
     });
     if (this.activationProjectId()) params.set('projectId', this.activationProjectId());
+    if (this.projectVisibility()) params.set('visibility', this.projectVisibility());
     const projectCode = this.route.snapshot.queryParamMap.get('projectCode');
     if (projectCode) params.set('projectCode', projectCode);
     if (this.isUpgrade()) params.set('upgrade', '1');

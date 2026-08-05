@@ -42,6 +42,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   incompleteProject = signal<Project | null>(null);
   incompleteRequirements = signal<string[]>([]);
   reviewingSubmission = signal<ReviewSubmission | null>(null);
+  reviewSubmissions = signal<ReviewSubmission[]>([]);
   reviewDecision = signal<ReviewDecision>(null);
   reviewComments = signal('');
   reviewLoadingIndex = signal<number | null>(null);
@@ -179,23 +180,30 @@ export class TopMenuSoloProjectsComponent implements OnInit {
         const submissions = response.submissions
           .filter(submission => submission.collaborator_index === collaboratorIndex)
           .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
-        const submission = submissions.find(item => item.status === 'submitted') ?? submissions[0];
         this.reviewLoadingIndex.set(null);
-        if (!submission) {
+        if (submissions.length === 0) {
           this.reviewEmptyIndex.set(collaboratorIndex);
           return;
         }
+        const latestByDocument = new Map<number, DbSubmission>();
+        for (const submission of submissions) {
+          if (!latestByDocument.has(submission.document_index)) latestByDocument.set(submission.document_index, submission);
+        }
+        const reviewItems = [...latestByDocument.values()]
+          .sort((a, b) => a.document_index - b.document_index)
+          .map(submission => ({
+            id: submission.id, projectId: project.id, collaboratorIndex, documentIndex: submission.document_index,
+            collaborator: project.collaborators[collaboratorIndex],
+            documentType: project.documents[submission.document_index]?.name ?? 'Document',
+            fileName: submission.file_name, submittedDate: submission.submitted_at,
+            status: (submission.status === 'submitted' ? 'pending' : submission.status) as ReviewSubmission['status'],
+            comments: submission.feedback,
+          }));
         this.viewingProject.set(null);
         this.reviewDecision.set(null);
         this.reviewComments.set('');
-        this.reviewingSubmission.set({
-          id: submission.id, projectId: project.id, collaboratorIndex, documentIndex: submission.document_index,
-          collaborator: project.collaborators[collaboratorIndex],
-          documentType: project.documents[submission.document_index]?.name ?? 'Document',
-          fileName: submission.file_name, submittedDate: submission.submitted_at,
-          status: submission.status === 'submitted' ? 'pending' : submission.status,
-          comments: submission.feedback,
-        });
+        this.reviewSubmissions.set(reviewItems);
+        this.reviewingSubmission.set(reviewItems.find(item => item.status === 'pending') ?? reviewItems[0]);
       },
       error: err => {
         this.reviewLoadingIndex.set(null);
@@ -205,7 +213,18 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     });
   }
 
-  closeReviewModal(): void { this.reviewingSubmission.set(null); this.reviewDecision.set(null); this.reviewComments.set(''); }
+  selectReviewSubmission(submission: ReviewSubmission): void {
+    this.reviewingSubmission.set(submission);
+    this.reviewDecision.set(null);
+    this.reviewComments.set('');
+    this.reviewError.set(null);
+  }
+
+  reviewStatusLabel(status: ReviewSubmission['status']): string {
+    return ({ pending: 'Pending review', approved: 'Approved', revision: 'Revision required', rejected: 'Declined' })[status];
+  }
+
+  closeReviewModal(): void { this.reviewingSubmission.set(null); this.reviewSubmissions.set([]); this.reviewDecision.set(null); this.reviewComments.set(''); }
   chooseReviewDecision(decision: Exclude<ReviewDecision, null>): void { this.reviewDecision.set(decision); this.reviewComments.set(''); }
   submitReviewDecision(): void {
     const submission = this.reviewingSubmission();

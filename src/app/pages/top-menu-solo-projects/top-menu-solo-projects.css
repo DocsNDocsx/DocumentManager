@@ -495,6 +495,14 @@
 .review-modal-body { padding: 1.75rem 2rem; }
 .review-modal-body section { margin-bottom: 1.4rem; }
 .review-modal-body section > strong, .review-modal-body label { display: block; margin-bottom: .55rem; color: var(--text-dark); }
+.review-document-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .65rem; }
+.review-document-tabs button { padding: .75rem .9rem; display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; border: 1px solid var(--border-color); border-radius: 9px; background: var(--bg-light); color: var(--text-dark); cursor: pointer; text-align: left; }
+.review-document-tabs button.active { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(23,107,91,.14); background: #edf7f4; }
+.review-document-tabs span { font-weight: 700; }
+.review-document-tabs small { color: var(--text-light); }
+.review-document-tabs small[data-status="pending"] { color: #9a6700; }
+.review-document-tabs small[data-status="approved"] { color: #147a55; }
+.review-document-tabs small[data-status="rejected"] { color: #a12a2a; }
 .review-value { padding: .85rem 1rem; border: 1px solid var(--border-color); border-radius: 9px; background: var(--bg-light); color: var(--text-dark); }
 .review-document-preview { padding: 2rem; border: 2px dashed var(--border-color); border-radius: 12px; background: var(--bg-light); text-align: center; }
 .review-document-preview > i { display: block; font-size: 3.2rem; color: var(--text-light); margin-bottom: .65rem; }

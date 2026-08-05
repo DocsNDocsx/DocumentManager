@@ -40,6 +40,7 @@ describe('BillingEstimateService', () => {
   it('builds solo activation query from actual deadline days without a monthly cap', () => {
     const query = service.buildSoloActivationQuery({
       id: 'solo-project-1',
+      type: 'private',
       deadline: '2026-09-15',
       documents: [{ name: 'Resume' }],
       expectedCollaborators: 3,
@@ -49,6 +50,7 @@ describe('BillingEstimateService', () => {
       subscriptionRequired: '1',
       type: 'solo',
       projectId: 'solo-project-1',
+      visibility: 'private',
       projects: 1,
       collaborators: 3,
       documents: 1,
