@@ -12,9 +12,10 @@ function authorizeCron(req, res) {
   return true;
 }
 
-// Called daily by Vercel Cron. Vercel automatically sends:
+// Called daily by Vercel Cron using GET. Vercel automatically sends:
 //   Authorization: Bearer <CRON_SECRET>
-router.post('/internal/deadline-reminders', async (req, res) => {
+// POST remains available for authenticated manual/internal invocations.
+async function runDeadlineReminders(req, res) {
   if (!authorizeCron(req, res)) return;
 
   const [reminderResult, cleanupResult] = await Promise.allSettled([
@@ -35,7 +36,10 @@ router.post('/internal/deadline-reminders', async (req, res) => {
     remindersSent: reminderResult.status === 'fulfilled' ? reminderResult.value : null,
     staleCleanup: cleanupResult.status === 'fulfilled' ? cleanupResult.value : null,
   });
-});
+}
+
+router.get('/internal/deadline-reminders', runDeadlineReminders);
+router.post('/internal/deadline-reminders', runDeadlineReminders);
 
 router.post('/internal/stale-project-cleanup', async (req, res) => {
   if (!authorizeCron(req, res)) return;
