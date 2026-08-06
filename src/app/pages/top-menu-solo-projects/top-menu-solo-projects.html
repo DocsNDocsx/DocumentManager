@@ -238,7 +238,7 @@
           <div class="collab-link-row">
             <div class="collab-avatar">{{ getInitials(collab.firstName, collab.lastName) }}</div>
             <div class="collab-info">
-              <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
+              <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }} @if (collab.status === 'inactive') { <span class="status-badge">Removed</span> }</div>
               <div class="collab-email">{{ collab.email }}</div>
             </div>
             <div class="collab-actions">

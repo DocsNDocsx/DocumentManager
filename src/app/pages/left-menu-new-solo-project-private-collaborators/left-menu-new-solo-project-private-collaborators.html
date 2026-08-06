@@ -57,11 +57,13 @@
           <h2 class="section-title"><i class="fas fa-user-edit" aria-hidden="true"></i> Collaborator Details</h2>
         </div>
         @for (collab of collaborators(); track trackByIndex($index); let i = $index) {
-          <div class="collab-card">
+          <div class="collab-card" [class.inactive]="collab.status === 'inactive'">
             <div class="collab-header">
               <span class="collab-number">Collaborator {{ i + 1 }}</span>
-              @if (collaborators().length > 1) {
-                <button class="btn-remove" type="button" (click)="removeCollaborator(i)" [disabled]="collaborators().length <= minimumCollaboratorCount()" [attr.aria-label]="'Remove collaborator ' + (i + 1)">
+              @if (collab.status === 'inactive') {
+                <span class="inactive-badge">Removed</span>
+              } @else if (activeCollaboratorCount() > 1) {
+                <button class="btn-remove" type="button" (click)="removeCollaborator(i)" [attr.aria-label]="'Remove collaborator ' + (i + 1)">
                   <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
               }
@@ -69,19 +71,19 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" [for]="'firstName-' + i">First Name <span aria-hidden="true">*</span></label>
-                <input type="text" class="form-control" [id]="'firstName-' + i" placeholder="John" [value]="collab.firstName" (input)="updateField(i, 'firstName', $any($event.target).value)" required aria-required="true" />
+                <input type="text" class="form-control" [id]="'firstName-' + i" placeholder="John" [value]="collab.firstName" [disabled]="collab.status === 'inactive'" (input)="updateField(i, 'firstName', $any($event.target).value)" required aria-required="true" />
               </div>
               <div class="form-group">
                 <label class="form-label" [for]="'lastName-' + i">Last Name <span aria-hidden="true">*</span></label>
-                <input type="text" class="form-control" [id]="'lastName-' + i" placeholder="Doe" [value]="collab.lastName" (input)="updateField(i, 'lastName', $any($event.target).value)" required aria-required="true" />
+                <input type="text" class="form-control" [id]="'lastName-' + i" placeholder="Doe" [value]="collab.lastName" [disabled]="collab.status === 'inactive'" (input)="updateField(i, 'lastName', $any($event.target).value)" required aria-required="true" />
               </div>
               <div class="form-group">
                 <label class="form-label" [for]="'email-' + i">Email Address <span aria-hidden="true">*</span></label>
-                <input type="email" class="form-control" [id]="'email-' + i" placeholder="john@example.com" [value]="collab.email" (input)="updateField(i, 'email', $any($event.target).value)" required aria-required="true" />
+                <input type="email" class="form-control" [id]="'email-' + i" placeholder="john@example.com" [value]="collab.email" [disabled]="collab.status === 'inactive'" (input)="updateField(i, 'email', $any($event.target).value)" required aria-required="true" />
               </div>
               <div class="form-group">
                 <label class="form-label" [for]="'affiliation-' + i">Affiliation</label>
-                <input type="text" class="form-control" [id]="'affiliation-' + i" placeholder="University / Company" [value]="collab.affiliation" (input)="updateField(i, 'affiliation', $any($event.target).value)" />
+                <input type="text" class="form-control" [id]="'affiliation-' + i" placeholder="University / Company" [value]="collab.affiliation" [disabled]="collab.status === 'inactive'" (input)="updateField(i, 'affiliation', $any($event.target).value)" />
               </div>
             </div>
           </div>

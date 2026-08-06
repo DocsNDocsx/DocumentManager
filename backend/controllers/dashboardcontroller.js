@@ -142,8 +142,7 @@ exports.getDashboardStats = async (req, res) => {
         [userid]
       ),
       pool.query(
-        `SELECT COALESCE(SUM(${jsonLen('collaborators')}), 0) AS cnt
-         FROM projects WHERE user_id = ? AND status = ?`,
+        `SELECT collaborators FROM projects WHERE user_id = ? AND status = ?`,
         [userid, 'active']
       ),
     ]);
@@ -156,7 +155,10 @@ exports.getDashboardStats = async (req, res) => {
     const soloProjects = Number(soloActiveRows[0].cnt);
     const teamProjects = Number(teamActiveRows[0].cnt);
     const documentsThisWeek = submissions.filter(row => new Date(row.submitted_at).getTime() >= weekAgo).length;
-    const activeCollaborators = Number(collaboratorsRows[0].cnt);
+    const activeCollaborators = collaboratorsRows.reduce((sum, row) => {
+      const collaborators = typeof row.collaborators === 'string' ? JSON.parse(row.collaborators || '[]') : (row.collaborators ?? []);
+      return sum + collaborators.filter(c => c?.status !== 'inactive').length;
+    }, 0);
     const totalBytes = submissions.reduce((sum, row) => sum + (Number(row.file_size) || 0), 0);
 
     res.json({
@@ -262,7 +264,7 @@ exports.getRecentProjects = async (req, res) => {
          p.project_code,
          p.description,
          ${jsonLen('p.documents')} AS document_count,
-         ${jsonLen('p.collaborators')} AS collaborator_count,
+         p.collaborators,
          p.expected_collaborators,
          p.deadline,
          p.updated_at,
@@ -298,7 +300,8 @@ exports.getRecentProjects = async (req, res) => {
     );
 
     const soloProjects = soloRows.map(row => {
-      const collaboratorCount = Number(row.collaborator_count) || 0;
+      const collaborators = typeof row.collaborators === 'string' ? JSON.parse(row.collaborators || '[]') : (row.collaborators ?? []);
+      const collaboratorCount = collaborators.filter(c => c?.status !== 'inactive').length;
       const submittedCount = Number(row.submitted_count) || 0;
       const isPublic = row.visibility === 'public';
 

@@ -60,7 +60,7 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
   documents = computed(() => this.project()?.documents ?? []);
   assignments = computed(() => this.project()?.assignments ?? {});
   supportStaff = computed(() => this.project()?.staff ?? null);
-  collabCount = computed(() => this.collaborators().length);
+  collabCount = computed(() => this.collaborators().filter(c => c.status !== 'inactive').length);
   supportCount = computed(() => this.supportStaff() ? 1 : 0);
   totalEmails = computed(() => this.collabCount() + this.supportCount());
 

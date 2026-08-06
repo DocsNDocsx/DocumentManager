@@ -90,19 +90,43 @@ describe('LeftMenuNewSoloProjectPrivateCollaboratorsComponent', () => {
     wizard.project.set({ status: 'active', collaborators: existing });
     component.ngOnInit();
 
-    expect(component.minimumCollaboratorCount()).toBe(2);
+    expect(component.minimumCollaboratorCount()).toBe(1);
     component.collaboratorCount.set(4);
     component.generateForms();
 
     expect(component.collaborators()).toEqual([
       ...existing,
-      { firstName: '', lastName: '', email: '', affiliation: '' },
-      { firstName: '', lastName: '', email: '', affiliation: '' },
+      { firstName: '', lastName: '', email: '', affiliation: '', status: 'active' },
+      { firstName: '', lastName: '', email: '', affiliation: '', status: 'active' },
     ]);
 
     component.collaboratorCount.set(1);
     component.generateForms();
     expect(component.collaborators()).toHaveLength(4);
+  });
+
+  it('allows unpaid collaborators to be removed down to the paid count', () => {
+    const paid = [
+      { firstName: 'Alice', lastName: 'Morgan', email: 'alice@example.com', affiliation: '' },
+      { firstName: 'Bob', lastName: 'Chen', email: 'bob@example.com', affiliation: '' },
+    ];
+    wizard.project.set({
+      status: 'active',
+      collaborators: [...paid,
+        { firstName: 'Cara', lastName: 'Diaz', email: 'cara@example.com', affiliation: '' },
+        { firstName: 'Dan', lastName: 'Evans', email: 'dan@example.com', affiliation: '' },
+      ],
+      pendingBillingUpgrade: { collaborators: paid, documents: [], assignments: {}, deadline: null, expectedCollaborators: null },
+    });
+    component.ngOnInit();
+
+    component.removeCollaborator(3);
+    component.removeCollaborator(2);
+    expect(component.collaborators().filter(c => c.status !== 'inactive')).toEqual(paid);
+    expect(component.collaborators().filter(c => c.status === 'inactive')).toHaveLength(2);
+
+    component.removeCollaborator(1);
+    expect(component.activeCollaboratorCount()).toBe(1);
   });
 
   it('removes collaborators but keeps the last remaining form', () => {

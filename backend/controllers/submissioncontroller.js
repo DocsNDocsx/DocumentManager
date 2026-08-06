@@ -91,6 +91,9 @@ exports.createSubmission = async (req, res) => {
     if (!Number.isInteger(collabIdx) || !collaborators[collabIdx]) {
       return res.status(400).json({ success: false, message: 'Invalid collaborator' });
     }
+    if (collaborators[collabIdx].status === 'inactive') {
+      return res.status(403).json({ success: false, message: 'This collaborator has been removed from the project' });
+    }
     if (req.user?.email) {
       const isCollaborator = String(collaborators[collabIdx].email ?? '').toLowerCase() === String(req.user.email).toLowerCase();
       if (!isCollaborator) {
@@ -365,6 +368,7 @@ exports.getSubmissions = async (req, res) => {
       const isOwner = String(projects[0].user_id) === String(ownerId);
       const collaborators = parseArray(projects[0].collaborators);
       const isRequestedCollaborator = collabIndex !== undefined
+        && collaborators[Number(collabIndex)]?.status !== 'inactive'
         && String(collaborators[Number(collabIndex)]?.email ?? '').toLowerCase() === String(req.user.email).toLowerCase();
       if (!isOwner && !isRequestedCollaborator) {
         return res.status(403).json({ success: false, message: 'You cannot view these submissions' });

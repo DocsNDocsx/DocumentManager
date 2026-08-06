@@ -70,6 +70,7 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
         const collaborators = parseArray(projects[0].collaborators);
         const documents = parseArray(projects[0].documents);
         if (!Number.isInteger(collabIndex) || !collaborators[collabIndex]) throw new Error('Invalid collaborator');
+        if (collaborators[collabIndex].status === 'inactive') throw new Error('Removed collaborator');
         if (!Number.isInteger(docIndex) || !documents[docIndex]) throw new Error('Invalid document');
         const isCollaborator = String(collaborators[collabIndex]?.email ?? '').toLowerCase() === String(req.user?.email ?? '').toLowerCase();
         if (!isCollaborator) {
@@ -93,6 +94,9 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
     const message = String(err?.message ?? 'Could not start upload');
     if (message === 'Unauthorized collaborator') {
       return res.status(403).json({ success: false, message: 'You are not authorized to upload for this collaborator.' });
+    }
+    if (message === 'Removed collaborator') {
+      return res.status(403).json({ success: false, message: 'This collaborator has been removed from the project.' });
     }
     if (message === 'Project not found') {
       return res.status(404).json({ success: false, message });

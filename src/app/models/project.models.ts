@@ -12,6 +12,8 @@ export interface ProjectCollaborator {
   lastName: string;
   email: string;
   affiliation: string;
+  status?: 'active' | 'inactive';
+  removedAt?: string | null;
 }
 
 export interface ProjectDocument {
@@ -59,6 +61,7 @@ export interface Project {
     assignments: ProjectAssignments;
     expectedCollaborators: number | null;
   } | null;
+  paidCollaboratorCapacity?: number | null;
 }
 
 export interface ProjectApiResponse {

@@ -40,6 +40,8 @@ function parseJson(value, fallback) {
   try { return JSON.parse(value); } catch { return fallback; }
 }
 
+const activeCollaboratorCount = collaborators => parseJson(collaborators, []).filter(c => c?.status !== 'inactive').length;
+
 function dateIncreaseDays(previousDeadline, currentDeadline) {
   const previous = /^\d{4}-\d{2}-\d{2}/.exec(String(previousDeadline ?? ''))?.[0];
   const current = /^\d{4}-\d{2}-\d{2}/.exec(String(currentDeadline ?? ''))?.[0];
@@ -63,12 +65,12 @@ async function paidUpgradeUsage(projectId, record, requested) {
   } else {
     const [projects] = await pool.query('SELECT type, deadline, expected_collaborators, collaborators, documents FROM projects WHERE id = ?', [projectId]);
     if (!projects?.[0]) return null;
-    current = { ...projects[0], collaboratorCount: parseJson(projects[0].collaborators, []).length };
+    current = { ...projects[0], collaboratorCount: activeCollaboratorCount(projects[0].collaborators) };
   }
 
   const baselineCollaborators = current.type === 'public'
     ? Number(baseline.expectedCollaborators ?? 1)
-    : Number(baseline.collaborators?.length ?? 1);
+    : Number((baseline.collaborators ?? []).filter(c => c?.status !== 'inactive').length || 1);
   const currentCollaborators = current.type === 'public'
     ? Number(current.expected_collaborators ?? 1)
     : current.collaboratorCount;

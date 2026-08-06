@@ -125,11 +125,12 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     const project = this.pendingPaymentProject();
     const baseline = project?.pendingBillingUpgrade;
     if (!project || !baseline) return;
-    const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : project.collaborators.length);
+    const activeCount = project.collaborators.filter(c => c.status !== 'inactive').length;
+    const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : Math.max(activeCount, project.paidCollaboratorCapacity ?? 0));
     if (!queryParams) return;
     const baselineQuery = this.billingEstimate.buildSoloActivationQuery(
       { ...project, deadline: baseline.deadline, documents: baseline.documents, expectedCollaborators: baseline.expectedCollaborators },
-      project.type === 'public' ? Number(baseline.expectedCollaborators) : baseline.collaborators.length,
+      project.type === 'public' ? Number(baseline.expectedCollaborators) : baseline.collaborators.filter(c => c.status !== 'inactive').length,
     );
     queryParams['monthly'] = Math.max(0, Number(queryParams['monthly']) - Number(baselineQuery?.['monthly'] ?? 0)).toFixed(2);
     queryParams['upgrade'] = '1';
@@ -156,14 +157,15 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   }
 
   isCurrentUserCollaborator(project: Project, collaboratorIndex: number): boolean {
-    return project.collaborators[collaboratorIndex]?.email.trim().toLowerCase() === this.auth.currentUserEmail().trim().toLowerCase();
+    const collaborator = project.collaborators[collaboratorIndex];
+    return collaborator?.status !== 'inactive' && collaborator?.email.trim().toLowerCase() === this.auth.currentUserEmail().trim().toLowerCase();
   }
 
   visibleCollaborators(project: Project): { collaborator: Project['collaborators'][number]; index: number }[] {
     const entries = project.collaborators.map((collaborator, index) => ({ collaborator, index }));
     if (this.isProjectOwner(project)) return entries;
     const email = this.auth.currentUserEmail().trim().toLowerCase();
-    return entries.filter(entry => entry.collaborator.email.trim().toLowerCase() === email);
+    return entries.filter(entry => entry.collaborator.status !== 'inactive' && entry.collaborator.email.trim().toLowerCase() === email);
   }
 
   openCollaboratorWorkspace(project: Project, collaboratorIndex: number): void {
@@ -330,7 +332,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
       error: err => {
         this.logger.error('Failed to activate project', err);
         if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
-          const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.collaborators?.length);
+          const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.collaborators?.filter(c => c.status !== 'inactive').length);
           if (!queryParams) return;
           this.router.navigate(['/pricing-plan-ccard-information'], {
             queryParams,

@@ -24,8 +24,10 @@ async function authenticatedUserId(req) {
 
 function includesCollaboratorEmail(value, email) {
   const collaborators = typeof value === 'string' ? JSON.parse(value || '[]') : (value ?? []);
-  return collaborators.some(c => String(c?.email ?? '').toLowerCase() === String(email ?? '').toLowerCase());
+  return collaborators.some(c => c?.status !== 'inactive' && String(c?.email ?? '').toLowerCase() === String(email ?? '').toLowerCase());
 }
+
+const activeCollaborators = collaborators => (collaborators ?? []).filter(c => c?.status !== 'inactive');
 
 function parseProject(row) {
   const jsonCols = ['collaborators', 'documents', 'assignments', 'attachments'];
@@ -70,6 +72,7 @@ function parseProject(row) {
     createdAt: parsed.created_at,
     updatedAt: parsed.updated_at,
     pendingBillingUpgrade,
+    paidCollaboratorCapacity: parsed.paid_collaborator_capacity == null ? null : Number(parsed.paid_collaborator_capacity),
   };
 }
 
@@ -181,9 +184,14 @@ exports.getProject = async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await pool.query(
-      `SELECT p.*, u.firstname AS owner_firstname, u.lastname AS owner_lastname
+      `SELECT p.*, u.firstname AS owner_firstname, u.lastname AS owner_lastname,
+              ppu.snapshot AS pending_billing_snapshot,
+              (SELECT ss.collaborators FROM stripe_subscriptions ss
+               WHERE ss.project_id = p.id AND ss.status IN ('active', 'trialing')
+               ORDER BY ss.created_at DESC LIMIT 1) AS paid_collaborator_capacity
        FROM projects p
        JOIN users u ON u.userid = p.user_id
+       LEFT JOIN pending_project_upgrades ppu ON ppu.project_id = p.id AND ppu.project_type = 'solo'
        WHERE p.id = ?`,
       [id]
     );
@@ -222,25 +230,41 @@ exports.updateProject = async (req, res) => {
       if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can update this project' });
       ownedProject = owned[0];
     }
-    if (ownedProject?.status === 'active' && deadline !== undefined &&
-        deadlineCalendarDate(deadline) < deadlineCalendarDate(ownedProject.deadline)) {
-      return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
-    }
     const currentSolo = ownedProject ? parseProject(ownedProject) : null;
-    if (ownedProject?.status === 'active' && collaborators !== undefined && collaborators.length < currentSolo.collaborators.length) {
-      return res.status(409).json({ success: false, message: 'The collaborator count of an active project cannot be reduced' });
+    let paidSolo = currentSolo;
+    if (ownedProject?.status === 'active') {
+      const [pendingRows] = await pool.query("SELECT snapshot FROM pending_project_upgrades WHERE project_id = ? AND project_type = 'solo'", [id]);
+      if (pendingRows.length > 0) {
+        const snapshot = typeof pendingRows[0].snapshot === 'string' ? JSON.parse(pendingRows[0].snapshot) : pendingRows[0].snapshot;
+        paidSolo = {
+          ...currentSolo,
+          deadline: snapshot.deadline,
+          collaborators: snapshot.collaborators ?? [],
+          documents: snapshot.documents ?? [],
+          assignments: snapshot.assignments ?? {},
+          expectedCollaborators: snapshot.expectedCollaborators ?? null,
+        };
+      }
     }
-    if (ownedProject?.status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(ownedProject.expected_collaborators ?? 0)) {
+    const [capacityRows] = ownedProject?.status === 'active'
+      ? await pool.query("SELECT collaborators FROM stripe_subscriptions WHERE project_id = ? AND status IN ('active', 'trialing') ORDER BY created_at DESC LIMIT 1", [id])
+      : [[]];
+    const paidCollaboratorCapacity = Number(capacityRows[0]?.collaborators ?? activeCollaborators(paidSolo?.collaborators).length);
+    if (ownedProject?.status === 'active' && deadline !== undefined &&
+        deadlineCalendarDate(deadline) < deadlineCalendarDate(paidSolo.deadline)) {
+      return res.status(409).json({ success: false, message: 'An active project deadline cannot be earlier than its last paid deadline' });
+    }
+    if (ownedProject?.status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(paidSolo.expectedCollaborators ?? 0)) {
       return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
     }
-    if (ownedProject?.status === 'active' && documents !== undefined && documents.length < currentSolo.documents.length) {
+    if (ownedProject?.status === 'active' && documents !== undefined && documents.length < paidSolo.documents.length) {
       return res.status(409).json({ success: false, message: 'The document count of an active project cannot be reduced' });
     }
     const soloBillingIncreased = ownedProject?.status === 'active' && (
-      (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(ownedProject.deadline)) ||
-      (collaborators !== undefined && collaborators.length > currentSolo.collaborators.length) ||
-      (documents !== undefined && documents.length > currentSolo.documents.length) ||
-      (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(ownedProject.expected_collaborators ?? 0))
+      (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(paidSolo.deadline)) ||
+      (collaborators !== undefined && activeCollaborators(collaborators).length > paidCollaboratorCapacity) ||
+      (documents !== undefined && documents.length > paidSolo.documents.length) ||
+      (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(paidSolo.expectedCollaborators ?? 0))
     );
     if (soloBillingIncreased) {
       await preservePaidSoloConfiguration(ownedProject);
@@ -317,6 +341,7 @@ exports.updateProject = async (req, res) => {
     if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
     const [rows] = await pool.query('SELECT * FROM projects WHERE id = ?', [id]);
+    rows[0].paid_collaborator_capacity = paidCollaboratorCapacity || null;
     res.json({ success: true, project: parseProject(rows[0]) });
   } catch (err) {
     console.error('Update project error:', err);
@@ -383,7 +408,7 @@ exports.activateProject = async (req, res) => {
           subject: `DocsNDocs: Your project "${project.name}" is now active`,
         });
       }
-      recipients.push(...(project.collaborators ?? []));
+      recipients.push(...activeCollaborators(project.collaborators));
       const templatePath = path.join(__dirname, '../templates-email/projectactivation.html');
       const template = fs.readFileSync(templatePath, 'utf8');
 

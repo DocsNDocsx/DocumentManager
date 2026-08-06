@@ -80,7 +80,7 @@
       <ul class="collab-list" aria-label="Collaborator list">
         @for (collab of collaborators(); track collab.email; let i = $index) {
           <li class="collab-item">
-            <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }}</div>
+            <div class="collab-name">{{ collab.firstName }} {{ collab.lastName }} @if (collab.status === 'inactive') { <span class="status-badge">Removed</span> }</div>
             <div class="collab-email">{{ collab.email }}</div>
             <div class="collab-docs"><i class="fas fa-file-alt" aria-hidden="true"></i> {{ getAssignedDocNames(i) }}</div>
           </li>

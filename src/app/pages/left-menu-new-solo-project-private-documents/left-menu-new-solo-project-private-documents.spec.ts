@@ -102,6 +102,29 @@ describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
     expect(component.documents()[3].name).toBe('');
   });
 
+  it('allows unpaid documents to be removed down to the paid count', () => {
+    const paid = [
+      { name: 'Resume', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },
+      { name: 'Cover Letter', fileTypes: ['DOCX'], maxSize: '5', sizeUnit: 'MB', templateName: '' },
+    ];
+    wizard.project.set({
+      status: 'active',
+      documents: [...paid,
+        { name: 'Transcript', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },
+        { name: 'Portfolio', fileTypes: ['PDF'], maxSize: '20', sizeUnit: 'MB', templateName: '' },
+      ],
+      pendingBillingUpgrade: { collaborators: [], documents: paid, assignments: {}, deadline: null, expectedCollaborators: null },
+    });
+    component.ngOnInit();
+
+    component.removeDocument(3);
+    component.removeDocument(2);
+    expect(component.documents()).toEqual(paid);
+
+    component.removeDocument(1);
+    expect(component.documents()).toEqual(paid);
+  });
+
   it('saves valid documents and navigates to assignments', () => {
     component.documents.set([
       { name: 'Resume', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },

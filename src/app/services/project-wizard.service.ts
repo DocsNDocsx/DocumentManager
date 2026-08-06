@@ -191,8 +191,11 @@ export class ProjectWizardService {
           this.project.set(res.project);
           this.logger.info(`Saved ${context}`, { projectId: res.project.id });
           if (previousProject?.status === 'active') {
-            const previous = this.billingEstimate.buildSoloActivationQuery(previousProject, previousProject.collaborators?.length);
-            const current = this.billingEstimate.buildSoloActivationQuery(res.project, res.project.collaborators?.length);
+            const previousActive = previousProject.collaborators?.filter(c => c.status !== 'inactive').length ?? 0;
+            const currentActive = res.project.collaborators?.filter(c => c.status !== 'inactive').length ?? 0;
+            const paidCapacity = res.project.paidCollaboratorCapacity ?? previousProject.paidCollaboratorCapacity ?? previousActive;
+            const previous = this.billingEstimate.buildSoloActivationQuery(previousProject, Math.max(previousActive, paidCapacity));
+            const current = this.billingEstimate.buildSoloActivationQuery(res.project, Math.max(currentActive, paidCapacity));
             if (previous && current && Number(current['monthly']) > Number(previous['monthly'])) {
               const extensionDays = this.billingEstimate.deadlineExtensionDays(previousProject.deadline, res.project.deadline);
               const pending = this.pendingUpgradeQuery();

@@ -8,6 +8,8 @@ interface CollabSummary {
   firstName: string;
   lastName: string;
   email: string;
+  projectIndex: number;
+  status?: 'active' | 'inactive';
 }
 
 interface DocSummary {
@@ -73,11 +75,13 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
   private populateForm(): void {
     const proj = this.wizardService.project();
     if (proj) {
-      this.collaborators.set(proj.collaborators.map(c => ({ firstName: c.firstName, lastName: c.lastName, email: c.email })));
+      this.collaborators.set(proj.collaborators
+        .map((c, projectIndex) => ({ firstName: c.firstName, lastName: c.lastName, email: c.email, projectIndex, status: c.status }))
+        .filter(c => c.status !== 'inactive'));
       this.documents.set(proj.documents.map(d => ({ name: d.name })));
       const restored: Record<number, Set<number>> = {};
-      proj.collaborators.forEach((_, i) => {
-        restored[i] = new Set(proj.assignments[String(i)] ?? []);
+      this.collaborators().forEach(collaborator => {
+        restored[collaborator.projectIndex] = new Set(proj.assignments[String(collaborator.projectIndex)] ?? []);
       });
       this.assignments.set(restored);
     }
@@ -87,7 +91,7 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
     const collabs = this.collaborators();
     const assigns = this.assignments();
     return collabs
-      .map((c, i) => ({ name: `${c.firstName} ${c.lastName}`, assigned: assigns[i]?.size ?? 0 }))
+      .map(c => ({ name: `${c.firstName} ${c.lastName}`, assigned: assigns[c.projectIndex]?.size ?? 0 }))
       .filter(item => item.assigned === 0)
       .map(item => `${item.name} has no documents assigned`);
   });
@@ -105,20 +109,23 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
   }
 
   isChecked(collabIndex: number, docIndex: number): boolean {
-    return this.assignments()[collabIndex]?.has(docIndex) ?? false;
+    const projectIndex = this.collaborators()[collabIndex]?.projectIndex;
+    return projectIndex == null ? false : (this.assignments()[projectIndex]?.has(docIndex) ?? false);
   }
 
   toggleAssignment(collabIndex: number, docIndex: number, checked: boolean): void {
+    const projectIndex = this.collaborators()[collabIndex]?.projectIndex;
+    if (projectIndex == null) return;
     this.assignments.update(curr => {
       const copy: Record<number, Set<number>> = {};
       for (const key in curr) {
         copy[key] = new Set(curr[key]);
       }
-      if (!copy[collabIndex]) copy[collabIndex] = new Set();
+      if (!copy[projectIndex]) copy[projectIndex] = new Set();
       if (checked) {
-        copy[collabIndex].add(docIndex);
+        copy[projectIndex].add(docIndex);
       } else {
-        copy[collabIndex].delete(docIndex);
+        copy[projectIndex].delete(docIndex);
       }
       return copy;
     });
@@ -133,7 +140,8 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
     this.assignments.update(curr => {
       const copy: Record<number, Set<number>> = {};
       for (const key in curr) copy[key] = new Set(curr[key]);
-      this.collaborators().forEach((_, ci) => {
+      this.collaborators().forEach(collaborator => {
+        const ci = collaborator.projectIndex;
         if (!copy[ci]) copy[ci] = new Set();
         if (allSelected) {
           copy[ci].delete(docIndex);
@@ -147,15 +155,15 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
 
   selectAll(): void {
     const newAssign: Record<number, Set<number>> = {};
-    this.collaborators().forEach((_, ci) => {
-      newAssign[ci] = new Set(this.documents().map((_, di) => di));
+    this.collaborators().forEach(collaborator => {
+      newAssign[collaborator.projectIndex] = new Set(this.documents().map((_, di) => di));
     });
     this.assignments.set(newAssign);
   }
 
   clearAll(): void {
     const newAssign: Record<number, Set<number>> = {};
-    this.collaborators().forEach((_, ci) => { newAssign[ci] = new Set(); });
+    this.collaborators().forEach(collaborator => { newAssign[collaborator.projectIndex] = new Set(); });
     this.assignments.set(newAssign);
   }
 

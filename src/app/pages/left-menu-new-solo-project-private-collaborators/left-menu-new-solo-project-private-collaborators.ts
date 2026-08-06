@@ -10,6 +10,8 @@ export interface Collaborator {
   lastName: string;
   email: string;
   affiliation: string;
+  status?: 'active' | 'inactive';
+  removedAt?: string | null;
 }
 
 @Component({
@@ -47,6 +49,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
   collaboratorCount = signal(1);
   minimumCollaboratorCount = signal(1);
   collaborators = signal<Collaborator[]>([]);
+  activeCollaboratorCount = computed(() => this.collaborators().filter(c => c.status !== 'inactive').length);
   formsGenerated = signal(false);
   isSaving = computed(() => this.wizardService.isSaving());
 
@@ -72,14 +75,14 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
     const proj = this.wizardService.project();
     if (proj && proj.collaborators.length > 0) {
       this.collaborators.set(proj.collaborators);
-      this.collaboratorCount.set(proj.collaborators.length);
-      this.minimumCollaboratorCount.set(proj.status === 'active' ? proj.collaborators.length : 1);
+      this.collaboratorCount.set(proj.collaborators.filter(c => c.status !== 'inactive').length);
+      this.minimumCollaboratorCount.set(1);
       this.formsGenerated.set(true);
     }
   }
 
   isFormValid = computed(() => {
-    const list = this.collaborators();
+    const list = this.collaborators().filter(c => c.status !== 'inactive');
     if (!list.length) return false;
     return list.every(c =>
       c.firstName.trim() !== '' &&
@@ -100,11 +103,13 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
 
   generateForms(): void {
     const n = this.collaboratorCount();
-    if (n < this.minimumCollaboratorCount()) return;
+    const activeCount = this.activeCollaboratorCount();
+    if (n < activeCount || n < 1) return;
     const existing = this.collaborators();
-    this.collaborators.set(Array.from({ length: n }, (_, index) =>
-      existing[index] ?? { firstName: '', lastName: '', email: '', affiliation: '' }
-    ));
+    const additions = Array.from({ length: n - activeCount }, () =>
+      ({ firstName: '', lastName: '', email: '', affiliation: '', status: 'active' as const })
+    );
+    this.collaborators.set([...existing, ...additions]);
     this.formsGenerated.set(true);
   }
 
@@ -117,9 +122,15 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
   }
 
   removeCollaborator(index: number): void {
-    if (this.collaborators().length <= this.minimumCollaboratorCount()) return;
-    this.collaborators.update(list => list.filter((_, i) => i !== index));
-    this.collaboratorCount.set(this.collaborators().length);
+    if (this.activeCollaboratorCount() <= 1) return;
+    if (this.isActiveProject()) {
+      this.collaborators.update(list => list.map((collaborator, i) => i === index
+        ? { ...collaborator, status: 'inactive', removedAt: new Date().toISOString() }
+        : collaborator));
+    } else {
+      this.collaborators.update(list => list.filter((_, i) => i !== index));
+    }
+    this.collaboratorCount.set(this.activeCollaboratorCount());
   }
 
   trackByIndex(index: number): number {

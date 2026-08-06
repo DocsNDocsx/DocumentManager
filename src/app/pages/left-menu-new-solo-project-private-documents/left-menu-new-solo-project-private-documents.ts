@@ -78,7 +78,8 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
     if (proj && proj.documents.length > 0) {
       this.documents.set(proj.documents);
       this.documentCount.set(proj.documents.length);
-      this.minimumDocumentCount.set(proj.status === 'active' ? proj.documents.length : 1);
+      const paidCount = proj.pendingBillingUpgrade?.documents?.length ?? proj.documents.length;
+      this.minimumDocumentCount.set(proj.status === 'active' ? paidCount : 1);
       this.formsGenerated.set(true);
     }
   }
@@ -178,6 +179,7 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
 
   removeDocument(index: number): void {
     if (this.documents().length <= this.minimumDocumentCount()) return;
+    if (this.isActiveProject() && index < this.minimumDocumentCount()) return;
     this.documents.update(list => list.filter((_, i) => i !== index));
     this.documentCount.set(this.documents().length);
   }
