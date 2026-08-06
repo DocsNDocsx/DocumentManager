@@ -16,9 +16,11 @@
         <button class="selector-tab" [class.active]="activeTab() === 'solo'" (click)="switchTab('solo')" role="tab" [attr.aria-selected]="activeTab() === 'solo'">
           <i class="fas fa-user" aria-hidden="true"></i> Solo Projects
         </button>
-        <button class="selector-tab" [class.active]="activeTab() === 'team'" (click)="switchTab('team')" role="tab" [attr.aria-selected]="activeTab() === 'team'">
-          <i class="fas fa-users" aria-hidden="true"></i> Team Projects
-        </button>
+        @if (teamsEnabled) {
+          <button class="selector-tab" [class.active]="activeTab() === 'team'" (click)="switchTab('team')" role="tab" [attr.aria-selected]="activeTab() === 'team'">
+            <i class="fas fa-users" aria-hidden="true"></i> Team Projects
+          </button>
+        }
       </div>
 
       @if (activeTab() === 'solo') {
@@ -48,7 +50,7 @@
         </div>
       }
 
-      @if (activeTab() === 'team') {
+      @if (teamsEnabled && activeTab() === 'team') {
         <div class="selector-content active" role="tabpanel">
           <div class="form-group">
             <label class="form-label" for="teamProjectSelect">Select Team Project</label>

@@ -4,6 +4,7 @@ import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sideb
 import { TeamSelectorComponent, TeamOption } from '../../shared/team-selector/team-selector';
 import { DashboardService } from '../../services/dashboard.service';
 import { StorageDataSet } from '../../models/dashboard.models';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 const EMPTY_STATUS = { count: '0 projects · 0 documents', size: '0 B', percent: '0%', percentNum: 0 };
 const EMPTY_DATA: StorageDataSet = {
@@ -33,6 +34,7 @@ const EMPTY_DATA: StorageDataSet = {
   host: { '(document:click)': 'closeDropdown()' },
 })
 export class DropDownStorageComponent implements OnInit {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private dashboard = inject(DashboardService);
 
   dropdownOpen = signal(false);

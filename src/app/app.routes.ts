@@ -54,6 +54,7 @@ import { LeftMenuNewTeamProjectPublicDocumentsComponent } from './pages/left-men
 import { LeftMenuNewTeamProjectPublicDecisionComponent } from './pages/left-menu-new-team-project-public-decision/left-menu-new-team-project-public-decision';
 import { TeamStepGuard } from './guards/team-step.guard';
 import { TeamProjectUploadComponent } from './pages/team-project-upload/team-project-upload';
+import { teamFeatureGuard } from './guards/team-feature.guard';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -85,11 +86,11 @@ export const routes: Routes = [
 
     // Top-menu pages
     { path: 'top-menu-solo-projects', component: TopMenuSoloProjectsComponent, canActivate: [authGuard] },
-    { path: 'top-menu-teams', component: TopMenuTeamsComponent, canActivate: [authGuard] },
-    { path: 'top-menu-teams-edit-teams', component: TopMenuTeamsEditTeamsComponent, canActivate: [authGuard] },
-    { path: 'top-menu-teams-view-teams', component: TopMenuTeamsViewTeamsComponent, canActivate: [authGuard] },
-    { path: 'top-menu-team-projects', component: TopMenuTeamProjectsComponent, canActivate: [authGuard] },
-    { path: 'team-project-upload/:projectId/:collaboratorId', component: TeamProjectUploadComponent },
+    { path: 'top-menu-teams', component: TopMenuTeamsComponent, canActivate: [authGuard, teamFeatureGuard] },
+    { path: 'top-menu-teams-edit-teams', component: TopMenuTeamsEditTeamsComponent, canActivate: [authGuard, teamFeatureGuard] },
+    { path: 'top-menu-teams-view-teams', component: TopMenuTeamsViewTeamsComponent, canActivate: [authGuard, teamFeatureGuard] },
+    { path: 'top-menu-team-projects', component: TopMenuTeamProjectsComponent, canActivate: [authGuard, teamFeatureGuard] },
+    { path: 'team-project-upload/:projectId/:collaboratorId', component: TeamProjectUploadComponent, canActivate: [teamFeatureGuard] },
 
     // Pricing — unified usage-based flow
     { path: 'pricing-plan', component: PricingPlanComponent, canActivate: [authGuard] },
@@ -98,7 +99,7 @@ export const routes: Routes = [
 
 
     // Left-menu — shared
-    { path: 'left-menu-create-new-team', component: LeftMenuCreateNewTeamComponent, canActivate: [authGuard] },
+    { path: 'left-menu-create-new-team', component: LeftMenuCreateNewTeamComponent, canActivate: [authGuard, teamFeatureGuard] },
     { path: 'left-menu-sign-out', component: LeftMenuSignOutComponent, canActivate: [authGuard] },
     { path: 'left-menu-sign-out-confirm', component: LeftMenuSignOutConfirmComponent, canActivate: [authGuard] },
     { path: 'left-menu-add-external-project', component: LeftMenuAddExternalProjectComponent, canActivate: [authGuard] },
@@ -157,11 +158,11 @@ export const routes: Routes = [
     },
 
     // Left-menu — team project wizard
-    { path: 'left-menu-new-team-project-landing', component: LeftMenuNewTeamProjectLandingComponent, canActivate: [authGuard] },
+    { path: 'left-menu-new-team-project-landing', component: LeftMenuNewTeamProjectLandingComponent, canActivate: [authGuard, teamFeatureGuard] },
     {
       path: 'new-team-project/private',
       component: SoloProjectWizardShellComponent,
-      canActivate: [authGuard],
+      canActivate: [authGuard, teamFeatureGuard],
       children: [
         { path: '', redirectTo: 'details', pathMatch: 'full' },
         { path: 'details',       component: LeftMenuNewTeamProjectPrivateDetailsComponent,       canActivate: [TeamStepGuard(1)] },
@@ -174,7 +175,7 @@ export const routes: Routes = [
     {
       path: 'new-team-project/public',
       component: SoloProjectWizardShellComponent,
-      canActivate: [authGuard],
+      canActivate: [authGuard, teamFeatureGuard],
       children: [
         { path: '', redirectTo: 'details', pathMatch: 'full' },
         { path: 'details',   component: LeftMenuNewTeamProjectPublicDetailsComponent,   canActivate: [TeamStepGuard(1)] },
@@ -185,7 +186,7 @@ export const routes: Routes = [
     {
       path: 'new-team-project/private/:projectId',
       component: SoloProjectWizardShellComponent,
-      canActivate: [authGuard],
+      canActivate: [authGuard, teamFeatureGuard],
       children: [
         { path: '', redirectTo: 'details', pathMatch: 'full' },
         { path: 'details',       component: LeftMenuNewTeamProjectPrivateDetailsComponent,       canActivate: [TeamStepGuard(1)] },
@@ -198,7 +199,7 @@ export const routes: Routes = [
     {
       path: 'new-team-project/public/:projectId',
       component: SoloProjectWizardShellComponent,
-      canActivate: [authGuard],
+      canActivate: [authGuard, teamFeatureGuard],
       children: [
         { path: '', redirectTo: 'details', pathMatch: 'full' },
         { path: 'details',   component: LeftMenuNewTeamProjectPublicDetailsComponent,   canActivate: [TeamStepGuard(1)] },

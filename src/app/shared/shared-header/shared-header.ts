@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { LogoComponent } from '../logo/logo';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 @Component({
   selector: 'app-shared-header',
@@ -14,6 +15,7 @@ import { LogoComponent } from '../logo/logo';
   },
 })
 export class SharedHeaderComponent {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private authService = inject(AuthService);
   private router = inject(Router);
 

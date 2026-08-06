@@ -2,8 +2,10 @@
   <app-logo routerLink="/dashboard" [imageWidth]="150" [imageHeight]="50" ariaLabel="DocNDocs Home" />
   <nav class="top-nav" aria-label="Main navigation">
     <a routerLink="/top-menu-solo-projects" routerLinkActive="active" #soloRLA="routerLinkActive" [attr.aria-current]="soloRLA.isActive ? 'page' : null">Solo Projects</a>
-    <a routerLink="/top-menu-teams" routerLinkActive="active" #teamsRLA="routerLinkActive" [attr.aria-current]="teamsRLA.isActive ? 'page' : null">Teams</a>
-    <a routerLink="/top-menu-team-projects" routerLinkActive="active" #teamProjRLA="routerLinkActive" [attr.aria-current]="teamProjRLA.isActive ? 'page' : null">Team Projects</a>
+    @if (teamsEnabled) {
+      <a routerLink="/top-menu-teams" routerLinkActive="active" #teamsRLA="routerLinkActive" [attr.aria-current]="teamsRLA.isActive ? 'page' : null">Teams</a>
+      <a routerLink="/top-menu-team-projects" routerLinkActive="active" #teamProjRLA="routerLinkActive" [attr.aria-current]="teamProjRLA.isActive ? 'page' : null">Team Projects</a>
+    }
     <div class="user-dropdown" style="position: relative">
       <button
         class="user-greeting"

@@ -10,6 +10,7 @@ import { TeamProjectsService } from '../../services/team-projects.service';
 import { Project, Submission as DbSubmission } from '../../models/project.models';
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 type SubmissionStatus = 'pending' | 'approved' | 'revision' | 'rejected';
 type ProjectTab = 'solo' | 'team';
@@ -58,6 +59,7 @@ interface TeamCollaborator {
   host: { '(document:click)': 'onDocumentClick()' },
 })
 export class CheckSubmissionsComponent implements OnInit {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   protected listService = inject(ProjectListService);
@@ -125,10 +127,10 @@ export class CheckSubmissionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.listService.load();
-    this.teamProjectsService.load();
+    if (this.teamsEnabled) this.teamProjectsService.load();
 
     const projectId = this.route.snapshot.queryParamMap.get('projectId');
-    if (projectId) {
+    if (projectId && this.teamsEnabled) {
       this.activeTab.set('team');
       this.selectedTeamProject.set(projectId);
       this.loadTeamProject();

@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 const RATE = 0.09; // $ per project · collaborator · day
 
@@ -22,6 +23,7 @@ const RATE = 0.09; // $ per project · collaborator · day
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PricingPlanComponent implements OnInit {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);

@@ -55,6 +55,7 @@
       >
         <i class="fas fa-user" aria-hidden="true"></i> Solo Projects
       </button>
+      @if (teamsEnabled) {
       <button
         class="tab-btn"
         [class.active]="!isSolo()"
@@ -64,6 +65,7 @@
       >
         <i class="fas fa-users" aria-hidden="true"></i> Team Projects
       </button>
+      }
     </div>
 
     <!-- Cost calculator -->

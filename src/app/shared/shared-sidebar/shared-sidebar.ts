@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 @Component({
   selector: 'app-shared-sidebar',
@@ -13,6 +14,7 @@ import { AuthService } from '../../services/auth.service';
   },
 })
 export class SharedSidebarComponent {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private authService = inject(AuthService);
   private router = inject(Router);
 

@@ -24,18 +24,20 @@
           <span class="menu-text">New Solo Project</span>
         </a>
       </li>
-      <li>
-        <a routerLink="/left-menu-create-new-team" routerLinkActive="active">
-          <i class="fas fa-users-cog" aria-hidden="true"></i>
-          <span class="menu-text">New Team</span>
-        </a>
-      </li>
-      <li>
-        <a routerLink="/left-menu-new-team-project-landing" routerLinkActive="active">
-          <i class="fas fa-folder-plus" aria-hidden="true"></i>
-          <span class="menu-text">New Team Project</span>
-        </a>
-      </li>
+      @if (teamsEnabled) {
+        <li>
+          <a routerLink="/left-menu-create-new-team" routerLinkActive="active">
+            <i class="fas fa-users-cog" aria-hidden="true"></i>
+            <span class="menu-text">New Team</span>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/left-menu-new-team-project-landing" routerLinkActive="active">
+            <i class="fas fa-folder-plus" aria-hidden="true"></i>
+            <span class="menu-text">New Team Project</span>
+          </a>
+        </li>
+      }
       <li>
         <a routerLink="/left-menu-add-external-project" routerLinkActive="active">
           <i class="fas fa-file-import" aria-hidden="true"></i>

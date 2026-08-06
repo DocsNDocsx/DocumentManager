@@ -13,9 +13,11 @@
       <button class="view-toggle-btn" [class.active]="currentView() === 'solo'" (click)="switchView('solo')" type="button">
         <i class="fas fa-user"></i> Solo Projects
       </button>
-      <button class="view-toggle-btn" [class.active]="currentView() === 'team'" (click)="switchView('team')" type="button">
-        <i class="fas fa-users"></i> Team Projects
-      </button>
+      @if (teamsEnabled) {
+        <button class="view-toggle-btn" [class.active]="currentView() === 'team'" (click)="switchView('team')" type="button">
+          <i class="fas fa-users"></i> Team Projects
+        </button>
+      }
     </div>
 
     <div class="summary-cards">

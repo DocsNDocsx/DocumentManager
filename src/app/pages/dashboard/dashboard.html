@@ -73,7 +73,7 @@
       <div class="error-state" role="alert">
         <i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ dashboard.error() }}
       </div>
-    } @else if (dashboard.recentProjects().length === 0) {
+    } @else if (visibleRecentProjects().length === 0) {
       <div class="empty-state">
         <i class="fas fa-folder-open" aria-hidden="true"></i>
         <p>No projects yet. Create your first project to get started.</p>
@@ -91,7 +91,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (project of dashboard.recentProjects(); track project.id) {
+            @for (project of visibleRecentProjects(); track project.id) {
               <tr class="project-row" [routerLink]="projectRoute(project)" style="cursor:pointer">
                 <td class="col-name">
                   <div class="project-name-text" [title]="project.name">{{ project.name }}</div>

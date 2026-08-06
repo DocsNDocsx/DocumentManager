@@ -7,6 +7,7 @@ import { CardsService } from '../../services/cards.service';
 import { AuthService } from '../../services/auth.service';
 import { CardType, PaymentCard } from '../../models/cards.models';
 import { LoggingService } from '../../services/logging.service';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 type TeamKey = 'alpha' | 'product' | 'finance' | 'research';
 
@@ -26,6 +27,7 @@ const TEAM_NAMES: Record<TeamKey, string> = {
   host: { '(document:click)': 'onDocumentClick()' },
 })
 export class DropDownPaymentCardsComponent {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private cardsService = inject(CardsService);
   private authService = inject(AuthService);
   private logger = inject(LoggingService);

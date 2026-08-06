@@ -5,6 +5,7 @@ import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sideb
 import { AuthService } from '../../services/auth.service';
 import { DashboardService } from '../../services/dashboard.service';
 import { ActivityIconType, DashboardProject } from '../../models/dashboard.models';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,6 +20,9 @@ export class DashboardComponent implements OnInit {
 
   userFirstname = this.auth.currentUserFirstname;
   progressWidth = computed(() => `${this.dashboard.stats()?.storageUsedPercent ?? 0}%`);
+  visibleRecentProjects = computed(() => this.dashboard.recentProjects().filter(project =>
+    TEAM_FEATURE_ENABLED || project.type === 'solo'
+  ));
 
   ngOnInit(): void {
     this.dashboard.load();

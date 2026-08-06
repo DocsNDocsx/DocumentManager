@@ -5,6 +5,7 @@ import { TeamSelectorComponent, TeamOption } from '../../shared/team-selector/te
 import { PaymentService } from '../../services/payment.service';
 import { AuthService } from '../../services/auth.service';
 import { PaymentRecord, PaymentSummary } from '../../models/payment.models';
+import { TEAM_FEATURE_ENABLED } from '../../config/features';
 
 interface PaymentDataSet {
   title: string;
@@ -29,6 +30,7 @@ const EMPTY_SUMMARY: PaymentSummary = {
   host: { '(document:click)': 'closeDropdown()' },
 })
 export class DropDownPaymentHistoryComponent implements OnInit {
+  protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
   private paymentService = inject(PaymentService);
   private authService = inject(AuthService);
 
