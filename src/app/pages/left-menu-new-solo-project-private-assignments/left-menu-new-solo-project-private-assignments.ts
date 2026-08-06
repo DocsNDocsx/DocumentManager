@@ -14,6 +14,8 @@ interface CollabSummary {
 
 interface DocSummary {
   name: string;
+  projectIndex: number;
+  status?: 'active' | 'inactive';
 }
 
 @Component({
@@ -78,10 +80,15 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
       this.collaborators.set(proj.collaborators
         .map((c, projectIndex) => ({ firstName: c.firstName, lastName: c.lastName, email: c.email, projectIndex, status: c.status }))
         .filter(c => c.status !== 'inactive'));
-      this.documents.set(proj.documents.map(d => ({ name: d.name })));
+      this.documents.set(proj.documents
+        .map((d, projectIndex) => ({ name: d.name, projectIndex, status: d.status }))
+        .filter(d => d.status !== 'inactive'));
+      const activeDocumentIndexes = new Set(this.documents().map(document => document.projectIndex));
       const restored: Record<number, Set<number>> = {};
       this.collaborators().forEach(collaborator => {
-        restored[collaborator.projectIndex] = new Set(proj.assignments[String(collaborator.projectIndex)] ?? []);
+        restored[collaborator.projectIndex] = new Set(
+          (proj.assignments[String(collaborator.projectIndex)] ?? []).filter(index => activeDocumentIndexes.has(index))
+        );
       });
       this.assignments.set(restored);
     }
@@ -110,12 +117,14 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
 
   isChecked(collabIndex: number, docIndex: number): boolean {
     const projectIndex = this.collaborators()[collabIndex]?.projectIndex;
-    return projectIndex == null ? false : (this.assignments()[projectIndex]?.has(docIndex) ?? false);
+    const projectDocIndex = this.documents()[docIndex]?.projectIndex;
+    return projectIndex == null || projectDocIndex == null ? false : (this.assignments()[projectIndex]?.has(projectDocIndex) ?? false);
   }
 
   toggleAssignment(collabIndex: number, docIndex: number, checked: boolean): void {
     const projectIndex = this.collaborators()[collabIndex]?.projectIndex;
-    if (projectIndex == null) return;
+    const projectDocIndex = this.documents()[docIndex]?.projectIndex;
+    if (projectIndex == null || projectDocIndex == null) return;
     this.assignments.update(curr => {
       const copy: Record<number, Set<number>> = {};
       for (const key in curr) {
@@ -123,9 +132,9 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
       }
       if (!copy[projectIndex]) copy[projectIndex] = new Set();
       if (checked) {
-        copy[projectIndex].add(docIndex);
+        copy[projectIndex].add(projectDocIndex);
       } else {
-        copy[projectIndex].delete(docIndex);
+        copy[projectIndex].delete(projectDocIndex);
       }
       return copy;
     });
@@ -137,6 +146,8 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
 
   toggleColumn(docIndex: number): void {
     const allSelected = this.isColumnAllSelected(docIndex);
+    const projectDocIndex = this.documents()[docIndex]?.projectIndex;
+    if (projectDocIndex == null) return;
     this.assignments.update(curr => {
       const copy: Record<number, Set<number>> = {};
       for (const key in curr) copy[key] = new Set(curr[key]);
@@ -144,9 +155,9 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
         const ci = collaborator.projectIndex;
         if (!copy[ci]) copy[ci] = new Set();
         if (allSelected) {
-          copy[ci].delete(docIndex);
+          copy[ci].delete(projectDocIndex);
         } else {
-          copy[ci].add(docIndex);
+          copy[ci].add(projectDocIndex);
         }
       });
       return copy;
@@ -156,7 +167,7 @@ export class LeftMenuNewSoloProjectPrivateAssignmentsComponent implements OnInit
   selectAll(): void {
     const newAssign: Record<number, Set<number>> = {};
     this.collaborators().forEach(collaborator => {
-      newAssign[collaborator.projectIndex] = new Set(this.documents().map((_, di) => di));
+      newAssign[collaborator.projectIndex] = new Set(this.documents().map(document => document.projectIndex));
     });
     this.assignments.set(newAssign);
   }

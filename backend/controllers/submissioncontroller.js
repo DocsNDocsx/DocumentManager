@@ -103,6 +103,9 @@ exports.createSubmission = async (req, res) => {
     if (!Number.isInteger(docIdx) || !document) {
       return res.status(400).json({ success: false, message: 'Invalid document' });
     }
+    if (document.status === 'inactive') {
+      return res.status(403).json({ success: false, message: 'This document requirement has been removed from the project' });
+    }
     if (project.status !== 'active') {
       return res.status(409).json({ success: false, message: 'Project is not accepting submissions' });
     }

@@ -11,6 +11,8 @@ export interface DocumentRequirement {
   maxSize: string;
   sizeUnit: string;
   templateName: string;
+  status?: 'active' | 'inactive';
+  removedAt?: string | null;
 }
 
 export const FILE_TYPES = ['PDF', 'DOCX', 'DOC', 'JPG', 'PNG', 'XLSX'];
@@ -50,6 +52,7 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
   documentCount = signal(1);
   minimumDocumentCount = signal(1);
   documents = signal<DocumentRequirement[]>([]);
+  activeDocumentCount = computed(() => this.documents().filter(d => d.status !== 'inactive').length);
   formsGenerated = signal(false);
   isSaving = computed(() => this.wizardService.isSaving());
 
@@ -77,15 +80,14 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
     const proj = this.wizardService.project();
     if (proj && proj.documents.length > 0) {
       this.documents.set(proj.documents);
-      this.documentCount.set(proj.documents.length);
-      const paidCount = proj.pendingBillingUpgrade?.documents?.length ?? proj.documents.length;
-      this.minimumDocumentCount.set(proj.status === 'active' ? paidCount : 1);
+      this.documentCount.set(proj.documents.filter(d => d.status !== 'inactive').length);
+      this.minimumDocumentCount.set(1);
       this.formsGenerated.set(true);
     }
   }
 
   isFormValid = computed(() => {
-    const docs = this.documents();
+    const docs = this.documents().filter(d => d.status !== 'inactive');
     if (!docs.length) return false;
     return docs.every(d =>
       d.name.trim() !== '' &&
@@ -107,13 +109,13 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
 
   generateForms(): void {
     const n = this.documentCount();
-    if (n < this.minimumDocumentCount() || n > 50) return;
+    const activeCount = this.activeDocumentCount();
+    if (n < activeCount || n < 1 || n > 50) return;
     const existing = this.documents();
-    this.documents.set(
-      Array.from({ length: n }, (_, index) => existing[index] ?? ({
-        name: '', fileTypes: [], maxSize: '', sizeUnit: 'MB', templateName: '',
-      }))
-    );
+    const additions = Array.from({ length: n - activeCount }, () => ({
+      name: '', fileTypes: [], maxSize: '', sizeUnit: 'MB', templateName: '', status: 'active' as const,
+    }));
+    this.documents.set([...existing, ...additions]);
     this.formsGenerated.set(true);
   }
 
@@ -178,10 +180,15 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
   }
 
   removeDocument(index: number): void {
-    if (this.documents().length <= this.minimumDocumentCount()) return;
-    if (this.isActiveProject() && index < this.minimumDocumentCount()) return;
-    this.documents.update(list => list.filter((_, i) => i !== index));
-    this.documentCount.set(this.documents().length);
+    if (this.activeDocumentCount() <= 1) return;
+    if (this.isActiveProject()) {
+      this.documents.update(list => list.map((document, i) => i === index
+        ? { ...document, status: 'inactive', removedAt: new Date().toISOString() }
+        : document));
+    } else {
+      this.documents.update(list => list.filter((_, i) => i !== index));
+    }
+    this.documentCount.set(this.activeDocumentCount());
   }
 
   trackByIndex(index: number): number {

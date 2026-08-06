@@ -61,13 +61,14 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
   assignments = computed(() => this.project()?.assignments ?? {});
   supportStaff = computed(() => this.project()?.staff ?? null);
   collabCount = computed(() => this.collaborators().filter(c => c.status !== 'inactive').length);
+  documentCount = computed(() => this.documents().filter(d => d.status !== 'inactive').length);
   supportCount = computed(() => this.supportStaff() ? 1 : 0);
   totalEmails = computed(() => this.collabCount() + this.supportCount());
 
   getAssignedDocNames(collabIndex: number): string {
     const docs = this.documents();
     return (this.assignments()[String(collabIndex)] ?? [])
-      .map(di => docs[di]?.name ?? '')
+      .map(di => docs[di]?.status === 'inactive' ? '' : (docs[di]?.name ?? ''))
       .filter(Boolean)
       .join(', ') || 'No documents assigned';
   }

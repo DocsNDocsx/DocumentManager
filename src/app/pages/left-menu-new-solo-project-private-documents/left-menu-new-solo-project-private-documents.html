@@ -72,11 +72,13 @@
       @if (formsGenerated()) {
         <div style="margin-top: 2rem" aria-live="polite">
           @for (doc of documents(); track trackByIndex($index); let i = $index) {
-            <div class="doc-card">
+            <div class="doc-card" [class.inactive]="doc.status === 'inactive'">
               <div class="doc-card-header">
                 <span class="doc-card-number">Document {{ i + 1 }}</span>
-                @if (documents().length > 1) {
-                  <button class="btn-remove-doc" type="button" (click)="removeDocument(i)" [disabled]="documents().length <= minimumDocumentCount() || (isActiveProject() && i < minimumDocumentCount())" [attr.aria-label]="'Remove document ' + (i + 1)">
+                @if (doc.status === 'inactive') {
+                  <span class="inactive-badge">Removed</span>
+                } @else if (activeDocumentCount() > 1) {
+                  <button class="btn-remove-doc" type="button" (click)="removeDocument(i)" [attr.aria-label]="'Remove document ' + (i + 1)">
                     <i class="fas fa-trash" aria-hidden="true"></i> Remove
                   </button>
                 }
@@ -90,6 +92,7 @@
                     [id]="'docName' + i"
                     placeholder="e.g., Resume"
                     [value]="doc.name"
+                    [disabled]="doc.status === 'inactive'"
                     (input)="updateName(i, $any($event.target).value)"
                     required
                     aria-required="true"
@@ -105,11 +108,12 @@
                       placeholder="e.g., 10"
                       min="1"
                       [value]="doc.maxSize"
+                      [disabled]="doc.status === 'inactive'"
                       (input)="updateMaxSize(i, $any($event.target).value)"
                       required
                       aria-required="true"
                     />
-                    <select class="size-unit-select" [id]="'docUnit' + i" [value]="doc.sizeUnit" (change)="updateSizeUnit(i, $any($event.target).value)" [attr.aria-label]="'Size unit for document ' + (i + 1)">
+                    <select class="size-unit-select" [id]="'docUnit' + i" [value]="doc.sizeUnit" [disabled]="doc.status === 'inactive'" (change)="updateSizeUnit(i, $any($event.target).value)" [attr.aria-label]="'Size unit for document ' + (i + 1)">
                       <option value="KB">KB</option>
                       <option value="MB">MB</option>
                       <option value="GB">GB</option>
@@ -125,6 +129,7 @@
                       <input
                         type="checkbox"
                         [checked]="isFileTypeChecked(i, type)"
+                        [disabled]="doc.status === 'inactive'"
                         (change)="toggleFileType(i, type, $any($event.target).checked)"
                         [attr.aria-label]="type + ' format'"
                       />
@@ -136,13 +141,14 @@
               <div class="template-upload" style="margin-top: 1rem">
                 <label class="form-label">Template File <span style="font-weight: 400; color: var(--text-light)">(optional)</span></label>
                 @if (!doc.templateName) {
-                  <label class="btn-upload-template">
+                  <label class="btn-upload-template" [class.disabled]="doc.status === 'inactive'">
                     <i class="fas fa-upload" aria-hidden="true"></i> Upload Template
                     <input
                       type="file"
                       style="display: none"
                       accept=".pdf,.doc,.docx"
                       (change)="handleTemplateUpload(i, $event)"
+                      [disabled]="doc.status === 'inactive'"
                       [attr.aria-label]="'Upload template for document ' + (i + 1)"
                     />
                   </label>
@@ -150,7 +156,7 @@
                   <div class="template-file-row">
                     <i class="fas fa-file" aria-hidden="true"></i>
                     <span>{{ doc.templateName }}</span>
-                    <button class="btn-remove-template" type="button" (click)="removeTemplate(i)" [attr.aria-label]="'Remove template for document ' + (i + 1)">
+                    <button class="btn-remove-template" type="button" (click)="removeTemplate(i)" [disabled]="doc.status === 'inactive'" [attr.aria-label]="'Remove template for document ' + (i + 1)">
                       <i class="fas fa-times" aria-hidden="true"></i>
                     </button>
                   </div>

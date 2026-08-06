@@ -26,8 +26,8 @@ type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'docu
 export class BillingEstimateService {
   private auth = inject(AuthService);
 
-  buildSoloActivationQuery(project: BillingProject, collaboratorCount?: number): Params | null {
-    return this.buildActivationQuery('solo', project, collaboratorCount);
+  buildSoloActivationQuery(project: BillingProject, collaboratorCount?: number, documentCount?: number): Params | null {
+    return this.buildActivationQuery('solo', project, collaboratorCount, documentCount);
   }
 
   buildTeamActivationQuery(project: BillingProject, collaboratorCount?: number): Params | null {
@@ -45,13 +45,14 @@ export class BillingEstimateService {
     type: 'solo' | 'team',
     project: BillingProject,
     collaboratorCount?: number,
+    documentCount?: number,
   ): Params | null {
     const projects = 1;
     const collaborators = this.usageCount(
       collaboratorCount ?? project.expectedCollaborators,
       DEFAULT_COLLABORATORS,
     );
-    const documents = this.usageCount(project.documents?.length, DEFAULT_DOCUMENTS);
+    const documents = this.usageCount(documentCount ?? project.documents?.length, DEFAULT_DOCUMENTS);
     const days = this.activeDays(project.deadline);
     if (days === null) return null;
 

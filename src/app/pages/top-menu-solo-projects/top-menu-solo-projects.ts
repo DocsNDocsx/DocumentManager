@@ -126,11 +126,13 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     const baseline = project?.pendingBillingUpgrade;
     if (!project || !baseline) return;
     const activeCount = project.collaborators.filter(c => c.status !== 'inactive').length;
-    const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : Math.max(activeCount, project.paidCollaboratorCapacity ?? 0));
+    const activeDocuments = project.documents.filter(d => d.status !== 'inactive').length;
+    const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : Math.max(activeCount, project.paidCollaboratorCapacity ?? 0), Math.max(activeDocuments, project.paidDocumentCapacity ?? 0));
     if (!queryParams) return;
     const baselineQuery = this.billingEstimate.buildSoloActivationQuery(
       { ...project, deadline: baseline.deadline, documents: baseline.documents, expectedCollaborators: baseline.expectedCollaborators },
       project.type === 'public' ? Number(baseline.expectedCollaborators) : baseline.collaborators.filter(c => c.status !== 'inactive').length,
+      baseline.documents.filter(d => d.status !== 'inactive').length,
     );
     queryParams['monthly'] = Math.max(0, Number(queryParams['monthly']) - Number(baselineQuery?.['monthly'] ?? 0)).toFixed(2);
     queryParams['upgrade'] = '1';
@@ -196,7 +198,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
           .map(submission => ({
             id: submission.id, projectId: project.id, collaboratorIndex, documentIndex: submission.document_index,
             collaborator: project.collaborators[collaboratorIndex],
-            documentType: project.documents[submission.document_index]?.name ?? 'Document',
+            documentType: `${project.documents[submission.document_index]?.name ?? 'Document'}${project.documents[submission.document_index]?.status === 'inactive' ? ' (Removed)' : ''}`,
             fileName: submission.file_name, submittedDate: submission.submitted_at,
             status: (submission.status === 'submitted' ? 'pending' : submission.status) as ReviewSubmission['status'],
             comments: submission.feedback,

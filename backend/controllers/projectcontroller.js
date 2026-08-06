@@ -28,6 +28,7 @@ function includesCollaboratorEmail(value, email) {
 }
 
 const activeCollaborators = collaborators => (collaborators ?? []).filter(c => c?.status !== 'inactive');
+const activeDocuments = documents => (documents ?? []).filter(d => d?.status !== 'inactive');
 
 function parseProject(row) {
   const jsonCols = ['collaborators', 'documents', 'assignments', 'attachments'];
@@ -73,6 +74,7 @@ function parseProject(row) {
     updatedAt: parsed.updated_at,
     pendingBillingUpgrade,
     paidCollaboratorCapacity: parsed.paid_collaborator_capacity == null ? null : Number(parsed.paid_collaborator_capacity),
+    paidDocumentCapacity: parsed.paid_document_capacity == null ? null : Number(parsed.paid_document_capacity),
   };
 }
 
@@ -188,7 +190,10 @@ exports.getProject = async (req, res) => {
               ppu.snapshot AS pending_billing_snapshot,
               (SELECT ss.collaborators FROM stripe_subscriptions ss
                WHERE ss.project_id = p.id AND ss.status IN ('active', 'trialing')
-               ORDER BY ss.created_at DESC LIMIT 1) AS paid_collaborator_capacity
+               ORDER BY ss.created_at DESC LIMIT 1) AS paid_collaborator_capacity,
+              (SELECT ss.documents FROM stripe_subscriptions ss
+               WHERE ss.project_id = p.id AND ss.status IN ('active', 'trialing')
+               ORDER BY ss.created_at DESC LIMIT 1) AS paid_document_capacity
        FROM projects p
        JOIN users u ON u.userid = p.user_id
        LEFT JOIN pending_project_upgrades ppu ON ppu.project_id = p.id AND ppu.project_type = 'solo'
@@ -247,9 +252,10 @@ exports.updateProject = async (req, res) => {
       }
     }
     const [capacityRows] = ownedProject?.status === 'active'
-      ? await pool.query("SELECT collaborators FROM stripe_subscriptions WHERE project_id = ? AND status IN ('active', 'trialing') ORDER BY created_at DESC LIMIT 1", [id])
+      ? await pool.query("SELECT collaborators, documents FROM stripe_subscriptions WHERE project_id = ? AND status IN ('active', 'trialing') ORDER BY created_at DESC LIMIT 1", [id])
       : [[]];
     const paidCollaboratorCapacity = Number(capacityRows[0]?.collaborators ?? activeCollaborators(paidSolo?.collaborators).length);
+    const paidDocumentCapacity = Number(capacityRows[0]?.documents ?? activeDocuments(paidSolo?.documents).length);
     if (ownedProject?.status === 'active' && deadline !== undefined &&
         deadlineCalendarDate(deadline) < deadlineCalendarDate(paidSolo.deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline cannot be earlier than its last paid deadline' });
@@ -257,13 +263,10 @@ exports.updateProject = async (req, res) => {
     if (ownedProject?.status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(paidSolo.expectedCollaborators ?? 0)) {
       return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
     }
-    if (ownedProject?.status === 'active' && documents !== undefined && documents.length < paidSolo.documents.length) {
-      return res.status(409).json({ success: false, message: 'The document count of an active project cannot be reduced' });
-    }
     const soloBillingIncreased = ownedProject?.status === 'active' && (
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(paidSolo.deadline)) ||
       (collaborators !== undefined && activeCollaborators(collaborators).length > paidCollaboratorCapacity) ||
-      (documents !== undefined && documents.length > paidSolo.documents.length) ||
+      (documents !== undefined && activeDocuments(documents).length > paidDocumentCapacity) ||
       (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(paidSolo.expectedCollaborators ?? 0))
     );
     if (soloBillingIncreased) {
@@ -342,6 +345,7 @@ exports.updateProject = async (req, res) => {
 
     const [rows] = await pool.query('SELECT * FROM projects WHERE id = ?', [id]);
     rows[0].paid_collaborator_capacity = paidCollaboratorCapacity || null;
+    rows[0].paid_document_capacity = paidDocumentCapacity || null;
     res.json({ success: true, project: parseProject(rows[0]) });
   } catch (err) {
     console.error('Update project error:', err);

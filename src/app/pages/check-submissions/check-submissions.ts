@@ -184,7 +184,7 @@ export class CheckSubmissionsComponent implements OnInit {
           lastName: collab?.lastName ?? '',
           email: collab?.email ?? '',
         },
-        documentType: doc?.name ?? 'Unknown Document',
+        documentType: `${doc?.name ?? 'Unknown Document'}${doc?.status === 'inactive' ? ' (Removed)' : ''}`,
         fileName: s.file_name,
         submittedDate: s.submitted_at,
         status: DB_TO_STATUS[s.status] ?? 'pending',

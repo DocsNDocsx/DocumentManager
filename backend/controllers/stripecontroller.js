@@ -41,6 +41,7 @@ function parseJson(value, fallback) {
 }
 
 const activeCollaboratorCount = collaborators => parseJson(collaborators, []).filter(c => c?.status !== 'inactive').length;
+const activeDocumentCount = documents => parseJson(documents, []).filter(d => d?.status !== 'inactive').length;
 
 function dateIncreaseDays(previousDeadline, currentDeadline) {
   const previous = /^\d{4}-\d{2}-\d{2}/.exec(String(previousDeadline ?? ''))?.[0];
@@ -74,8 +75,8 @@ async function paidUpgradeUsage(projectId, record, requested) {
   const currentCollaborators = current.type === 'public'
     ? Number(current.expected_collaborators ?? 1)
     : current.collaboratorCount;
-  const baselineDocuments = Number(baseline.documents?.length ?? 1);
-  const currentDocuments = Number(parseJson(current.documents, []).length || 1);
+  const baselineDocuments = Number((baseline.documents ?? []).filter(d => d?.status !== 'inactive').length || 1);
+  const currentDocuments = Number(activeDocumentCount(current.documents) || 1);
 
   return {
     projects: Math.max(1, Number(record.projects) || Number(requested.projects) || 1),

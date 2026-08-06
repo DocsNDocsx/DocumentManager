@@ -153,7 +153,8 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
     const documentIndices = project.type === 'public' && assignedIndices.length === 0
       ? project.documents.map((_, index) => index)
       : assignedIndices;
-    const slots: DocumentSlot[] = documentIndices.map(docIdx => {
+    const activeDocumentIndices = documentIndices.filter(index => project.documents[index]?.status !== 'inactive');
+    const slots: DocumentSlot[] = activeDocumentIndices.map(docIdx => {
       const pd = project.documents[docIdx];
       const sub = submissions.find(s => s.document_index === docIdx);
       return {

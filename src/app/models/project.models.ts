@@ -22,6 +22,8 @@ export interface ProjectDocument {
   maxSize: string;
   sizeUnit: string;
   templateName: string;
+  status?: 'active' | 'inactive';
+  removedAt?: string | null;
 }
 
 export type ProjectAssignments = Record<string, number[]>;
@@ -62,6 +64,7 @@ export interface Project {
     expectedCollaborators: number | null;
   } | null;
   paidCollaboratorCapacity?: number | null;
+  paidDocumentCapacity?: number | null;
 }
 
 export interface ProjectApiResponse {

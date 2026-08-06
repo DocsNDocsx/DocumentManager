@@ -66,7 +66,7 @@
 
       <div class="stat-row">
         <span class="stat-chip"><i class="fas fa-users" aria-hidden="true"></i> {{ collabCount() }} Collaborator{{ collabCount() !== 1 ? 's' : '' }}</span>
-        <span class="stat-chip"><i class="fas fa-file-alt" aria-hidden="true"></i> {{ documents().length }} Document{{ documents().length !== 1 ? 's' : '' }}</span>
+        <span class="stat-chip"><i class="fas fa-file-alt" aria-hidden="true"></i> {{ documentCount() }} Document{{ documentCount() !== 1 ? 's' : '' }}</span>
         <span class="stat-chip"><i class="fas fa-envelope" aria-hidden="true"></i> {{ totalEmails() }} Email{{ totalEmails() !== 1 ? 's' : '' }} Will Be Sent</span>
         @if (supportStaff()) {
           <span class="stat-chip"><i class="fas fa-user-tie" aria-hidden="true"></i> 1 Support Staff</span>

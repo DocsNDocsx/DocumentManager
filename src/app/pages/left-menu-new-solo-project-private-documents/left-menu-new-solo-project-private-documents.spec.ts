@@ -119,10 +119,11 @@ describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
 
     component.removeDocument(3);
     component.removeDocument(2);
-    expect(component.documents()).toEqual(paid);
+    expect(component.documents().filter(d => d.status !== 'inactive')).toEqual(paid);
+    expect(component.documents().filter(d => d.status === 'inactive')).toHaveLength(2);
 
     component.removeDocument(1);
-    expect(component.documents()).toEqual(paid);
+    expect(component.activeDocumentCount()).toBe(1);
   });
 
   it('saves valid documents and navigates to assignments', () => {

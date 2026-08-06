@@ -125,3 +125,44 @@ describe('dashboardcontroller.getDashboardStats Blob reconciliation', () => {
     }));
   });
 });
+
+describe('dashboard collaborator visibility', () => {
+  it('includes an active collaborator project in recent projects', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ email: 'collab@example.com' }]])
+      .mockResolvedValueOnce([[
+        {
+          id: 'project-1', user_id: 'owner-1', name: 'Shared Research', visibility: 'private',
+          project_code: null, description: 'Shared project', documents: JSON.stringify([{ name: 'Resume' }]),
+          collaborators: JSON.stringify([{ email: 'collab@example.com', status: 'active' }]),
+          expected_collaborators: null, deadline: new Date('2099-01-01'), updated_at: new Date(), submitted_count: 0,
+        },
+      ]])
+      .mockResolvedValueOnce([[]]);
+    const res = mockResponse();
+
+    await dashboardController.getRecentProjects({ query: { userid: 'collaborator-1' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      projects: [expect.objectContaining({ id: 'project-1', name: 'Shared Research' })],
+    }));
+  });
+
+  it('includes activity for projects where the user is an active collaborator', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ email: 'collab@example.com' }]])
+      .mockResolvedValueOnce([[
+        { user_id: 'owner-1', name: 'Shared Research', collaborators: JSON.stringify([{ email: 'collab@example.com' }]) },
+      ]])
+      .mockResolvedValueOnce([[
+        { id: 'activity-1', type: 'upload', title: 'New document uploaded to "Shared Research"', actor: null, projectName: 'Shared Research', timestamp: new Date() },
+      ]]);
+    const res = mockResponse();
+
+    await dashboardController.getDashboardActivity({ query: { userid: 'collaborator-1' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      activities: [expect.objectContaining({ id: 'activity-1', projectName: 'Shared Research' })],
+    }));
+  });
+});

@@ -4,6 +4,7 @@ const pool = require('../utils/sql');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonLen = col => isMySQL ? `JSON_LENGTH(${col})` : `jsonb_array_length(${col}::jsonb)`;
+const jsonText = col => isMySQL ? col : `${col}::text`;
 
 const STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024;
 const STORAGE_STATUSES = ['active', 'draft', 'completed', 'not_completed', 'deleted'];
@@ -30,6 +31,53 @@ async function existingSubmissionBlobUrls() {
 function existingSubmissions(rows, blobUrls) {
   if (!blobUrls) return rows;
   return rows.filter(row => !String(row.file_path ?? '').includes('.blob.vercel-storage.com') || blobUrls.has(row.file_path));
+}
+
+function parseCollaborators(value) {
+  if (Array.isArray(value)) return value;
+  try { return JSON.parse(value ?? '[]'); } catch { return []; }
+}
+
+async function dashboardUserEmail(userid) {
+  const [rows] = await pool.query('SELECT email FROM users WHERE userid = ?', [userid]);
+  return String(rows[0]?.email ?? '').trim().toLowerCase();
+}
+
+function isActiveCollaborator(row, email) {
+  if (!email) return false;
+  return parseCollaborators(row.collaborators).some(collaborator =>
+    collaborator?.status !== 'inactive' && String(collaborator?.email ?? '').trim().toLowerCase() === email
+  );
+}
+
+async function collaboratorActivityProjects(userid) {
+  const email = await dashboardUserEmail(userid);
+  if (!email) return [];
+  const [rows] = await pool.query(
+    `SELECT user_id, name, collaborators
+     FROM projects
+     WHERE status = 'active' AND LOWER(${jsonText('collaborators')}) LIKE LOWER(?)`,
+    [`%${email}%`]
+  );
+  return rows.filter(row => isActiveCollaborator(row, email));
+}
+
+async function visibleActivityRows(userid, limit = null) {
+  const projects = await collaboratorActivityProjects(userid);
+  const clauses = ['user_id = ?'];
+  const params = [userid];
+  for (const project of projects) {
+    clauses.push('(user_id = ? AND project_name = ?)');
+    params.push(project.user_id, project.name);
+  }
+  const [rows] = await pool.query(
+    `SELECT id, type, title, actor, project_name AS projectName, created_at AS timestamp
+     FROM activity_log
+     WHERE ${clauses.join(' OR ')}
+     ORDER BY created_at DESC${limit ? ` LIMIT ${Number(limit)}` : ''}`,
+    params
+  );
+  return rows;
 }
 
 function emptyStorageStatus() {
@@ -256,25 +304,28 @@ exports.getRecentProjects = async (req, res) => {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
 
-    const [soloRows] = await pool.query(
+    const email = await dashboardUserEmail(userid);
+    const [soloCandidates] = await pool.query(
       `SELECT
          p.id,
+         p.user_id,
          p.name,
          p.type AS visibility,
          p.project_code,
          p.description,
-         ${jsonLen('p.documents')} AS document_count,
+         p.documents,
          p.collaborators,
          p.expected_collaborators,
          p.deadline,
          p.updated_at,
          (SELECT COUNT(DISTINCT s.collaborator_index) FROM submissions s WHERE s.project_id = p.id) AS submitted_count
        FROM projects p
-       WHERE p.user_id = ? AND p.status = ?
+       WHERE p.status = ? AND (p.user_id = ?${email ? ` OR LOWER(${jsonText('p.collaborators')}) LIKE LOWER(?)` : ''})
        ORDER BY p.updated_at DESC
-       LIMIT 4`,
-      [userid, 'active']
+       LIMIT 20`,
+      email ? ['active', userid, `%${email}%`] : ['active', userid]
     );
+    const soloRows = soloCandidates.filter(row => String(row.user_id) === String(userid) || isActiveCollaborator(row, email));
 
     const [teamRows] = await pool.query(
       `SELECT
@@ -302,6 +353,7 @@ exports.getRecentProjects = async (req, res) => {
     const soloProjects = soloRows.map(row => {
       const collaborators = typeof row.collaborators === 'string' ? JSON.parse(row.collaborators || '[]') : (row.collaborators ?? []);
       const collaboratorCount = collaborators.filter(c => c?.status !== 'inactive').length;
+      const documents = typeof row.documents === 'string' ? JSON.parse(row.documents || '[]') : (row.documents ?? []);
       const submittedCount = Number(row.submitted_count) || 0;
       const isPublic = row.visibility === 'public';
 
@@ -313,7 +365,7 @@ exports.getRecentProjects = async (req, res) => {
         projectCode: isPublic ? (row.project_code ?? null) : null,
         teamName: null,
         description: row.description ?? null,
-        documentCount: Number(row.document_count) || 0,
+        documentCount: documents.filter(d => d?.status !== 'inactive').length,
         collaboratorCount,
         submittedCount: isPublic ? null : submittedCount,
         totalExpected: isPublic ? null : (row.expected_collaborators ?? null),
@@ -359,20 +411,14 @@ exports.getDashboardActivity = async (req, res) => {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
 
-    const [rows] = await pool.query(
-      `SELECT id, type, title, actor, created_at AS timestamp
-       FROM activity_log
-       WHERE user_id = ?
-       ORDER BY created_at DESC
-       LIMIT 10`,
-      [userid]
-    );
+    const rows = await visibleActivityRows(userid, 10);
 
     const activities = rows.map(row => ({
       id: row.id,
       type: row.type,
       title: row.title,
       actor: row.actor ?? null,
+      projectName: row.projectName ?? null,
       timestamp: row.timestamp,
     }));
 
@@ -388,13 +434,7 @@ exports.getDashboardAllActivity = async (req, res) => {
     const { userid } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
 
-    const [rows] = await pool.query(
-      `SELECT id, type, title, actor, project_name AS projectName, created_at AS timestamp
-       FROM activity_log
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
-      [userid]
-    );
+    const rows = await visibleActivityRows(userid);
 
     const activities = rows.map(row => ({
       id: row.id,
