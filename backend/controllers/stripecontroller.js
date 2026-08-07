@@ -11,6 +11,39 @@ function stripeProcessingFeeCents(amountCents) {
   return Math.round(amountCents * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE_CENTS);
 }
 
+async function recordInitialPayment(user, type, subscription, fallbackAmountCents) {
+  const invoice = typeof subscription.latest_invoice === 'object'
+    ? subscription.latest_invoice
+    : null;
+  if (!invoice || (invoice.status && invoice.status !== 'paid')) return;
+
+  const invoiceNo = invoice.number ?? invoice.id;
+  if (!invoiceNo) return;
+
+  const [existing] = await pool.query(
+    'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
+    [invoiceNo, user.userid]
+  );
+  if (existing.length > 0) return;
+
+  const paidAtSeconds = invoice.status_transitions?.paid_at ?? invoice.created;
+  await pool.query(
+    `INSERT INTO payment_history
+       (userid, invoice_no, plan, amount, currency, status, payment_method, paid_at, type)
+     VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, ?)`,
+    [
+      user.userid,
+      invoiceNo,
+      'Usage subscription',
+      (invoice.amount_paid ?? fallbackAmountCents ?? 0) / 100,
+      (invoice.currency ?? 'usd').toUpperCase(),
+      null,
+      paidAtSeconds ? new Date(paidAtSeconds * 1000).toISOString() : new Date().toISOString(),
+      type,
+    ]
+  );
+}
+
 // The JWT only carries the user's email, so we resolve the authoritative user
 // (and userid) from it here rather than trusting any id sent in the request body.
 async function getUserFromToken(req) {
@@ -339,6 +372,10 @@ exports.createSubscription = async (req, res) => {
         (unitAmount / 100).toFixed(2), 'usd', subscription.status, periodEnd,
       ]
     );
+
+    // Make the first successful checkout visible immediately. Stripe webhooks
+    // remain the source for renewals and will skip this invoice as a duplicate.
+    await recordInitialPayment(user, type, subscription, unitAmount);
 
     await pool.query("UPDATE users SET issubscribed = 'true' WHERE userid = ?", [user.userid]);
 

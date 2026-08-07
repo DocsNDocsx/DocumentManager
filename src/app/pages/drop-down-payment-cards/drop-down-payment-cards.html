@@ -66,15 +66,17 @@
         </div>
       }
 
-      <div class="add-card-box" (click)="openModal()" role="button" tabindex="0" (keyup.enter)="openModal()" aria-label="Add new card">
-        <div class="add-card-icon"><i class="fas fa-plus"></i></div>
-        <div class="add-card-text">Add New Card</div>
-      </div>
+      @if (cardAddEnabled) {
+        <div class="add-card-box" (click)="openModal()" role="button" tabindex="0" (keyup.enter)="openModal()" aria-label="Add new card">
+          <div class="add-card-icon"><i class="fas fa-plus"></i></div>
+          <div class="add-card-text">Add New Card</div>
+        </div>
+      }
     </div>
   </main>
 </div>
 
-@if (showModal()) {
+@if (cardAddEnabled && showModal()) {
   <div class="modal-overlay show" role="dialog" aria-modal="true" aria-labelledby="addCardModalTitle" (click)="onModalOverlayClick($event)">
     <div class="modal-box">
       <div class="modal-header">

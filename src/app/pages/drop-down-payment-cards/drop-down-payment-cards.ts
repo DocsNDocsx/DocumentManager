@@ -7,7 +7,7 @@ import { CardsService } from '../../services/cards.service';
 import { AuthService } from '../../services/auth.service';
 import { CardType, PaymentCard } from '../../models/cards.models';
 import { LoggingService } from '../../services/logging.service';
-import { TEAM_FEATURE_ENABLED } from '../../config/features';
+import { CARD_ADD_FEATURE_ENABLED, TEAM_FEATURE_ENABLED } from '../../config/features';
 
 type TeamKey = 'alpha' | 'product' | 'finance' | 'research';
 
@@ -28,6 +28,7 @@ const TEAM_NAMES: Record<TeamKey, string> = {
 })
 export class DropDownPaymentCardsComponent {
   protected readonly teamsEnabled = TEAM_FEATURE_ENABLED;
+  protected readonly cardAddEnabled = CARD_ADD_FEATURE_ENABLED;
   private cardsService = inject(CardsService);
   private authService = inject(AuthService);
   private logger = inject(LoggingService);

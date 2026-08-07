@@ -270,6 +270,14 @@ describe('stripecontroller', () => {
       );
       expect(pool.query.mock.calls[1][0]).toContain('ON DUPLICATE KEY UPDATE');
       expect(pool.query.mock.calls[1][1]).toEqual(expect.arrayContaining(['project-1']));
+      expect(pool.query).toHaveBeenCalledWith(
+        'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
+        ['INV-123', 123],
+      );
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO payment_history'),
+        expect.arrayContaining([123, 'INV-123', 'Usage subscription', 9.72, 'USD', 'solo']),
+      );
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
         subscriptionId: 'sub_123',
