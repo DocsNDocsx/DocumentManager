@@ -35,6 +35,12 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
   org = signal('');
   timezone = signal('UTC-5');
   notifPref = signal('daily');
+  addressLine1 = signal('');
+  addressLine2 = signal('');
+  city = signal('');
+  state = signal('');
+  postalCode = signal('');
+  country = signal('US');
 
   currentPw = signal('');
   newPw = signal('');
@@ -57,6 +63,12 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
         this.org.set(profile.organization);
         this.timezone.set(profile.timezone);
         this.notifPref.set(profile.notifPref);
+        this.addressLine1.set(profile.addressLine1 ?? '');
+        this.addressLine2.set(profile.addressLine2 ?? '');
+        this.city.set(profile.city ?? '');
+        this.state.set(profile.state ?? '');
+        this.postalCode.set(profile.postalCode ?? '');
+        this.country.set(profile.country || 'US');
       },
       error: err => {
         this.logger.error('Profile load failed', err);
@@ -105,6 +117,12 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
       organization: this.org(),
       timezone: this.timezone(),
       notifPref: this.notifPref(),
+      addressLine1: this.addressLine1(),
+      addressLine2: this.addressLine2(),
+      city: this.city(),
+      state: this.state(),
+      postalCode: this.postalCode(),
+      country: this.country(),
       ...(this.newPw() ? { currentPw: this.currentPw(), newPw: this.newPw() } : {}),
     }).subscribe({
       next: () => {

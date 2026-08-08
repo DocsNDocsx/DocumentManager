@@ -330,7 +330,7 @@ exports.getAvatar = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { email, firstname, lastname, phone, organization, timezone, notifPref, currentPw, newPw } = req.body;
+    const { email, firstname, lastname, phone, organization, timezone, notifPref, addressLine1, addressLine2, city, state, postalCode, country, currentPw, newPw } = req.body;
 
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
     if (req.user?.email && String(req.user.email).toLowerCase() !== String(email).toLowerCase()) {
@@ -348,13 +348,13 @@ exports.updateProfile = async (req, res) => {
 
       const hashedPassword = await bcrypt.hash(newPw, 10);
       await pool.query(
-        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, password = ? WHERE email = ?',
-        [firstname, lastname, phone, organization, timezone, notifPref, hashedPassword, email]
+        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ?, password = ? WHERE email = ?',
+        [firstname, lastname, phone, organization, timezone, notifPref, addressLine1, addressLine2, city, state, postalCode, country, hashedPassword, email]
       );
     } else {
       await pool.query(
-        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ? WHERE email = ?',
-        [firstname, lastname, phone, organization, timezone, notifPref, email]
+        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ? WHERE email = ?',
+        [firstname, lastname, phone, organization, timezone, notifPref, addressLine1, addressLine2, city, state, postalCode, country, email]
       );
     }
 
@@ -370,7 +370,7 @@ exports.getProfile = async (req, res) => {
     const email = req.user?.email;
     if (!email) return res.status(401).json({ success: false, message: 'Unauthorized' });
     const [rows] = await pool.query(
-      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref FROM users WHERE email = ?',
+      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref, address_line1, address_line2, city, state, postal_code, country FROM users WHERE email = ?',
       [email]
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
@@ -385,6 +385,12 @@ exports.getProfile = async (req, res) => {
         organization: user.organization ?? '',
         timezone: user.timezone ?? 'UTC-5',
         notifPref: user.notif_pref ?? 'daily',
+        addressLine1: user.address_line1 ?? '',
+        addressLine2: user.address_line2 ?? '',
+        city: user.city ?? '',
+        state: user.state ?? '',
+        postalCode: user.postal_code ?? '',
+        country: user.country ?? 'US',
       },
     });
   } catch (err) {

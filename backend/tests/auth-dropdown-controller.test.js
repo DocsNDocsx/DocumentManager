@@ -313,8 +313,8 @@ describe('authcontroller dropdown/account APIs', () => {
 
     expect(pool.query).toHaveBeenNthCalledWith(
       2,
-      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ? WHERE email = ?',
-      ['Mridul', 'Mishra', '555-0100', 'DocsNDocs', 'America/New_York', 'email', 'user@example.com'],
+      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ? WHERE email = ?',
+      ['Mridul', 'Mishra', '555-0100', 'DocsNDocs', 'America/New_York', 'email', undefined, undefined, undefined, undefined, undefined, undefined, 'user@example.com'],
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -371,8 +371,8 @@ describe('authcontroller dropdown/account APIs', () => {
     expect(bcrypt.compare).toHaveBeenCalledWith('current-password', 'hashed-current');
     expect(pool.query).toHaveBeenNthCalledWith(
       2,
-      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, password = ? WHERE email = ?',
-      ['Mridul', 'Mishra', '', '', 'UTC', 'none', 'hashed-new-password', 'user@example.com'],
+      'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ?, password = ? WHERE email = ?',
+      ['Mridul', 'Mishra', '', '', 'UTC', 'none', undefined, undefined, undefined, undefined, undefined, undefined, 'hashed-new-password', 'user@example.com'],
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -393,7 +393,7 @@ describe('authcontroller dropdown/account APIs', () => {
     await authController.getProfile({ user: { email: 'user@example.com' } }, res);
 
     expect(pool.query).toHaveBeenCalledWith(
-      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref FROM users WHERE email = ?',
+      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref, address_line1, address_line2, city, state, postal_code, country FROM users WHERE email = ?',
       ['user@example.com'],
     );
     expect(res.json).toHaveBeenCalledWith({

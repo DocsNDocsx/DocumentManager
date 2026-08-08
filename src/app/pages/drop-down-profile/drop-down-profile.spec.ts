@@ -24,6 +24,7 @@ describe('DropDownProfileComponent', () => {
         profile: {
           firstname: 'Cypress', lastname: 'Tester', email: 'cypress@example.com',
           phone: '', organization: '', timezone: 'UTC-5', notifPref: 'daily',
+          addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: 'US',
         },
       })),
       saveUserAvatar: vi.fn(),
@@ -126,6 +127,12 @@ describe('DropDownProfileComponent', () => {
       organization: '',
       timezone: 'UTC',
       notifPref: 'email',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: 'US',
     });
     expect(authService.saveUserFirstname).toHaveBeenCalledWith('Mridul');
     expect(authService.saveUserLastname).toHaveBeenCalledWith('Mishra');
@@ -141,6 +148,8 @@ describe('DropDownProfileComponent', () => {
         firstname: 'Cypress', lastname: 'Tester', email: 'cypress@example.com',
         phone: '555-0100', organization: 'DocsNDocs',
         timezone: 'UTC+1', notifPref: 'email',
+        addressLine1: '25 Cinder Rd', addressLine2: 'Apt 3F', city: 'Edison',
+        state: 'NJ', postalCode: '08817', country: 'US',
       },
     }));
 
@@ -150,6 +159,8 @@ describe('DropDownProfileComponent', () => {
     expect(component.phone()).toBe('555-0100');
     expect(component.org()).toBe('DocsNDocs');
     expect(component.notifPref()).toBe('email');
+    expect(component.addressLine1()).toBe('25 Cinder Rd');
+    expect(component.postalCode()).toBe('08817');
   });
 
   it('blocks profile save when new password confirmation does not match', () => {

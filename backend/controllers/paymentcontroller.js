@@ -1,12 +1,80 @@
 const pool = require('../utils/sql');
+const { stripe } = require('../utils/stripe');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const interval12Months = isMySQL ? 'INTERVAL 12 MONTH' : "INTERVAL '12 months'";
+
+const invoiceSubscriptionId = invoice => {
+  const value = invoice?.subscription ?? invoice?.parent?.subscription_details?.subscription;
+  return typeof value === 'object' ? value?.id : value;
+};
+
+/**
+ * Backfill paid Stripe invoices that pre-date the direct payment-history write.
+ * The local subscription/project relationship is used to avoid mixing solo and
+ * team invoices belonging to the same Stripe customer.
+ */
+async function reconcileStripePayments(userid, type) {
+  if (!stripe) return;
+  const [subscriptions] = await pool.query(
+    `SELECT stripe_customer_id, stripe_subscription_id, project_id
+       FROM stripe_subscriptions
+      WHERE userid = ? AND type = ?`,
+    [userid, type]
+  );
+  if (!subscriptions.length || !subscriptions[0].stripe_customer_id) return;
+
+  const subscriptionIds = new Set(subscriptions.map(row => row.stripe_subscription_id).filter(Boolean));
+  const projectIds = new Set(subscriptions.map(row => String(row.project_id || '')).filter(Boolean));
+  const invoices = await stripe.invoices.list({
+    customer: subscriptions[0].stripe_customer_id,
+    status: 'paid',
+    limit: 100,
+  });
+
+  for (const invoice of invoices.data ?? []) {
+    const subId = invoiceSubscriptionId(invoice);
+    const projectId = String(invoice.metadata?.projectId || '');
+    if (!subscriptionIds.has(subId) && !projectIds.has(projectId)) continue;
+
+    const invoiceNo = invoice.number ?? invoice.id;
+    if (!invoiceNo) continue;
+    const [existing] = await pool.query(
+      'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
+      [invoiceNo, userid]
+    );
+    if (existing.length) continue;
+
+    const paidAt = invoice.status_transitions?.paid_at ?? invoice.created;
+    await pool.query(
+      `INSERT INTO payment_history
+         (userid, invoice_no, plan, amount, currency, status, payment_method, paid_at, type)
+       VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, ?)`,
+      [
+        userid,
+        invoiceNo,
+        invoice.metadata?.kind === 'project_upgrade' ? 'Prorated project upgrade' : 'Project payment',
+        (invoice.amount_paid ?? invoice.amount_due ?? 0) / 100,
+        (invoice.currency ?? 'usd').toUpperCase(),
+        null,
+        paidAt ? new Date(paidAt * 1000).toISOString() : new Date().toISOString(),
+        type,
+      ]
+    );
+  }
+}
 
 exports.getPaymentHistory = async (req, res) => {
   try {
     const { userid, type = 'solo' } = req.query;
     if (!userid) return res.status(400).json({ success: false, message: 'userid is required' });
+
+    try {
+      await reconcileStripePayments(userid, type);
+    } catch (reconcileError) {
+      // Existing local history remains usable during a transient Stripe outage.
+      console.warn('Payment history Stripe reconciliation failed:', reconcileError.message);
+    }
 
     const [payments] = await pool.query(
       `SELECT invoice_no, plan, amount, currency, status, payment_method, paid_at

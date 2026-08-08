@@ -44,6 +44,35 @@ async function recordInitialPayment(user, type, subscription, fallbackAmountCent
   );
 }
 
+async function recordPaidInvoice(user, type, invoice, plan = 'Usage subscription') {
+  if (!invoice || (!invoice.paid && invoice.status !== 'paid')) return;
+  const invoiceNo = invoice.number ?? invoice.id;
+  if (!invoiceNo) return;
+
+  const [existing] = await pool.query(
+    'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
+    [invoiceNo, user.userid]
+  );
+  if (existing.length > 0) return;
+
+  const paidAtSeconds = invoice.status_transitions?.paid_at ?? invoice.created;
+  await pool.query(
+    `INSERT INTO payment_history
+       (userid, invoice_no, plan, amount, currency, status, payment_method, paid_at, type)
+     VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, ?)`,
+    [
+      user.userid,
+      invoiceNo,
+      plan,
+      (invoice.amount_paid ?? invoice.amount_due ?? 0) / 100,
+      (invoice.currency ?? 'usd').toUpperCase(),
+      null,
+      paidAtSeconds ? new Date(paidAtSeconds * 1000).toISOString() : new Date().toISOString(),
+      type,
+    ]
+  );
+}
+
 // The JWT only carries the user's email, so we resolve the authoritative user
 // (and userid) from it here rather than trusting any id sent in the request body.
 async function getUserFromToken(req) {
@@ -162,6 +191,25 @@ exports.getBillingProfile = async (req, res) => {
     if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const [profileRows] = await pool.query(
+      'SELECT address_line1, address_line2, city, state, postal_code, country FROM users WHERE userid = ?',
+      [user.userid]
+    );
+    const profileAddress = profileRows[0];
+    const hasProfileAddress = Boolean(profileAddress?.address_line1 || profileAddress?.postal_code);
+    if (hasProfileAddress) {
+      return res.json({
+        success: true,
+        billingAddress: {
+          line1: profileAddress.address_line1 ?? '',
+          line2: profileAddress.address_line2 ?? '',
+          city: profileAddress.city ?? '',
+          state: profileAddress.state ?? '',
+          postalCode: profileAddress.postal_code ?? '',
+          country: profileAddress.country ?? 'US',
+        },
+      });
+    }
     if (!user.stripe_customer_id) return res.json({ success: true, billingAddress: null });
     const customer = await stripe.customers.retrieve(user.stripe_customer_id);
     const address = customer.deleted ? null : customer.address;
@@ -476,6 +524,9 @@ exports.upgradeSubscription = async (req, res) => {
       'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, last_charge_amount = ?, last_invoice_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [upgradedProjects, upgradedCollaborators, upgradedDocuments, upgradedDays, (unitAmount / 100).toFixed(2), (totalChargeCents / 100).toFixed(2), paidInvoice.id, updated.status, record.id]
     );
+    // Persist immediately; the webhook performs the same insert idempotently.
+    // This keeps payment history correct even if webhook delivery is delayed.
+    await recordPaidInvoice(user, record.type || 'solo', paidInvoice, 'Prorated project upgrade');
     await pool.query('DELETE FROM pending_project_upgrades WHERE project_id = ?', [projectId]);
     return res.json({
       success: true,

@@ -33,6 +33,12 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(50),
   timezone      VARCHAR(100),
   notif_pref    VARCHAR(100),
+  address_line1 VARCHAR(500),
+  address_line2 VARCHAR(500),
+  city           VARCHAR(255),
+  state          VARCHAR(255),
+  postal_code    VARCHAR(50),
+  country        VARCHAR(2) DEFAULT 'US',
 
   PRIMARY KEY (userid),
   UNIQUE (email)

@@ -50,14 +50,14 @@ export class DropDownPaymentHistoryComponent implements OnInit {
 
   private soloData = signal<PaymentDataSet>({
     title: 'Payment History — Solo Projects',
-    subtitle: 'View and manage all your solo project subscription payments',
+    subtitle: 'View and manage all your solo project payments',
     summary: EMPTY_SUMMARY,
     payments: [],
   });
 
   private teamData = signal<PaymentDataSet>({
     title: 'Payment History — Team Projects',
-    subtitle: 'View and manage all your team project subscription payments',
+    subtitle: 'View and manage all your team project payments',
     summary: EMPTY_SUMMARY,
     payments: [],
   });
@@ -89,8 +89,8 @@ export class DropDownPaymentHistoryComponent implements OnInit {
         const dataset: PaymentDataSet = {
           title: type === 'solo' ? 'Payment History — Solo Projects' : 'Payment History — Team Projects',
           subtitle: type === 'solo'
-            ? 'View and manage all your solo project subscription payments'
-            : 'View and manage all your team project subscription payments',
+            ? 'View and manage all your solo project payments'
+            : 'View and manage all your team project payments',
           summary,
           payments,
         };
