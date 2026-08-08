@@ -17,7 +17,6 @@ import { CollaboratorViewComponent } from './pages/collaborator-view/collaborato
 import { DropDownProfileComponent } from './pages/drop-down-profile/drop-down-profile';
 import { DropDownStorageComponent } from './pages/drop-down-storage/drop-down-storage';
 import { DropDownPaymentHistoryComponent } from './pages/drop-down-payment-history/drop-down-payment-history';
-import { DropDownPaymentCardsComponent } from './pages/drop-down-payment-cards/drop-down-payment-cards';
 import { DropDownAccountSettingsComponent } from './pages/drop-down-account-settings/drop-down-account-settings';
 import { TopMenuSoloProjectsComponent } from './pages/top-menu-solo-projects/top-menu-solo-projects';
 import { TopMenuTeamsComponent } from './pages/top-menu-teams/top-menu-teams';
@@ -81,7 +80,7 @@ export const routes: Routes = [
     { path: 'drop-down-profile', component: DropDownProfileComponent, canActivate: [authGuard] },
     { path: 'drop-down-storage', component: DropDownStorageComponent, canActivate: [authGuard] },
     { path: 'drop-down-payment-history', component: DropDownPaymentHistoryComponent, canActivate: [authGuard] },
-    { path: 'drop-down-payment-cards', component: DropDownPaymentCardsComponent, canActivate: [authGuard] },
+    { path: 'drop-down-payment-cards', redirectTo: 'drop-down-payment-history', pathMatch: 'full' },
     { path: 'drop-down-account-settings', component: DropDownAccountSettingsComponent, canActivate: [authGuard] },
 
     // Top-menu pages
