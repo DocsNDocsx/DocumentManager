@@ -202,6 +202,9 @@ describe('stripecontroller', () => {
           stripe_customer_id: 'cus_123',
         }]])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([[]])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([{ affectedRows: 1 }]);
       const res = mockResponse();
 
@@ -244,6 +247,10 @@ describe('stripecontroller', () => {
           country: 'US',
         },
       });
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('SET address_line1 = ?'),
+        ['123 Main St', '', 'New York', 'NY', '10001', 'US', 123],
+      );
       expect(stripe.subscriptions.create).toHaveBeenCalledWith(
         expect.objectContaining({
           customer: 'cus_123',
@@ -268,8 +275,8 @@ describe('stripecontroller', () => {
         "UPDATE users SET issubscribed = 'true' WHERE userid = ?",
         [123],
       );
-      expect(pool.query.mock.calls[1][0]).toContain('ON DUPLICATE KEY UPDATE');
-      expect(pool.query.mock.calls[1][1]).toEqual(expect.arrayContaining(['project-1']));
+      expect(pool.query.mock.calls[2][0]).toContain('ON DUPLICATE KEY UPDATE');
+      expect(pool.query.mock.calls[2][1]).toEqual(expect.arrayContaining(['project-1']));
       expect(pool.query).toHaveBeenCalledWith(
         'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
         ['INV-123', 123],

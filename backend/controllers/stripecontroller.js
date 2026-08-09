@@ -11,6 +11,24 @@ function stripeProcessingFeeCents(amountCents) {
   return Math.round(amountCents * STRIPE_CARD_PERCENT_FEE + STRIPE_CARD_FIXED_FEE_CENTS);
 }
 
+async function syncProfileBillingAddress(userid, billingAddress) {
+  if (!userid || !billingAddress?.postalCode || !billingAddress?.country) return;
+  await pool.query(
+    `UPDATE users
+        SET address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ?
+      WHERE userid = ?`,
+    [
+      billingAddress.line1 || '',
+      billingAddress.line2 || '',
+      billingAddress.city || '',
+      billingAddress.state || '',
+      billingAddress.postalCode,
+      billingAddress.country,
+      userid,
+    ]
+  );
+}
+
 async function recordInitialPayment(user, type, subscription, fallbackAmountCents) {
   const invoice = typeof subscription.latest_invoice === 'object'
     ? subscription.latest_invoice
@@ -353,6 +371,7 @@ exports.createSubscription = async (req, res) => {
       };
     }
     await stripe.customers.update(customerId, customerUpdate);
+    await syncProfileBillingAddress(user.userid, billingAddress);
 
     const product = await getProductId();
 
@@ -492,6 +511,7 @@ exports.upgradeSubscription = async (req, res) => {
       postal_code: billingAddress.postalCode, country: billingAddress.country,
     };
     await stripe.customers.update(record.stripe_customer_id, customerUpdate);
+    await syncProfileBillingAddress(user.userid, billingAddress);
     const subscription = await stripe.subscriptions.retrieve(record.stripe_subscription_id);
     const item = subscription.items?.data?.[0];
     if (!item) return res.status(409).json({ success: false, message: 'Subscription item not found' });
