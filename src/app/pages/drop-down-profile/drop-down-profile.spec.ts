@@ -56,10 +56,10 @@ describe('DropDownProfileComponent', () => {
 
   it('should create', () => { expect(component).toBeTruthy(); });
 
-  it('shows the account email as read-only', () => {
+  it('shows the account email as disabled', () => {
     fixture.detectChanges();
     const emailInput = fixture.nativeElement.querySelector('#email') as HTMLInputElement;
-    expect(emailInput.readOnly).toBe(true);
+    expect(emailInput.disabled).toBe(true);
     expect(emailInput.value).toBe('cypress@example.com');
   });
 
