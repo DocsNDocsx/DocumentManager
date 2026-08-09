@@ -370,11 +370,35 @@ exports.getProfile = async (req, res) => {
     const email = req.user?.email;
     if (!email) return res.status(401).json({ success: false, message: 'Unauthorized' });
     const [rows] = await pool.query(
-      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref, address_line1, address_line2, city, state, postal_code, country FROM users WHERE email = ?',
+      'SELECT userid, firstname, lastname, email, phone, organization, timezone, notif_pref, address_line1, address_line2, city, state, postal_code, country FROM users WHERE email = ?',
       [email]
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
     const user = rows[0];
+    const [ownedRows] = await pool.query(
+      "SELECT COUNT(*) AS owned_count, COALESCE(SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END), 0) AS active_count FROM projects WHERE user_id = ?",
+      [user.userid]
+    );
+    const [candidateCollaborations] = await pool.query(
+      "SELECT id, collaborators FROM projects WHERE user_id != ? AND status = 'active'",
+      [user.userid]
+    );
+    const normalizedEmail = String(user.email || '').trim().toLowerCase();
+    const collaboratorCount = candidateCollaborations.filter(project => {
+      let collaborators = project.collaborators;
+      if (typeof collaborators === 'string') {
+        try { collaborators = JSON.parse(collaborators); } catch { collaborators = []; }
+      }
+      return Array.isArray(collaborators) && collaborators.some(collaborator =>
+        collaborator?.status !== 'inactive' && (
+          String(collaborator?.userId ?? '') === String(user.userid) ||
+          String(collaborator?.email ?? '').trim().toLowerCase() === normalizedEmail
+        )
+      );
+    }).length;
+    const ownedCount = Number(ownedRows[0]?.active_count ?? 0);
+    const hasOwnedProjects = Number(ownedRows[0]?.owned_count ?? 0) > 0;
+    const memberSinceTimestamp = Number(user.userid) * 1000;
     return res.json({
       success: true,
       profile: {
@@ -391,6 +415,9 @@ exports.getProfile = async (req, res) => {
         state: user.state ?? '',
         postalCode: user.postal_code ?? '',
         country: user.country ?? 'US',
+        memberSince: Number.isFinite(memberSinceTimestamp) ? new Date(memberSinceTimestamp).toISOString() : '',
+        activeProjectCount: ownedCount + collaboratorCount,
+        accountRole: hasOwnedProjects ? 'Project Owner' : collaboratorCount > 0 ? 'Collaborator' : 'User',
       },
     });
   } catch (err) {

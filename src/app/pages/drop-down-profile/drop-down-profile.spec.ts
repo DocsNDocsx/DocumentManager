@@ -25,6 +25,7 @@ describe('DropDownProfileComponent', () => {
           firstname: 'Cypress', lastname: 'Tester', email: 'cypress@example.com',
           phone: '', organization: '', timezone: 'UTC-5', notifPref: 'daily',
           addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: 'US',
+          memberSince: '2026-01-15T00:00:00.000Z', activeProjectCount: 2, accountRole: 'Project Owner',
         },
       })),
       saveUserAvatar: vi.fn(),
@@ -150,6 +151,7 @@ describe('DropDownProfileComponent', () => {
         timezone: 'UTC+1', notifPref: 'email',
         addressLine1: '25 Cinder Rd', addressLine2: 'Apt 3F', city: 'Edison',
         state: 'NJ', postalCode: '08817', country: 'US',
+        memberSince: '2025-03-10T00:00:00.000Z', activeProjectCount: 4, accountRole: 'Project Owner',
       },
     }));
 
@@ -161,6 +163,9 @@ describe('DropDownProfileComponent', () => {
     expect(component.notifPref()).toBe('email');
     expect(component.addressLine1()).toBe('25 Cinder Rd');
     expect(component.postalCode()).toBe('08817');
+    expect(component.activeProjectCount()).toBe(4);
+    expect(component.accountRole()).toBe('Project Owner');
+    expect(component.memberSinceLabel()).toBe('Member since March 2025');
   });
 
   it('blocks profile save when new password confirmation does not match', () => {

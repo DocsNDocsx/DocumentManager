@@ -384,21 +384,34 @@ describe('authcontroller dropdown/account APIs', () => {
   });
 
   it('loads the authenticated user profile including timezone', async () => {
-    pool.query.mockResolvedValueOnce([[{ 
+    pool.query
+      .mockResolvedValueOnce([[{
+      userid: '1780952400',
       firstname: 'Mridul', lastname: 'Mishra', email: 'user@example.com',
       phone: '555-0100', organization: 'DocsNDocs', timezone: 'UTC+1', notif_pref: 'email',
-    }]]);
+      }]])
+      .mockResolvedValueOnce([[{ owned_count: '4', active_count: '2' }]])
+      .mockResolvedValueOnce([[{
+        id: 'collab-project',
+        collaborators: [{ email: 'user@example.com', status: 'active' }],
+      }]]);
     const res = mockResponse();
 
     await authController.getProfile({ user: { email: 'user@example.com' } }, res);
 
     expect(pool.query).toHaveBeenCalledWith(
-      'SELECT firstname, lastname, email, phone, organization, timezone, notif_pref, address_line1, address_line2, city, state, postal_code, country FROM users WHERE email = ?',
+      'SELECT userid, firstname, lastname, email, phone, organization, timezone, notif_pref, address_line1, address_line2, city, state, postal_code, country FROM users WHERE email = ?',
       ['user@example.com'],
     );
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      profile: expect.objectContaining({ timezone: 'UTC+1', organization: 'DocsNDocs' }),
+      profile: expect.objectContaining({
+        timezone: 'UTC+1',
+        organization: 'DocsNDocs',
+        activeProjectCount: 3,
+        accountRole: 'Project Owner',
+        memberSince: expect.any(String),
+      }),
     });
   });
 

@@ -20,7 +20,7 @@
       <div class="profile-card-body">
 
         <div class="profile-name">{{ firstName() }} {{ lastName() }}</div>
-        <div class="profile-role">Account Owner</div>
+        <div class="profile-role">{{ accountRole() }}</div>
 
         <div class="profile-meta">
           <div class="profile-meta-item">
@@ -29,11 +29,11 @@
           </div>
           <div class="profile-meta-item">
             <i class="fas fa-calendar-alt" aria-hidden="true"></i>
-            <span>Member since January 2025</span>
+            <span>{{ memberSinceLabel() }}</span>
           </div>
           <div class="profile-meta-item">
             <i class="fas fa-folder-open" aria-hidden="true"></i>
-            <span>12 Active Projects</span>
+            <span>{{ activeProjectCount() }} Active {{ activeProjectCount() === 1 ? 'Project' : 'Projects' }}</span>
           </div>
         </div>
 

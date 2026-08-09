@@ -41,6 +41,17 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
   state = signal('');
   postalCode = signal('');
   country = signal('US');
+  memberSince = signal('');
+  activeProjectCount = signal(0);
+  accountRole = signal('User');
+
+  memberSinceLabel = computed(() => {
+    const value = this.memberSince();
+    if (!value) return 'Member since unavailable';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Member since unavailable';
+    return `Member since ${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  });
 
   currentPw = signal('');
   newPw = signal('');
@@ -69,6 +80,9 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
         this.state.set(profile.state ?? '');
         this.postalCode.set(profile.postalCode ?? '');
         this.country.set(profile.country || 'US');
+        this.memberSince.set(profile.memberSince ?? '');
+        this.activeProjectCount.set(Number(profile.activeProjectCount ?? 0));
+        this.accountRole.set(profile.accountRole || 'User');
       },
       error: err => {
         this.logger.error('Profile load failed', err);

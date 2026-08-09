@@ -72,6 +72,9 @@ export interface ProfileResponse {
     state: string;
     postalCode: string;
     country: string;
+    memberSince: string;
+    activeProjectCount: number;
+    accountRole: string;
   };
 }
 

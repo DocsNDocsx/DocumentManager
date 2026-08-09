@@ -313,6 +313,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_mime_type VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_filename VARCHAR(500);
+-- Keep existing production user tables in sync with the profile form. Vercel
+-- executes this schema file on every backend build, so these statements must
+-- live here in addition to the numbered migration.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_line1 VARCHAR(500);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_line2 VARCHAR(500);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS city VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(2) DEFAULT 'US';
 
 CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   id                     SERIAL        PRIMARY KEY,
