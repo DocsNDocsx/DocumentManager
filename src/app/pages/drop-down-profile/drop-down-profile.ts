@@ -4,6 +4,7 @@ import { SharedHeaderComponent } from '../../shared/shared-header/shared-header'
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { AuthService } from '../../services/auth.service';
 import { LoggingService } from '../../services/logging.service';
+import { AsYouType, parsePhoneNumberFromString } from 'libphonenumber-js';
 
 @Component({
   selector: 'app-drop-down-profile',
@@ -70,7 +71,7 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
         this.firstName.set(profile.firstname);
         this.lastName.set(profile.lastname);
         this.email.set(profile.email);
-        this.phone.set(profile.phone);
+        this.phone.set(this.formatPhone(profile.phone));
         this.org.set(profile.organization);
         this.timezone.set(profile.timezone);
         this.notifPref.set(profile.notifPref);
@@ -114,6 +115,14 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
   }
 
   saveProfile(): void {
+    if (this.phone()) {
+      const parsedPhone = parsePhoneNumberFromString(this.phone(), 'US');
+      if (!parsedPhone?.isValid()) {
+        this.showToast('Enter a valid phone number, including the ISD country code for international numbers.', true);
+        return;
+      }
+      this.phone.set(this.displayPhone(parsedPhone));
+    }
     if (this.newPw() && this.newPw() !== this.confirmPw()) {
       this.logger.warn('Profile save blocked — passwords do not match');
       this.showToast('Passwords do not match.', true);
@@ -162,6 +171,25 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
     this.newPw.set('');
     this.confirmPw.set('');
     this.showToast('Changes discarded.');
+  }
+
+  updatePhone(value: string): void {
+    this.phone.set(this.formatPhone(value));
+  }
+
+  private formatPhone(value: string | null | undefined): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    const hasInternationalPrefix = raw.startsWith('+');
+    const formatter = hasInternationalPrefix ? new AsYouType() : new AsYouType('US');
+    const formatted = formatter.input(raw);
+    const parsed = parsePhoneNumberFromString(formatted, hasInternationalPrefix ? undefined : 'US');
+    return parsed?.isValid() ? this.displayPhone(parsed) : formatted;
+  }
+
+  private displayPhone(phone: ReturnType<typeof parsePhoneNumberFromString>): string {
+    if (!phone) return '';
+    return phone.country === 'US' ? `+1 ${phone.formatNational()}` : phone.formatInternational();
   }
 
   triggerAvatarUpload(): void {

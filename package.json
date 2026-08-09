@@ -29,6 +29,7 @@
     "@angular/router": "^21.2.19",
     "@stripe/stripe-js": "^9.7.0",
     "@vercel/blob": "^2.6.1",
+    "libphonenumber-js": "^1.13.10",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

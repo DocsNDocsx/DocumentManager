@@ -63,6 +63,27 @@ describe('DropDownProfileComponent', () => {
     expect(emailInput.value).toBe('cypress@example.com');
   });
 
+  it('standardizes phone input to the displayed US format', () => {
+    component.updatePhone('1-864-555-1234');
+    expect(component.phone()).toBe('+1 (864) 555-1234');
+
+    component.updatePhone('86455');
+    expect(component.phone()).toBe('(864) 55');
+  });
+
+  it('accepts and formats an Indian number with its ISD code', () => {
+    component.updatePhone('+91 9876543210');
+    expect(component.phone()).toBe('+91 98765 43210');
+  });
+
+  it('does not save an incomplete phone number', () => {
+    component.updatePhone('86455');
+    component.saveProfile();
+    expect(authService.updateProfile).not.toHaveBeenCalled();
+    expect(component.toastError()).toBe(true);
+    expect(component.toastMsg()).toContain('valid phone number');
+  });
+
   it('uploads a profile photo and saves returned avatar path', () => {
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
     authService.uploadAvatar.mockReturnValue(of({ success: true, avatarPath: '/api/auth/profile/avatar/123' }));
@@ -121,7 +142,7 @@ describe('DropDownProfileComponent', () => {
     authService.updateProfile.mockReturnValue(of({ success: true, message: 'Profile updated successfully' }));
     component.firstName.set('Mridul');
     component.lastName.set('Mishra');
-    component.phone.set('555-0100');
+    component.phone.set('+1 (864) 555-0100');
     component.timezone.set('UTC');
     component.notifPref.set('email');
 
@@ -131,7 +152,7 @@ describe('DropDownProfileComponent', () => {
       email: 'cypress@example.com',
       firstname: 'Mridul',
       lastname: 'Mishra',
-      phone: '555-0100',
+      phone: '+1 (864) 555-0100',
       organization: '',
       timezone: 'UTC',
       notifPref: 'email',
@@ -154,7 +175,7 @@ describe('DropDownProfileComponent', () => {
       success: true,
       profile: {
         firstname: 'Cypress', lastname: 'Tester', email: 'cypress@example.com',
-        phone: '555-0100', organization: 'DocsNDocs',
+        phone: '8645550100', organization: 'DocsNDocs',
         timezone: 'UTC+1', notifPref: 'email',
         addressLine1: '25 Cinder Rd', addressLine2: 'Apt 3F', city: 'Edison',
         state: 'NJ', postalCode: '08817', country: 'US',
@@ -165,7 +186,7 @@ describe('DropDownProfileComponent', () => {
     component.ngOnInit();
 
     expect(component.timezone()).toBe('UTC+1');
-    expect(component.phone()).toBe('555-0100');
+    expect(component.phone()).toBe('+1 (864) 555-0100');
     expect(component.org()).toBe('DocsNDocs');
     expect(component.notifPref()).toBe('email');
     expect(component.addressLine1()).toBe('25 Cinder Rd');
