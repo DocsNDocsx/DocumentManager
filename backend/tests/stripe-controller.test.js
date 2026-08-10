@@ -389,10 +389,115 @@ describe('stripecontroller', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         subscriptionId: 'sub_defaults',
+        invoiceId: null,
         status: 'active',
         nextPaymentAt: null,
         voucherCode: null,
       });
+    });
+  });
+
+  describe('getPaymentConfirmation', () => {
+    it('returns authoritative invoice and project details for the payment owner', async () => {
+      const stripe = {
+        invoices: {
+          retrieve: jest.fn(async () => ({
+            id: 'in_123',
+            number: 'INV-123',
+            customer: 'cus_123',
+            subscription: 'sub_123',
+            paid: true,
+            status: 'paid',
+            amount_paid: 972,
+            currency: 'usd',
+            created: 1798761500,
+            status_transitions: { paid_at: 1798761600 },
+          })),
+        },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query
+        .mockResolvedValueOnce([[{
+          userid: 123,
+          email: 'paid@example.com',
+          firstname: 'Paid',
+          lastname: 'User',
+          stripe_customer_id: 'cus_123',
+        }]])
+        .mockResolvedValueOnce([[{ timezone: 'America/Chicago' }]])
+        .mockResolvedValueOnce([[{
+          project_id: 'project-1',
+          type: 'solo',
+          projects: 1,
+          collaborators: 4,
+          documents: 3,
+          days: 20,
+        }]])
+        .mockResolvedValueOnce([[{
+          id: 'project-1',
+          type: 'public',
+          project_code: 'PRJ-TEST-1234',
+          deadline: '2026-08-29',
+        }]]);
+      const res = mockResponse();
+
+      await controller.getPaymentConfirmation({
+        user: { email: 'paid@example.com' },
+        params: { invoiceId: 'in_123' },
+      }, res);
+
+      expect(stripe.invoices.retrieve).toHaveBeenCalledWith('in_123');
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        confirmation: expect.objectContaining({
+          invoiceId: 'in_123',
+          invoiceNumber: 'INV-123',
+          projectId: 'project-1',
+          projectCode: 'PRJ-TEST-1234',
+          projectType: 'solo',
+          visibility: 'public',
+          projects: 1,
+          collaborators: 4,
+          documents: 3,
+          days: 20,
+          amountCharged: '9.72',
+          currency: 'USD',
+          customerName: 'Paid User',
+          timezone: 'America/Chicago',
+        }),
+      });
+    });
+
+    it('does not expose a payment belonging to another Stripe customer', async () => {
+      const stripe = {
+        invoices: {
+          retrieve: jest.fn(async () => ({
+            id: 'in_other',
+            customer: 'cus_other',
+            paid: true,
+            status: 'paid',
+          })),
+        },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query.mockResolvedValueOnce([[{
+        userid: 123,
+        email: 'paid@example.com',
+        stripe_customer_id: 'cus_123',
+      }]]);
+      const res = mockResponse();
+
+      await controller.getPaymentConfirmation({
+        user: { email: 'paid@example.com' },
+        params: { invoiceId: 'in_other' },
+      }, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'This payment does not belong to your account',
+      });
+      expect(pool.query).toHaveBeenCalledTimes(1);
     });
   });
 

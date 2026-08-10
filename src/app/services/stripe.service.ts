@@ -10,6 +10,7 @@ import {
   CreateSubscriptionResponse,
   EstimateTaxRequest,
   EstimateTaxResponse,
+  PaymentConfirmation,
 } from '../models/stripe.models';
 import { LoggingService } from './logging.service';
 
@@ -86,6 +87,12 @@ export class StripeService {
   getBillingProfile() {
     return this.http.get<{ success: boolean; billingAddress: CreateSubscriptionRequest['billingAddress'] | null }>(
       `${environment.apiUrl}/stripe/billing-profile`,
+    );
+  }
+
+  getPaymentConfirmation(invoiceId: string) {
+    return this.http.get<{ success: boolean; confirmation: PaymentConfirmation }>(
+      `${environment.apiUrl}/stripe/payment-confirmation/${encodeURIComponent(invoiceId)}`,
     );
   }
 

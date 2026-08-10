@@ -60,6 +60,7 @@ describe('PricingPlanCcardInformationComponent', () => {
       createSubscription: vi.fn().mockReturnValue(of({
         success: true,
         subscriptionId: 'sub_123',
+        invoiceId: 'in_123',
         status: 'active',
       })),
       estimateTax: vi.fn().mockReturnValue(of({
@@ -352,14 +353,7 @@ describe('PricingPlanCcardInformationComponent', () => {
       }),
     );
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-confirm'], {
-      queryParams: expect.objectContaining({
-        type: 'team',
-        total: '21.14',
-        voucherCode: 'LAUNCH25',
-        projectId: 'team-project-1',
-        projectCode: 'PRJ-2TJS-FYD7',
-        name: 'Mridul Mishra',
-      }),
+      queryParams: { invoiceId: 'in_123' },
     });
     expect(component.processing()).toBe(false);
   });

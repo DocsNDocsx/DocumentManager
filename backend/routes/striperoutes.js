@@ -6,6 +6,7 @@ router.use(verifyJwt);
 
 router.post('/stripe/setup-intent', stripeController.createSetupIntent);
 router.get('/stripe/billing-profile', stripeController.getBillingProfile);
+router.get('/stripe/payment-confirmation/:invoiceId', stripeController.getPaymentConfirmation);
 router.post('/stripe/tax-estimate', stripeController.estimateTax);
 router.post('/stripe/subscription', stripeController.createSubscription);
 router.post('/stripe/subscription/upgrade', stripeController.upgradeSubscription);

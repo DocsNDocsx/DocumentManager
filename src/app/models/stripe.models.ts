@@ -46,6 +46,25 @@ export interface CreateSubscriptionResponse {
   subscriptionId: string;
   status: string;
   nextPaymentAt: string | null;
+  invoiceId?: string | null;
+}
+
+export interface PaymentConfirmation {
+  invoiceId: string;
+  invoiceNumber: string;
+  projectId: string;
+  projectCode: string | null;
+  projectType: 'solo' | 'team';
+  visibility: 'public' | 'private';
+  projects: number;
+  collaborators: number;
+  documents: number;
+  days: number;
+  amountCharged: string;
+  currency: string;
+  customerName: string;
+  timezone: string;
+  paidAt: string;
 }
 
 export interface EstimateTaxRequest {

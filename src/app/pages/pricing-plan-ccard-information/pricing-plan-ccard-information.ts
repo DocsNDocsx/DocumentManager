@@ -482,15 +482,21 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     subscriptionRequest
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: paymentResponse => {
+          const invoiceId = paymentResponse.invoiceId;
+          if (!invoiceId) {
+            this.validationError.set('Payment completed, but its invoice could not be verified. Please check Payment History.');
+            this.processing.set(false);
+            return;
+          }
           if (this.isUpgrade()) {
-            this.navigateToConfirmation();
+            this.navigateToConfirmation(invoiceId);
             return;
           }
           this.activateProjectAfterSubscription()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-              next: response => this.navigateToConfirmation((response as any)?.project?.projectCode ?? null),
+              next: () => this.navigateToConfirmation(invoiceId),
               error: err => {
                 const reason = err?.error?.message ?? 'Project activation failed.';
                 this.validationError.set(`Your subscription was created, but the project could not be activated: ${reason}`);
@@ -524,22 +530,12 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     return this.http.patch(`${environment.apiUrl}/projects/${projectId}/activate`, {});
   }
 
-  private navigateToConfirmation(activatedProjectCode: string | null = null): void {
+  private navigateToConfirmation(invoiceId: string): void {
     this.processing.set(false);
     this.teardownPaymentElement();
     this.router.navigate(['/pricing-plan-confirm'], {
       queryParams: {
-        type: this.projectType(),
-        projects: this.projects(),
-        collaborators: this.collaborators(),
-        documents: this.documents(),
-        days: this.days(),
-        total: this.total().toFixed(2),
-        voucherCode: this.appliedVoucherCode() || null,
-        projectId: this.activationProjectId() || null,
-        projectCode: activatedProjectCode || this.route.snapshot.queryParamMap.get('projectCode') || null,
-        visibility: this.projectVisibility() || null,
-        name: `${this.firstName()} ${this.lastName()}`,
+        invoiceId,
       },
     });
   }

@@ -457,6 +457,7 @@ exports.createSubscription = async (req, res) => {
     res.json({
       success: true,
       subscriptionId: subscription.id,
+      invoiceId: typeof subscription.latest_invoice === 'object' ? subscription.latest_invoice?.id ?? null : subscription.latest_invoice ?? null,
       status: subscription.status,
       nextPaymentAt: periodEnd,
       voucherCode: normalizedVoucherCode || null,
@@ -475,6 +476,79 @@ exports.createSubscription = async (req, res) => {
       message: isStripeError ? err.message : 'Could not create subscription',
       code: err.code || null,
     });
+  }
+};
+
+exports.getPaymentConfirmation = async (req, res) => {
+  try {
+    if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const invoiceId = String(req.params.invoiceId || '').trim();
+    if (!invoiceId) return res.status(400).json({ success: false, message: 'Invoice ID is required' });
+
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+    const invoiceCustomerId = typeof invoice.customer === 'object' ? invoice.customer?.id : invoice.customer;
+    if (!invoiceCustomerId || invoiceCustomerId !== user.stripe_customer_id) {
+      return res.status(403).json({ success: false, message: 'This payment does not belong to your account' });
+    }
+    if (!invoice.paid && invoice.status !== 'paid') {
+      return res.status(409).json({ success: false, message: 'Payment has not been completed' });
+    }
+    const [profileRows] = await pool.query('SELECT timezone FROM users WHERE userid = ?', [user.userid]);
+
+    const subscriptionValue = invoice.subscription ?? invoice.parent?.subscription_details?.subscription;
+    const subscriptionId = typeof subscriptionValue === 'object' ? subscriptionValue?.id : subscriptionValue;
+    const metadataProjectId = String(invoice.metadata?.projectId || '');
+    const [subscriptionRows] = subscriptionId
+      ? await pool.query(
+          'SELECT project_id, type, projects, collaborators, documents, days FROM stripe_subscriptions WHERE userid = ? AND stripe_subscription_id = ? LIMIT 1',
+          [user.userid, subscriptionId]
+        )
+      : await pool.query(
+          'SELECT project_id, type, projects, collaborators, documents, days FROM stripe_subscriptions WHERE userid = ? AND project_id = ? ORDER BY updated_at DESC LIMIT 1',
+          [user.userid, metadataProjectId]
+        );
+    const subscription = subscriptionRows[0];
+    const projectId = metadataProjectId || String(subscription?.project_id || '');
+    if (!subscription || !projectId) {
+      return res.status(404).json({ success: false, message: 'Associated project payment was not found' });
+    }
+
+    let project = null;
+    if (subscription.type === 'solo') {
+      const [projectRows] = await pool.query(
+        'SELECT id, type, project_code, deadline FROM projects WHERE id = ? AND user_id = ?',
+        [projectId, user.userid]
+      );
+      project = projectRows[0] ?? null;
+    }
+    if (!project) return res.status(404).json({ success: false, message: 'Associated project was not found' });
+
+    return res.json({
+      success: true,
+      confirmation: {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number ?? invoice.id,
+        projectId: project.id,
+        projectCode: project.project_code ?? null,
+        projectType: subscription.type,
+        visibility: project.type,
+        projects: Number(subscription.projects) || 1,
+        collaborators: Number(subscription.collaborators) || 0,
+        documents: Number(subscription.documents) || 0,
+        days: Number(subscription.days) || 0,
+        amountCharged: (Number(invoice.amount_paid ?? invoice.amount_due ?? 0) / 100).toFixed(2),
+        currency: String(invoice.currency || 'usd').toUpperCase(),
+        customerName: `${user.firstname ?? ''} ${user.lastname ?? ''}`.trim(),
+        timezone: profileRows[0]?.timezone || 'America/New_York',
+        paidAt: new Date((invoice.status_transitions?.paid_at ?? invoice.created) * 1000).toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error('Get payment confirmation error:', err.message);
+    const status = err?.code === 'resource_missing' ? 404 : 500;
+    return res.status(status).json({ success: false, message: status === 404 ? 'Payment could not be verified' : 'Could not load payment confirmation' });
   }
 };
 

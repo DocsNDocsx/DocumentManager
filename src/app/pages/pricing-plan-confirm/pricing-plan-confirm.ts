@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, ActivatedRoute } from '@angular/router';
+import { StripeService } from '../../services/stripe.service';
 
 @Component({
   selector: 'app-pricing-plan-confirm',
@@ -19,34 +20,56 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 export class PricingPlanConfirmComponent implements OnInit {
   private route      = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private stripeService = inject(StripeService);
 
-  projectType   = signal('Solo');
-  projects      = signal(1);
-  collaborators = signal(1);
-  documents     = signal(1);
-  days          = signal(20);
-  amountCharged = signal('0.00');
-  customerName  = signal('Customer');
-  projectId = signal('Not available');
+  isLoading = signal(true);
+  loadError = signal('');
+  projectType   = signal('');
+  projects      = signal(0);
+  collaborators = signal(0);
+  documents     = signal(0);
+  days          = signal(0);
+  amountCharged = signal('');
+  customerName  = signal('');
+  projectId = signal('');
   projectCode = signal('');
   projectVisibility = signal('');
+  timezone = signal('');
+  invoiceNumber = signal('');
 
   ngOnInit(): void {
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
-        this.projectType.set(
-          (params['type'] || 'solo') === 'team' ? 'Team' : 'Solo'
-        );
-        this.projects.set(+params['projects'] || 1);
-        this.collaborators.set(+params['collaborators'] || 1);
-        this.documents.set(+params['documents'] || 1);
-        this.days.set(+params['days'] || 20);
-        this.amountCharged.set(params['total'] || '0.00');
-        this.customerName.set(params['name'] || 'Customer');
-        this.projectId.set(params['projectId'] || 'Not available');
-        this.projectCode.set(params['projectCode'] || '');
-        this.projectVisibility.set(params['visibility'] || '');
+        const invoiceId = String(params['invoiceId'] || '').trim();
+        if (!invoiceId) {
+          this.isLoading.set(false);
+          this.loadError.set('Payment details could not be verified. Check Payment History or contact support.');
+          return;
+        }
+        this.stripeService.getPaymentConfirmation(invoiceId)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: ({ confirmation }) => {
+              this.projectType.set(confirmation.projectType === 'team' ? 'Team' : 'Solo');
+              this.projects.set(confirmation.projects);
+              this.collaborators.set(confirmation.collaborators);
+              this.documents.set(confirmation.documents);
+              this.days.set(confirmation.days);
+              this.amountCharged.set(confirmation.amountCharged);
+              this.customerName.set(confirmation.customerName);
+              this.projectId.set(confirmation.projectId);
+              this.projectCode.set(confirmation.projectCode ?? '');
+              this.projectVisibility.set(confirmation.visibility);
+              this.timezone.set(confirmation.timezone);
+              this.invoiceNumber.set(confirmation.invoiceNumber);
+              this.isLoading.set(false);
+            },
+            error: err => {
+              this.isLoading.set(false);
+              this.loadError.set(err?.error?.message ?? 'Payment details could not be verified. Check Payment History or contact support.');
+            },
+          });
       });
   }
 }

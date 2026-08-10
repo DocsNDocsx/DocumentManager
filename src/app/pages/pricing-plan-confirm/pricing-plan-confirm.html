@@ -1,4 +1,17 @@
 <div class="confirmation-container">
+  @if (isLoading()) {
+    <div class="success-icon" aria-label="Verifying payment"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
+    <h1>Verifying Payment</h1>
+    <p class="subtitle">Loading your confirmed payment and project details…</p>
+  } @else if (loadError()) {
+    <div class="success-icon" aria-label="Payment verification unavailable"><i class="fas fa-exclamation" aria-hidden="true"></i></div>
+    <h1>Payment Details Unavailable</h1>
+    <p class="subtitle">{{ loadError() }}</p>
+    <div class="action-buttons">
+      <a routerLink="/drop-down-payment-history" class="btn btn-primary">View Payment History</a>
+      <a routerLink="/dashboard" class="btn">Go to Dashboard</a>
+    </div>
+  } @else {
   <div class="success-icon" aria-label="Payment successful">
     <i class="fas fa-check" aria-hidden="true"></i>
   </div>
@@ -26,12 +39,16 @@
       <span class="detail-value">{{ documents() }}</span>
     </div>
     <div class="detail-row">
-      <span class="detail-label">Duration (ET)</span>
+      <span class="detail-label">Duration ({{ timezone() }})</span>
       <span class="detail-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>
     </div>
     <div class="detail-row">
       <span class="detail-label">Est. amount charged</span>
       <span class="detail-value">${{ amountCharged() }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Invoice</span>
+      <span class="detail-value">{{ invoiceNumber() }}</span>
     </div>
     @if (projectCode()) {
       <div class="detail-row">
@@ -49,7 +66,7 @@
   <div class="receipt-info">
     <p>
       <i class="fas fa-envelope" aria-hidden="true"></i>
-      A receipt has been sent to <strong>{{ customerName() }}'s email</strong>.
+      The receipt for {{ customerName() }} is available in Payment History.
     </p>
   </div>
 
@@ -58,4 +75,5 @@
       <i class="fas fa-home" aria-hidden="true"></i> Go to Dashboard
     </a>
   </div>
+  }
 </div>
