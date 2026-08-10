@@ -402,10 +402,21 @@ describe('submissioncontroller', () => {
   });
 
   it('returns submission stats grouped by project id', async () => {
-    pool.query.mockResolvedValueOnce([[
-      { project_id: 'project-1', approved: '2', submitted: '3' },
-      { project_id: 'project-2', approved: 1, submitted: 0 },
-    ]]);
+    pool.query
+      .mockResolvedValueOnce([[
+        { project_id: 'project-1', approved: '2', submitted: '3' },
+        { project_id: 'project-2', approved: 1, submitted: 0 },
+      ]])
+      .mockResolvedValueOnce([[
+        {
+          id: 'project-1', type: 'public',
+          documents: [{}, {}], collaborators: [{}, {}], assignments: {},
+        },
+        {
+          id: 'project-2', type: 'private',
+          documents: [{}], collaborators: [{}], assignments: { 0: [0] },
+        },
+      ]]);
     const res = mockResponse();
 
     await submissionController.getSubmissionStats({ query: { projectIds: 'project-1,project-2' } }, res);
@@ -417,8 +428,14 @@ describe('submissioncontroller', () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       stats: {
-        'project-1': { approved: 2, submitted: 3 },
-        'project-2': { approved: 1, submitted: 0 },
+        'project-1': {
+          approved: 2, submitted: 3, totalSlots: 4,
+          completionUnits: 2.75, completionPercent: 69,
+        },
+        'project-2': {
+          approved: 1, submitted: 0, totalSlots: 1,
+          completionUnits: 1, completionPercent: 100,
+        },
       },
     });
   });

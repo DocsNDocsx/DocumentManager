@@ -9,6 +9,10 @@ const { get, head } = require('@vercel/blob');
 const { Readable } = require('stream');
 
 const SIZE_MULTIPLIERS = { KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
+const configuredSubmittedWeight = Number(process.env.SUBMITTED_COMPLETION_WEIGHT ?? 0.25);
+const SUBMITTED_COMPLETION_WEIGHT = Number.isFinite(configuredSubmittedWeight) && configuredSubmittedWeight >= 0 && configuredSubmittedWeight <= 1
+  ? configuredSubmittedWeight
+  : 0.25;
 const FORMAT_MIMES = {
   PDF: ['application/pdf'], DOC: ['application/msword'],
   DOCX: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
@@ -21,6 +25,27 @@ const FORMAT_MIMES = {
 function parseArray(value) {
   if (Array.isArray(value)) return value;
   try { return JSON.parse(value ?? '[]'); } catch { return []; }
+}
+
+function parseObject(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  try { return JSON.parse(value ?? '{}'); } catch { return {}; }
+}
+
+function projectRequirementSlots(project) {
+  const documents = parseArray(project.documents);
+  const collaborators = parseArray(project.collaborators);
+  const assignments = parseObject(project.assignments);
+  const activeDocuments = new Set(documents.map((document, index) => ({ document, index }))
+    .filter(entry => entry.document?.status !== 'inactive').map(entry => entry.index));
+  const activeCollaborators = new Set(collaborators.map((collaborator, index) => ({ collaborator, index }))
+    .filter(entry => entry.collaborator?.status !== 'inactive').map(entry => entry.index));
+
+  if (project.type === 'public') return activeDocuments.size * activeCollaborators.size;
+  return Object.entries(assignments).reduce((total, [collaboratorIndex, documentIndices]) => {
+    if (!activeCollaborators.has(Number(collaboratorIndex)) || !Array.isArray(documentIndices)) return total;
+    return total + documentIndices.filter(documentIndex => activeDocuments.has(Number(documentIndex))).length;
+  }, 0);
 }
 
 function maxDocumentBytes(document) {
@@ -350,8 +375,29 @@ exports.getSubmissionStats = async (req, res) => {
        FROM submissions WHERE project_id IN (${placeholders}) GROUP BY project_id`,
       ids
     );
+    const [projects] = await pool.query(
+      `SELECT id, type, documents, collaborators, assignments
+       FROM projects WHERE id IN (${placeholders})`,
+      ids
+    );
+    const counts = Object.fromEntries(rows.map(row => [row.project_id, {
+      approved: Number(row.approved),
+      submitted: Number(row.submitted),
+    }]));
     const stats = {};
-    for (const row of rows) stats[row.project_id] = { approved: Number(row.approved), submitted: Number(row.submitted) };
+    for (const project of projects) {
+      const approved = counts[project.id]?.approved ?? 0;
+      const submitted = counts[project.id]?.submitted ?? 0;
+      const totalSlots = projectRequirementSlots(project);
+      const completionUnits = Math.min(totalSlots, approved + submitted * SUBMITTED_COMPLETION_WEIGHT);
+      stats[project.id] = {
+        approved,
+        submitted,
+        totalSlots,
+        completionUnits,
+        completionPercent: totalSlots > 0 ? Math.round(completionUnits / totalSlots * 100) : 0,
+      };
+    }
     res.json({ success: true, stats });
   } catch (err) {
     console.error('Submission stats error:', err);

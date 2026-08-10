@@ -76,12 +76,9 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   overallCompletionRate = computed(() => {
     const active = this.activeOnlyProjects();
-    const totalSlots = active.reduce((s, p) => s + this.totalSlots(p), 0);
+    const totalSlots = active.reduce((sum, project) => sum + (this.listService.submissionStats()[project.id]?.totalSlots ?? 0), 0);
     if (totalSlots === 0) return 0;
-    const weighted = active.reduce((s, p) => {
-      const stat = this.listService.submissionStats()[p.id];
-      return s + (stat?.approved ?? 0) + (stat?.submitted ?? 0) * 0.25;
-    }, 0);
+    const weighted = active.reduce((sum, project) => sum + (this.listService.submissionStats()[project.id]?.completionUnits ?? 0), 0);
     return Math.round((weighted / totalSlots) * 100);
   });
 
@@ -89,10 +86,8 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     const stats = this.listService.submissionStats();
     return Object.fromEntries(
       this.listService.projects().map(p => {
-        const total = this.totalSlots(p);
-        if (total === 0) return [p.id, 0];
         const stat = stats[p.id];
-        return [p.id, Math.round(((stat?.approved ?? 0) + (stat?.submitted ?? 0) * 0.25) / total * 100)];
+        return [p.id, stat?.completionPercent ?? 0];
       })
     );
   });

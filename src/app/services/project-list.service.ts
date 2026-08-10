@@ -5,6 +5,14 @@ import { AuthService } from './auth.service';
 import { Project, ProjectsApiResponse } from '../models/project.models';
 import { LoggingService } from './logging.service';
 
+export interface ProjectSubmissionStats {
+  approved: number;
+  submitted: number;
+  totalSlots: number;
+  completionUnits: number;
+  completionPercent: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjectListService {
   private http = inject(HttpClient);
@@ -14,7 +22,7 @@ export class ProjectListService {
   projects = signal<Project[]>([]);
   isLoading = signal(false);
   error = signal<string | null>(null);
-  submissionStats = signal<Record<string, { approved: number; submitted: number }>>({});
+  submissionStats = signal<Record<string, ProjectSubmissionStats>>({});
 
   load(): void {
     const userid = this.auth.currentUserId();
@@ -44,7 +52,7 @@ export class ProjectListService {
     if (projectIds.length === 0) { this.submissionStats.set({}); return; }
     this.logger.debug('Loading submission stats', { projectCount: projectIds.length });
     const params = new HttpParams().set('projectIds', projectIds.join(','));
-    this.http.get<{ success: boolean; stats: Record<string, { approved: number; submitted: number }> }>(
+    this.http.get<{ success: boolean; stats: Record<string, ProjectSubmissionStats> }>(
       `${environment.apiUrl}/submissions/stats`, { params }
     ).subscribe({
       next: res => {
