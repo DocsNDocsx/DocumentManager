@@ -15,7 +15,7 @@
         [attr.aria-expanded]="dropdownOpen()"
         aria-label="User menu"
       >
-        <span>{{ currentUserLastname() }}, {{ currentUserFirstname() }}!</span>
+        <span>{{ currentUserFirstname() }}!</span>
         <i class="fas fa-chevron-down" aria-hidden="true" style="font-size: 0.8rem"></i>
       </button>
       <div class="dropdown-menu-custom" [class.show]="dropdownOpen()" role="menu">
