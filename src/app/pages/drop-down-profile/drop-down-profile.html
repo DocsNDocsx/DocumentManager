@@ -166,7 +166,6 @@
             <label for="notifPref">Notification Frequency</label>
             <select id="notifPref" [value]="notifPref()" (change)="notifPref.set($any($event.target).value)">
               <option value="instant">Instant — every event</option>
-              <option value="daily">Daily digest</option>
               <option value="weekly">Weekly summary</option>
               <option value="none">None</option>
             </select>
