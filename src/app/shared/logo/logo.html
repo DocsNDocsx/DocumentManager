@@ -6,7 +6,7 @@
 >
   @if (showImage()) {
     <img
-      ngSrc="docsndocslogo-transparent.png"
+      [ngSrc]="variant() === 'light' ? 'docsndocslogo-light.png' : 'docsndocslogo-dark.png'"
       alt="DocsNDocs logo"
       [width]="imageWidth() || imageSize() * 3"
       [height]="imageHeight() || imageSize()"

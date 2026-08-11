@@ -49,8 +49,8 @@
         display: block;
         width: 180px;
         height: 60px;
-        object-fit: cover;
-        object-position: center 34%;
+        object-fit: contain;
+        object-position: center;
         border-radius: 6px;
       }
 
@@ -519,8 +519,8 @@
         display: block;
         width: 180px;
         height: 60px;
-        object-fit: cover;
-        object-position: center 34%;
+        object-fit: contain;
+        object-position: center;
         border-radius: 6px;
       }
 

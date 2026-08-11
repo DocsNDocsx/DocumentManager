@@ -14,8 +14,8 @@
   display: block;
   flex-shrink: 0;
   max-width: min(220px, 48vw);
-  object-fit: cover;
-  object-position: center 34%;
+  object-fit: contain;
+  object-position: center;
   border-radius: 6px;
   background: transparent;
 }

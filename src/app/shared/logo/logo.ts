@@ -17,5 +17,6 @@ export class LogoComponent {
   imageSize = input(32);
   imageWidth = input<number | null>(null);
   imageHeight = input<number | null>(null);
+  variant = input<'dark' | 'light'>('dark');
   nColor = input('');
 }
