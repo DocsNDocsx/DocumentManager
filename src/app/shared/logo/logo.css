@@ -17,7 +17,7 @@
   object-fit: cover;
   object-position: center 34%;
   border-radius: 6px;
-  background: #fff;
+  background: transparent;
 }
 
 .logo-docs-1,
