@@ -2,7 +2,13 @@
       <div class="panel-image">
         <img ngSrc="ImageSignUp.jpg" alt="Secure Sign Up" class="bg-img" fill priority />
         <div class="panel-image-content">
-          <app-logo href="sign-up" ariaLabel="DocNDocs home" />
+          <app-logo
+            href="sign-up"
+            ariaLabel="DocNDocs home"
+            variant="light"
+            [imageWidth]="240"
+            [imageHeight]="66"
+          />
 
           <div class="panel-tagline">
             <h2>Collect documents<br />with confidence.</h2>
@@ -17,7 +23,13 @@
 
       <div class="panel-form">
         <div class="mobile-logo">
-          <app-logo href="sign-up" ariaLabel="DocNDocs home" nColor="var(--primary-color)" />
+          <app-logo
+            href="sign-up"
+            ariaLabel="DocNDocs home"
+            variant="dark"
+            [imageWidth]="180"
+            [imageHeight]="50"
+          />
         </div>
 
         <div class="form-box">

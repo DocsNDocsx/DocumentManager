@@ -330,7 +330,7 @@ exports.getAvatar = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { email, firstname, lastname, phone, organization, timezone, notifPref, addressLine1, addressLine2, city, state, postalCode, country, currentPw, newPw } = req.body;
+    const { email, firstname, lastname, phone, organization, timezone, addressLine1, addressLine2, city, state, postalCode, country, currentPw, newPw } = req.body;
 
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
     if (req.user?.email && String(req.user.email).toLowerCase() !== String(email).toLowerCase()) {
@@ -348,13 +348,13 @@ exports.updateProfile = async (req, res) => {
 
       const hashedPassword = await bcrypt.hash(newPw, 10);
       await pool.query(
-        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ?, password = ? WHERE email = ?',
-        [firstname, lastname, phone, organization, timezone, notifPref, addressLine1, addressLine2, city, state, postalCode, country, hashedPassword, email]
+        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ?, password = ? WHERE email = ?',
+        [firstname, lastname, phone, organization, timezone, addressLine1, addressLine2, city, state, postalCode, country, hashedPassword, email]
       );
     } else {
       await pool.query(
-        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, notif_pref = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ? WHERE email = ?',
-        [firstname, lastname, phone, organization, timezone, notifPref, addressLine1, addressLine2, city, state, postalCode, country, email]
+        'UPDATE users SET firstname = ?, lastname = ?, phone = ?, organization = ?, timezone = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ? WHERE email = ?',
+        [firstname, lastname, phone, organization, timezone, addressLine1, addressLine2, city, state, postalCode, country, email]
       );
     }
 

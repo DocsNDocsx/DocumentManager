@@ -144,7 +144,6 @@ describe('DropDownProfileComponent', () => {
     component.lastName.set('Mishra');
     component.phone.set('+1 (864) 555-0100');
     component.timezone.set('UTC');
-    component.notifPref.set('email');
 
     component.saveProfile();
 
@@ -155,7 +154,6 @@ describe('DropDownProfileComponent', () => {
       phone: '+1 (864) 555-0100',
       organization: '',
       timezone: 'UTC',
-      notifPref: 'email',
       addressLine1: '',
       addressLine2: '',
       city: '',
@@ -188,7 +186,6 @@ describe('DropDownProfileComponent', () => {
     expect(component.timezone()).toBe('UTC+1');
     expect(component.phone()).toBe('+1 (864) 555-0100');
     expect(component.org()).toBe('DocsNDocs');
-    expect(component.notifPref()).toBe('email');
     expect(component.addressLine1()).toBe('25 Cinder Rd');
     expect(component.postalCode()).toBe('08817');
     expect(component.activeProjectCount()).toBe(4);

@@ -45,7 +45,6 @@ export interface UpdateProfileRequest {
   phone: string;
   organization: string;
   timezone: string;
-  notifPref: string;
   addressLine1: string;
   addressLine2: string;
   city: string;

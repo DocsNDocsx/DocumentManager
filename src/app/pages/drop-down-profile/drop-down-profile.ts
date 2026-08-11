@@ -35,7 +35,6 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
   phone = signal('');
   org = signal('');
   timezone = signal('UTC-5');
-  notifPref = signal('instant');
   addressLine1 = signal('');
   addressLine2 = signal('');
   city = signal('');
@@ -74,7 +73,6 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
         this.phone.set(this.formatPhone(profile.phone));
         this.org.set(profile.organization);
         this.timezone.set(profile.timezone);
-        this.notifPref.set(profile.notifPref === 'daily' ? 'instant' : (profile.notifPref || 'instant'));
         this.addressLine1.set(profile.addressLine1 ?? '');
         this.addressLine2.set(profile.addressLine2 ?? '');
         this.city.set(profile.city ?? '');
@@ -139,7 +137,6 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
       phone: this.phone(),
       organization: this.org(),
       timezone: this.timezone(),
-      notifPref: this.notifPref(),
       addressLine1: this.addressLine1(),
       addressLine2: this.addressLine2(),
       city: this.city(),
