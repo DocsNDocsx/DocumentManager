@@ -89,6 +89,49 @@ function parseProjectRow(p) {
   };
 }
 
+function collaboratorMilestones(expectedCollaborators, collaboratorCount) {
+  const expected = Number(expectedCollaborators);
+  if (!Number.isInteger(expected) || expected <= 0) return [];
+  const eightyPercentCount = Math.max(1, Math.floor(expected * 0.8));
+  return [
+    ...(collaboratorCount === eightyPercentCount ? [80] : []),
+    ...(collaboratorCount === expected ? [100] : []),
+  ];
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+async function notifyOwnerOfCollaboratorMilestones(project, collaboratorCount) {
+  const milestones = collaboratorMilestones(project.expected_collaborators, collaboratorCount);
+  if (!project.ownerEmail || milestones.length === 0) return;
+  for (const percentage of milestones) {
+    try {
+      const template = fs.readFileSync(path.join(__dirname, '../templates-email/collaboratormilestone.html'), 'utf8');
+      const body = template
+        .replaceAll('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
+        .replace('{{OWNER_NAME}}', escapeHtml([project.ownerFirstName, project.ownerLastName].filter(Boolean).join(' ') || 'Project Owner'))
+        .replace('{{PROJECT_NAME}}', escapeHtml(project.name))
+        .replace('{{MILESTONE_PERCENT}}', String(percentage))
+        .replace('{{COLLABORATOR_COUNT}}', String(collaboratorCount))
+        .replace('{{EXPECTED_COLLABORATORS}}', String(project.expected_collaborators));
+      await sendEmail(
+        project.ownerEmail,
+        `DocsNDocs: "${project.name}" reached ${percentage}% collaborator capacity`,
+        body,
+      );
+    } catch (emailErr) {
+      console.error(`[email] ${percentage}% collaborator milestone email failed (non-fatal):`, emailErr);
+    }
+  }
+}
+
 function parseJsonArray(value) {
   if (Array.isArray(value)) return value;
   if (value == null || value === '') return [];
@@ -964,9 +1007,11 @@ exports.joinProject = async (req, res) => {
     const normalizedCode = String(projectCode).trim().toUpperCase();
 
     const [projectRows] = await pool.query(
-      `SELECT tp.id, tp.name, tp.expected_collaborators, t.name AS "teamName"
+      `SELECT tp.id, tp.name, tp.expected_collaborators, t.name AS "teamName",
+              u.email AS "ownerEmail", u.firstname AS "ownerFirstName", u.lastname AS "ownerLastName"
        FROM team_projects tp
        JOIN teams t ON t.id = tp.team_id
+       JOIN users u ON u.userid = t.user_id
        WHERE tp.project_code = ? AND tp.type = 'public' AND tp.status = 'active'`,
       [normalizedCode]
     );
@@ -983,7 +1028,7 @@ exports.joinProject = async (req, res) => {
     if (projectRows.length === 0) {
       const [soloRows] = await pool.query(
         `SELECT p.id, p.name, p.collaborators, p.deadline, p.expected_collaborators,
-                u.firstname AS "ownerFirstName", u.lastname AS "ownerLastName"
+                u.firstname AS "ownerFirstName", u.lastname AS "ownerLastName", u.email AS "ownerEmail"
          FROM projects p
          JOIN users u ON u.userid = p.user_id
          WHERE p.project_code = ? AND p.type = 'public' AND p.status = 'active'`,
@@ -1047,6 +1092,7 @@ exports.joinProject = async (req, res) => {
       } catch (emailErr) {
         console.error('[email] Project join email failed (non-fatal):', emailErr);
       }
+      await notifyOwnerOfCollaboratorMilestones(soloProject, collaborators.length);
       return res.status(201).json({
         success: true,
         project: { id: soloProject.id, name: soloProject.name, projectType: 'solo', ownerName, collaboratorIndex, workspacePath },
@@ -1082,6 +1128,8 @@ exports.joinProject = async (req, res) => {
     if (joinResult.affectedRows === 0) {
       return res.status(409).json({ success: false, message: 'This project is already joined or has reached its collaborator limit' });
     }
+
+    await notifyOwnerOfCollaboratorMilestones(project, Number(countRows[0]?.collaborator_count ?? 0) + 1);
 
     res.status(201).json({
       success: true,

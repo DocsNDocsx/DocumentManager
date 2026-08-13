@@ -621,6 +621,48 @@ describe('teamcontroller', () => {
     });
   });
 
+  it('emails the team project owner when floor-rounded 80% capacity is reached', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{
+        id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team', expected_collaborators: 9,
+        ownerEmail: 'owner@example.com', ownerFirstName: 'Owner', ownerLastName: 'User',
+      }]])
+      .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com', organization: 'Org' }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ collaborator_count: 6 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await teamController.joinProject({ body: { projectCode: 'ABCD-2345', userId: '456' } }, res);
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      'owner@example.com',
+      'DocsNDocs: "Team Intake" reached 80% collaborator capacity',
+      expect.any(String),
+    );
+  });
+
+  it('emails the team project owner when 100% capacity is reached', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{
+        id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team', expected_collaborators: 9,
+        ownerEmail: 'owner@example.com', ownerFirstName: 'Owner', ownerLastName: 'User',
+      }]])
+      .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com', organization: 'Org' }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ collaborator_count: 8 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await teamController.joinProject({ body: { projectCode: 'ABCD-2345', userId: '456' } }, res);
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      'owner@example.com',
+      'DocsNDocs: "Team Intake" reached 100% collaborator capacity',
+      expect.any(String),
+    );
+  });
+
   it('rejects duplicate project joins', async () => {
     pool.query
       .mockResolvedValueOnce([[{ id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team' }]])
