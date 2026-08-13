@@ -197,7 +197,9 @@
             </div>
           } @else if (doc.status === 'submitted' || doc.status === 'approved') {
             <div class="document-actions">
-              <button class="btn-action btn-view">
+              <button class="btn-action btn-view"
+                      (click)="viewSubmittedDocument(doc)"
+                      [disabled]="!doc.submissionId">
                 <i class="fas fa-eye" aria-hidden="true"></i> View Submitted
               </button>
             </div>

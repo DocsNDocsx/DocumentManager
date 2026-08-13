@@ -86,7 +86,7 @@ describe('CollaboratorViewComponent', () => {
     expect(component.documents().map(d => d.title)).toEqual(['Resume', 'Transcript']);
   });
 
-  it('shows the backend reason when secure upload token generation fails', () => {
+  it('hides storage-provider details when secure upload token generation fails', () => {
     const originalProduction = environment.production;
     environment.production = true;
     component.projectId.set('project-1');
@@ -110,9 +110,35 @@ describe('CollaboratorViewComponent', () => {
       { status: 400, statusText: 'Bad Request' },
     );
 
-    expect(component.uploadError()).toBe('Blob storage is not configured for this environment');
+    expect(component.uploadError()).toBe('Document upload could not be completed. Please try again.');
     expect(component.toastVisible()).toBe(true);
-    expect(component.toastMsg()).toBe('Blob storage is not configured for this environment');
+    expect(component.toastMsg()).toBe('Document upload could not be completed. Please try again.');
     environment.production = originalProduction;
+  });
+
+  it('downloads the submitted document when View Submitted is selected', () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:submitted-document');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    component.projectId.set('project-1');
+    const submittedDocument = {
+      docIndex: 0,
+      title: 'Resume',
+      maxSize: '5 MB',
+      acceptedFormats: ['PDF'],
+      status: 'submitted' as const,
+      submissionId: 'submission-1',
+      submittedFileName: 'resume.pdf',
+      selectedFile: null,
+      uploading: false,
+    };
+
+    component.viewSubmittedDocument(submittedDocument);
+    http.expectOne(`${environment.apiUrl}/projects/project-1/submissions/submission-1/download`)
+      .flush(new Blob(['pdf'], { type: 'application/pdf' }));
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:submitted-document');
   });
 });

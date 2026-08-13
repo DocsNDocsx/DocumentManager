@@ -113,6 +113,14 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
     this.toastTimer = setTimeout(() => this.toastVisible.set(false), 4000);
   }
 
+  private uploadErrorMessage(err: any): string {
+    const rawMessage = String(err?.error?.message ?? err?.message ?? '');
+    if (/vercel|blob|storage|store|conflict|already exists|pathname/i.test(rawMessage)) {
+      return 'Document upload could not be completed. Please try again.';
+    }
+    return rawMessage || 'Document upload failed. Please try again.';
+  }
+
   private loadData(projectId: string, collabIndex: number): void {
     this.isLoading.set(true);
     this.logger.debug('Loading collaborator view', { projectId, collabIndex });
@@ -218,7 +226,8 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
     this.logger.info('Uploading document', { projectId: this.projectId(), docIdx, fileName: doc.selectedFile.name });
 
     const submissionUrl = `${environment.apiUrl}/projects/${this.projectId()}/submissions`;
-    const pathname = `submissions/solo/${this.projectId()}/${this.collabIndex()}/doc-${docIdx}-${doc.selectedFile.name}`;
+    const uploadId = crypto.randomUUID();
+    const pathname = `submissions/solo/${this.projectId()}/${this.collabIndex()}/doc-${docIdx}-${uploadId}-${doc.selectedFile.name}`;
     const clientPayload = JSON.stringify({ collabIndex: this.collabIndex(), docIndex: docIdx });
     const request$ = environment.production
       ? this.http.post<{ clientToken: string }>(`${submissionUrl}/upload-token`, {
@@ -267,7 +276,7 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.logger.error('Document upload failed', err);
-        const message = err?.error?.message ?? err?.message ?? 'Document upload failed. Please try again.';
+        const message = this.uploadErrorMessage(err);
         this.uploadError.set(message);
         this.showErrorToast(message);
         this.documents.update(docs => docs.map(d => d.docIndex === docIdx ? { ...d, uploading: false } : d));
@@ -277,6 +286,31 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
 
   closeSuccessModal(): void {
     this.showSuccessModal.set(false);
+  }
+
+  viewSubmittedDocument(doc: DocumentSlot): void {
+    if (!doc.submissionId || !doc.submittedFileName) {
+      this.showErrorToast('The submitted document is not available.');
+      return;
+    }
+
+    this.http.get(
+      `${environment.apiUrl}/projects/${this.projectId()}/submissions/${doc.submissionId}/download`,
+      { responseType: 'blob' },
+    ).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = doc.submittedFileName!;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      error: err => {
+        this.logger.error('Failed to open submitted document', err);
+        this.showErrorToast('Could not open the submitted document. Please try again.');
+      },
+    });
   }
 
   getFileIcon(fileName: string): string {

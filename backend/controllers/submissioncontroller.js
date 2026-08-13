@@ -446,17 +446,28 @@ exports.downloadSubmission = async (req, res) => {
   try {
     const ownerId = await ownerIdForEmail(req.user?.email);
     const [rows] = await pool.query(
-      `SELECT s.file_name, s.file_path
+      `SELECT s.file_name, s.file_path, s.collaborator_index, p.user_id, p.collaborators
        FROM submissions s
        JOIN projects p ON p.id = s.project_id
-       WHERE s.id = ? AND s.project_id = ? AND p.user_id = ?`,
-      [req.params.submissionId, req.params.projectId, ownerId]
+       WHERE s.id = ? AND s.project_id = ?`,
+      [req.params.submissionId, req.params.projectId]
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Submission not found' });
-    const result = await getBlobResult(rows[0].file_path);
+    const submission = rows[0];
+    const collaborators = parseArray(submission.collaborators);
+    const collaborator = collaborators[Number(submission.collaborator_index)];
+    const requestEmail = String(req.user?.email ?? '').toLowerCase();
+    const isOwner = String(submission.user_id) === String(ownerId);
+    const isSubmittingCollaborator = collaborator?.status !== 'inactive'
+      && String(collaborator?.email ?? '').toLowerCase() === requestEmail;
+    if (!isOwner && !isSubmittingCollaborator) {
+      return res.status(403).json({ success: false, message: 'You cannot download this submission' });
+    }
+
+    const result = await getBlobResult(submission.file_path);
     if (!result || result.statusCode !== 200) return res.status(404).json({ success: false, message: 'File not found' });
     res.set('Content-Type', result.blob.contentType || 'application/octet-stream');
-    res.set('Content-Disposition', `attachment; filename="${String(rows[0].file_name).replace(/["\r\n]/g, '_')}"`);
+    res.set('Content-Disposition', `attachment; filename="${String(submission.file_name).replace(/["\r\n]/g, '_')}"`);
     toNodeStream(result.stream).pipe(res);
   } catch (err) {
     console.error('Download submission error:', err);
