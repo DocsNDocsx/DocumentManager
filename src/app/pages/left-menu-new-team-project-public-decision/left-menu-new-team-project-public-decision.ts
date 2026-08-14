@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { Router, RouterLink } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
-import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
 import { BillingEstimateService } from '../../services/billing-estimate.service';
 
@@ -11,7 +10,7 @@ import { BillingEstimateService } from '../../services/billing-estimate.service'
   templateUrl: './left-menu-new-team-project-public-decision.html',
   styleUrl: './left-menu-new-team-project-public-decision.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, SharedSidebarComponent, ConfirmModalComponent, RouterLink],
+  imports: [SharedHeaderComponent, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },
@@ -22,7 +21,6 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
   private readonly billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
-  confirmModalOpen = signal(false);
   codeModalOpen = signal(false);
   projectCode = signal('');
   toastMsg = signal('');
@@ -51,45 +49,15 @@ export class LeftMenuNewTeamProjectPublicDecisionComponent implements OnInit {
     this.dropdownOpen.set(false);
   }
 
-  openConfirmModal(): void {
-    this.confirmModalOpen.set(true);
-  }
-
-  closeConfirmModal(): void {
-    this.confirmModalOpen.set(false);
-  }
-
-  confirmActivation(): void {
-    this.confirmModalOpen.set(false);
-    this.teamWizardService.activateProject().subscribe({
-      next: project => {
-        this.projectCode.set(project.projectCode ?? '');
-        this.codeModalOpen.set(true);
-      },
-      error: err => {
-        if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
-          this.showSubscribePrompt();
-        }
-      },
-    });
-  }
-
-  private showSubscribePrompt(): void {
-    this.toastMsg.set('Please subscribe before activating a project');
-    this.toastVisible.set(true);
-    setTimeout(() => this.toastVisible.set(false), 3000);
+  goToPayment(): void {
     const project = this.teamWizardService.project();
-    if (project) {
-      const queryParams = this.billingEstimate.buildTeamActivationQuery(project);
-      if (!queryParams) {
-        this.toastMsg.set('Please add a valid deadline before activating this project');
-        this.toastVisible.set(true);
-        return;
-      }
-      this.router.navigate(['/pricing-plan-ccard-information'], {
-        queryParams,
-      });
+    const queryParams = project ? this.billingEstimate.buildTeamActivationQuery(project) : null;
+    if (!queryParams) {
+      this.toastMsg.set('Please add a valid deadline before continuing to payment');
+      this.toastVisible.set(true);
+      return;
     }
+    this.router.navigate(['/pricing-plan-ccard-information'], { queryParams });
   }
 
   closeCodeModal(): void {

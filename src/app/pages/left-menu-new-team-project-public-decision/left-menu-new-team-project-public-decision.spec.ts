@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 
 import { LeftMenuNewTeamProjectPublicDecisionComponent } from './left-menu-new-team-project-public-decision';
 import { TeamProjectWizardService } from '../../services/team-project-wizard.service';
@@ -11,6 +11,7 @@ import { AuthService } from '../../services/auth.service';
 describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
   let component: LeftMenuNewTeamProjectPublicDecisionComponent;
   let wizard: any;
+  let billing: any;
   let router: any;
 
   beforeEach(async () => {
@@ -28,13 +29,14 @@ describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
       markComplete: vi.fn(() => of({ status: 'completed' })),
       reset: vi.fn(),
     };
+    billing = { buildTeamActivationQuery: vi.fn(() => ({ type: 'team', monthly: '12.00' })) };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
 
     await TestBed.configureTestingModule({
       imports: [LeftMenuNewTeamProjectPublicDecisionComponent],
       providers: [
         { provide: TeamProjectWizardService, useValue: wizard },
-        { provide: BillingEstimateService, useValue: { buildTeamActivationQuery: vi.fn(() => ({ type: 'team', monthly: '12.00' })) } },
+        { provide: BillingEstimateService, useValue: billing },
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { snapshot: {}, parent: { snapshot: { paramMap: { get: () => null } } } } },
         { provide: AuthService, useValue: { currentUserId: signal('123'), currentUserFirstname: signal(''), currentUserLastname: signal(''), currentUserEmail: signal(''), currentUserAvatar: signal('') } },
@@ -46,34 +48,26 @@ describe('LeftMenuNewTeamProjectPublicDecisionComponent', () => {
     component.ngOnInit();
   });
 
-  it('summarizes public team project state and activates to show code modal', () => {
+  it('summarizes public team project state and routes directly to billing', () => {
     expect(component.teamName()).toBe('Alpha');
     expect(component.expectedCollaborators()).toBe(8);
 
-    component.openConfirmModal();
-    component.confirmActivation();
+    component.goToPayment();
 
-    expect(component.confirmModalOpen()).toBe(false);
-    expect(component.projectCode()).toBe('TEAM-PUB-1');
-    expect(component.codeModalOpen()).toBe(true);
-  });
-
-  it('closes code modal and returns to team projects', () => {
-    component.closeCodeModal();
-
-    expect(wizard.reset).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-team-projects']);
-  });
-
-  it('routes subscription-required activation to billing', () => {
-    wizard.activateProject.mockReturnValueOnce(throwError(() => ({ error: { code: 'SUBSCRIPTION_REQUIRED' } })));
-
-    component.confirmActivation();
-
-    expect(component.toastMsg()).toBe('Please subscribe before activating a project');
+    expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-ccard-information'], {
       queryParams: { type: 'team', monthly: '12.00' },
     });
+  });
+
+  it('shows a validation message when a payment estimate cannot be created', () => {
+    billing.buildTeamActivationQuery.mockReturnValueOnce(null);
+
+    component.goToPayment();
+
+    expect(component.toastVisible()).toBe(true);
+    expect(component.toastMsg()).toBe('Please add a valid deadline before continuing to payment');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('returns to team projects without activating when editing an active project', () => {

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 
 import { LeftMenuNewSoloProjectPublicDecisionComponent } from './left-menu-new-solo-project-public-decision';
 import { ProjectWizardService } from '../../services/project-wizard.service';
@@ -51,40 +51,22 @@ describe('LeftMenuNewSoloProjectPublicDecisionComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('opens confirm modal, activates, shows code modal, and closes to project list', () => {
-    component.openConfirmModal();
-    expect(component.confirmModalOpen()).toBe(true);
+  it('routes directly to the billing page without activating', () => {
+    component.goToPayment();
 
-    component.confirmActivation();
-    expect(component.confirmModalOpen()).toBe(false);
-    expect(component.codeModalOpen()).toBe(true);
-
-    component.closeCodeModal();
-    expect(wizard.reset).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);
-  });
-
-  it('routes subscription-required activation to the billing page', () => {
-    wizard.activateProject.mockReturnValueOnce(throwError(() => ({ status: 402 })));
-
-    component.confirmActivation();
-
-    expect(component.toastMsg()).toBe('Please subscribe before activating a project');
+    expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-ccard-information'], {
       queryParams: { type: 'solo', monthly: '9.00' },
     });
   });
 
-  it('shows the backend reason when activation validation fails', () => {
-    wizard.activateProject.mockReturnValueOnce(throwError(() => ({
-      status: 400,
-      error: { message: 'A future deadline is required before activation' },
-    })));
+  it('shows a validation message when a payment estimate cannot be created', () => {
+    billing.buildSoloActivationQuery.mockReturnValueOnce(null);
 
-    component.confirmActivation();
+    component.goToPayment();
 
     expect(component.toastVisible()).toBe(true);
-    expect(component.toastMsg()).toBe('A future deadline is required before activation');
+    expect(component.toastMsg()).toBe('Please add a valid deadline before continuing to payment');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 

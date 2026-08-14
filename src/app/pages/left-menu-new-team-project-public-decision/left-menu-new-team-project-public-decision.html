@@ -110,26 +110,13 @@
           </button>
         </div>
       } @else {
-        <button class="btn-action btn-activate" type="button" (click)="openConfirmModal()">
-          <i class="fas fa-rocket" aria-hidden="true"></i> Activate Project
+        <button class="btn-action btn-activate" type="button" (click)="goToPayment()">
+          <i class="fas fa-credit-card" aria-hidden="true"></i> Payment
         </button>
       }
     </div>
   </main>
 </div>
-
-@if (confirmModalOpen()) {
-  <app-confirm-modal
-    title="Activate Public Team Project?"
-    confirmLabel="Yes, Activate"
-    confirmIcon="fas fa-rocket"
-    modalId="confirmModalTitle"
-    (confirm)="confirmActivation()"
-    (cancel)="closeConfirmModal()">
-    <p>This will create your public team project and generate a shareable <strong>project code</strong>. Collaborators can use this code to join and submit documents until the deadline.</p>
-    <p style="margin-top: 0.75rem">Are you sure you want to activate this project now?</p>
-  </app-confirm-modal>
-}
 
 @if (codeModalOpen()) {
   <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="codeModalTitle" (click)="closeCodeModal()">
