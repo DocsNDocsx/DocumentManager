@@ -130,7 +130,7 @@
         @if (uploadedFiles().length > 0) {
           <div style="margin-top: 1rem;" aria-live="polite">
             <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-              <i class="fas fa-file-alt" aria-hidden="true"></i> Uploaded Files
+              <i class="fas fa-check-circle" aria-hidden="true"></i> Uploaded Files ({{ uploadedFiles().length }})
             </div>
             @for (file of uploadedFiles(); track file.name; let i = $index) {
               <div class="file-item">

@@ -161,6 +161,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
     this.attachmentUploadService.upload(file, 'solo').subscribe({
       next: attachment => {
         this.uploadedFiles.update(list => list.some(item => item.name === attachment.name) ? list : [...list, attachment]);
+        this.showToast(`${attachment.name} uploaded successfully`);
       },
       error: () => {
         this.showToast(`Failed to upload ${file.name}`);

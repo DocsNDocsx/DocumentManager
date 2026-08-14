@@ -12,6 +12,7 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
   let component: LeftMenuNewSoloProjectPublicDetailsComponent;
   let wizard: any;
   let router: any;
+  let uploader: any;
 
   beforeEach(async () => {
     wizard = {
@@ -24,12 +25,13 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
       reset: vi.fn(() => wizard.project.set(null)),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
+    uploader = { upload: vi.fn(() => of({ name: 'a.pdf', size: '1 KB', iconClass: 'fa-file-pdf' })) };
 
     await TestBed.configureTestingModule({
       imports: [LeftMenuNewSoloProjectPublicDetailsComponent],
       providers: [
         { provide: ProjectWizardService, useValue: wizard },
-        { provide: ProjectAttachmentUploadService, useValue: { upload: vi.fn(() => of({ name: 'a.pdf', size: '1 KB', iconClass: 'fa-file-pdf' })) } },
+        { provide: ProjectAttachmentUploadService, useValue: uploader },
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { parent: { snapshot: { paramMap: { get: () => null } } } } },
         { provide: AuthService, useValue: { currentUserId: signal('123'), currentUserFirstname: signal(''), currentUserLastname: signal(''), currentUserEmail: signal(''), currentUserAvatar: signal('') } },
@@ -94,5 +96,23 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
       ['/new-solo-project/public', 'new-project', 'details'],
       { replaceUrl: true },
     );
+  });
+
+  it('shows the uploaded filename and a success notification', () => {
+    const file = new File(['pdf'], 'research-plan.pdf', { type: 'application/pdf' });
+    uploader.upload.mockReturnValue(of({
+      name: 'research-plan.pdf',
+      size: '3 B',
+      iconClass: 'fa-file-pdf',
+      url: 'https://files.example.com/research-plan.pdf',
+    }));
+
+    (component as any).uploadFile(file);
+
+    expect(component.uploadedFiles()).toEqual([
+      expect.objectContaining({ name: 'research-plan.pdf', size: '3 B' }),
+    ]);
+    expect(component.toastVisible()).toBe(true);
+    expect(component.toastMsg()).toBe('research-plan.pdf uploaded successfully');
   });
 });
