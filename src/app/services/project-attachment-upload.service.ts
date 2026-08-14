@@ -28,7 +28,7 @@ export class ProjectAttachmentUploadService {
       const clientPayload = JSON.stringify({ scope });
       const token = this.auth.getToken();
       return from(upload(pathname, file, {
-          access: 'public',
+          access: 'private',
           handleUploadUrl: `${environment.apiUrl}/project-attachments/upload-token`,
           clientPayload,
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
