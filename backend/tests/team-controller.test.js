@@ -663,6 +663,28 @@ describe('teamcontroller', () => {
     );
   });
 
+  it('sends only the 100% email when one collaborator reaches both milestones', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{
+        id: 'team-project-1', name: 'Solo Seat', teamName: 'Review Team', expected_collaborators: 1,
+        ownerEmail: 'owner@example.com', ownerFirstName: 'Owner', ownerLastName: 'User',
+      }]])
+      .mockResolvedValueOnce([[{ userid: '456', firstname: 'Join', lastname: 'User', email: 'join@example.com', organization: 'Org' }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ collaborator_count: 0 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await teamController.joinProject({ body: { projectCode: 'ABCD-2345', userId: '456' } }, res);
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledWith(
+      'owner@example.com',
+      'DocsNDocs: "Solo Seat" reached 100% collaborator capacity',
+      expect.any(String),
+    );
+  });
+
   it('rejects duplicate project joins', async () => {
     pool.query
       .mockResolvedValueOnce([[{ id: 'team-project-1', name: 'Team Intake', teamName: 'Review Team' }]])

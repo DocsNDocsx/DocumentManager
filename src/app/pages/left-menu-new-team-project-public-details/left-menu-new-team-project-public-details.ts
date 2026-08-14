@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -14,7 +14,7 @@ import { isValidProjectDeadline, minimumProjectDeadline } from '../../utils/dead
   templateUrl: './left-menu-new-team-project-public-details.html',
   styleUrl: './left-menu-new-team-project-public-details.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent],
+  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },
@@ -56,8 +56,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   isUploading = signal(false);
   private pendingUploads = 0;
 
-  supportFirstName = signal('');
-  supportLastName = signal('');
+  supportName = signal('');
   supportEmail = signal('');
   supportAffiliation = signal('');
 
@@ -103,8 +102,7 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
       this.minimumCollaborators.set(proj.status === 'active' ? Number(proj.expectedCollaborators ?? 1) : 1);
       this.uploadedFiles.set(proj.attachments ?? []);
       if (proj.supportStaff) {
-        this.supportFirstName.set(proj.supportStaff.firstName ?? '');
-        this.supportLastName.set(proj.supportStaff.lastName ?? '');
+        this.supportName.set([proj.supportStaff.firstName, proj.supportStaff.lastName].filter(Boolean).join(' '));
         this.supportEmail.set(proj.supportStaff.email ?? '');
         this.supportAffiliation.set(proj.supportStaff.affiliation ?? '');
       }
@@ -181,6 +179,11 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
     this.isUploading.set(this.pendingUploads > 0);
   }
 
+  private supportStaffName(): { firstName: string; lastName: string } {
+    const [firstName = '', ...lastNameParts] = this.supportName().trim().split(/\s+/).filter(Boolean);
+    return { firstName, lastName: lastNameParts.join(' ') };
+  }
+
   removeFile(index: number): void {
     this.uploadedFiles.update(list => list.filter((_, i) => i !== index));
   }
@@ -210,8 +213,8 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   saveAsDraft(): void {
     if (!this.isFormValid() || this.teamWizardService.isSaving() || this.isUploading()) return;
     this.teamWizardService.teamName.set(this.selectedTeamName());
-    const supportStaff = this.supportFirstName().trim() || this.supportLastName().trim() || this.supportEmail().trim() || this.supportAffiliation().trim()
-      ? { firstName: this.supportFirstName().trim(), lastName: this.supportLastName().trim(), email: this.supportEmail().trim(), affiliation: this.supportAffiliation().trim() }
+    const supportStaff = this.supportName().trim() || this.supportEmail().trim() || this.supportAffiliation().trim()
+      ? { ...this.supportStaffName(), email: this.supportEmail().trim(), affiliation: this.supportAffiliation().trim() }
       : null;
     this.teamWizardService.saveDetails({
       teamId: this.selectedTeamId(),
@@ -236,8 +239,8 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   continue(): void {
     if (!this.isFormValid() || this.teamWizardService.isSaving() || this.isUploading()) return;
     this.teamWizardService.teamName.set(this.selectedTeamName());
-    const supportStaff = this.supportFirstName().trim() || this.supportLastName().trim() || this.supportEmail().trim() || this.supportAffiliation().trim()
-      ? { firstName: this.supportFirstName().trim(), lastName: this.supportLastName().trim(), email: this.supportEmail().trim(), affiliation: this.supportAffiliation().trim() }
+    const supportStaff = this.supportName().trim() || this.supportEmail().trim() || this.supportAffiliation().trim()
+      ? { ...this.supportStaffName(), email: this.supportEmail().trim(), affiliation: this.supportAffiliation().trim() }
       : null;
     this.teamWizardService.saveDetails({
       teamId: this.selectedTeamId(),

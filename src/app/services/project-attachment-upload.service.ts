@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map } from 'rxjs';
+import { from, map, switchMap } from 'rxjs';
+import { put } from '@vercel/blob/client';
 import { environment } from '../../environments/environment';
 import { ProjectAttachment } from '../models/project.models';
 
@@ -19,6 +20,26 @@ export class ProjectAttachmentUploadService {
   private readonly http = inject(HttpClient);
 
   upload(file: File, scope: 'solo' | 'team') {
+    if (environment.production) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-');
+      const pathname = `project-attachments/${scope}/${crypto.randomUUID()}-${safeName}`;
+      const clientPayload = JSON.stringify({ scope });
+      return this.http.post<{ clientToken: string }>(
+        `${environment.apiUrl}/project-attachments/upload-token`,
+        {
+          type: 'blob.generate-client-token',
+          payload: { pathname, clientPayload, multipart: true },
+        },
+      ).pipe(
+        switchMap(response => from(put(pathname, file, {
+          access: 'public',
+          token: response.clientToken,
+          multipart: true,
+        }))),
+        map(blob => this.toAttachment(file.name, file.size, file.type, blob.url)),
+      );
+    }
+
     const formData = new FormData();
     formData.append('scope', scope);
     formData.append('file', file);
@@ -27,15 +48,24 @@ export class ProjectAttachmentUploadService {
       `${environment.apiUrl}/project-attachments`,
       formData,
     ).pipe(
-      map(res => ({
-        name: res.attachment.name,
-        size: this.formatSize(res.attachment.size),
-        iconClass: this.getIconClass(res.attachment.name),
-        url: res.attachment.url,
-        bytes: res.attachment.size,
-        mimeType: res.attachment.mimeType,
-      }) satisfies ProjectAttachment),
+      map(res => this.toAttachment(
+        res.attachment.name,
+        res.attachment.size,
+        res.attachment.mimeType,
+        res.attachment.url,
+      )),
     );
+  }
+
+  private toAttachment(name: string, bytes: number, mimeType: string, url: string): ProjectAttachment {
+    return {
+      name,
+      size: this.formatSize(bytes),
+      iconClass: this.getIconClass(name),
+      url,
+      bytes,
+      mimeType,
+    };
   }
 
   private formatSize(bytes: number): string {

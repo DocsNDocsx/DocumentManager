@@ -18,6 +18,8 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
       projectId: signal('new-project'),
       project: signal<any>({ documents: [] }),
       savePublicDocuments: vi.fn(() => of({ id: 'new-project' })),
+      cancelProject: vi.fn(() => of({ id: 'new-project' })),
+      reset: vi.fn(),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
 
@@ -80,5 +82,13 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
 
     expect(component.documents().slice(0, 2)).toEqual(existing);
     expect(component.documents()).toHaveLength(4);
+  });
+
+  it('cancels the project and returns to the project landing page', () => {
+    component.cancelProject();
+
+    expect(wizard.cancelProject).toHaveBeenCalledOnce();
+    expect(wizard.reset).toHaveBeenCalledOnce();
+    expect(router.navigate).toHaveBeenCalledWith(['/left-menu-new-solo-project-landing']);
   });
 });

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -20,7 +20,7 @@ export const TEAM_FILE_TYPES = ['PDF', 'DOCX', 'DOC', 'JPG', 'PNG', 'XLSX'];
   templateUrl: './left-menu-new-team-project-public-documents.html',
   styleUrl: './left-menu-new-team-project-public-documents.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent],
+  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },

@@ -93,10 +93,11 @@ function collaboratorMilestones(expectedCollaborators, collaboratorCount) {
   const expected = Number(expectedCollaborators);
   if (!Number.isInteger(expected) || expected <= 0) return [];
   const eightyPercentCount = Math.max(1, Math.floor(expected * 0.8));
-  return [
-    ...(collaboratorCount === eightyPercentCount ? [80] : []),
-    ...(collaboratorCount === expected ? [100] : []),
-  ];
+  // If one join reaches both thresholds (for example, a one-person project),
+  // send only the highest milestone instead of two emails for the same event.
+  if (collaboratorCount === expected) return [100];
+  if (collaboratorCount === eightyPercentCount) return [80];
+  return [];
 }
 
 function escapeHtml(value) {

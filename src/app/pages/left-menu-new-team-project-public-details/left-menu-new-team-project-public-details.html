@@ -17,22 +17,22 @@
     </div>
 
     <nav class="step-progress" aria-label="Project creation steps">
-      <div class="step active" aria-current="step">
-        <div class="step-circle" aria-hidden="true">1</div>
-        <div class="step-label">Details</div>
-      </div>
+      <a class="step active" routerLink="../details" aria-current="step">
+        <span class="step-circle" aria-hidden="true">1</span>
+        <span class="step-label">Details</span>
+      </a>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step">
-        <div class="step-circle" aria-hidden="true">2</div>
-        <div class="step-label">Documents</div>
-      </div>
+      <a class="step" routerLink="../documents">
+        <span class="step-circle" aria-hidden="true">2</span>
+        <span class="step-label">Documents</span>
+      </a>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step">
-        <div class="step-circle" aria-hidden="true">3</div>
-        <div class="step-label">Decision</div>
-      </div>
+      <a class="step" routerLink="../decision">
+        <span class="step-circle" aria-hidden="true">3</span>
+        <span class="step-label">Decision</span>
+      </a>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step"><div class="step-circle" aria-hidden="true">4</div><div class="step-label">Payment</div></div>
+      <span class="step locked" aria-disabled="true"><span class="step-circle" aria-hidden="true">4</span><span class="step-label">Payment</span></span>
     </nav>
 
     <div class="form-container">
@@ -185,16 +185,11 @@
         Support Staff <span style="font-size: 0.82rem; font-weight: 400; color: var(--text-light)">(optional)</span>
       </h3>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="support-staff-row">
         <div class="form-group">
-          <label class="form-label" for="supportFirstName">First Name</label>
-          <input type="text" class="form-control" id="supportFirstName" placeholder="e.g., Michael"
-            [ngModel]="supportFirstName()" (ngModelChange)="supportFirstName.set($event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="supportLastName">Last Name</label>
-          <input type="text" class="form-control" id="supportLastName" placeholder="e.g., Johnson"
-            [ngModel]="supportLastName()" (ngModelChange)="supportLastName.set($event)" />
+          <label class="form-label" for="supportName">Name</label>
+          <input type="text" class="form-control" id="supportName" placeholder="e.g., Michael Johnson"
+            [ngModel]="supportName()" (ngModelChange)="supportName.set($event)" />
         </div>
         <div class="form-group">
           <label class="form-label" for="supportEmail">Email</label>

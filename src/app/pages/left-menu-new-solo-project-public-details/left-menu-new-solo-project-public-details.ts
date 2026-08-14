@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -13,7 +13,7 @@ import { isValidProjectDeadline, minimumProjectDeadline } from '../../utils/dead
   templateUrl: './left-menu-new-solo-project-public-details.html',
   styleUrl: './left-menu-new-solo-project-public-details.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent],
+  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },
@@ -52,8 +52,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
   isUploading = signal(false);
   private pendingUploads = 0;
 
-  supportFirstName = signal('');
-  supportLastName = signal('');
+  supportName = signal('');
   supportEmail = signal('');
   supportAffiliation = signal('');
 
@@ -99,8 +98,7 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
       this.minimumCollaborators.set(proj.status === 'active' ? Number(proj.expectedCollaborators ?? 1) : 1);
       this.uploadedFiles.set(proj.attachments ?? []);
       if (proj.staff) {
-        this.supportFirstName.set(proj.staff.firstName);
-        this.supportLastName.set(proj.staff.lastName);
+        this.supportName.set([proj.staff.firstName, proj.staff.lastName].filter(Boolean).join(' '));
         this.supportEmail.set(proj.staff.email);
         this.supportAffiliation.set(proj.staff.affiliation);
       }
@@ -203,11 +201,15 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
     return map[ext] ?? 'fa-file';
   }
 
+  private supportStaffName(): { firstName: string; lastName: string } {
+    const [firstName = '', ...lastNameParts] = this.supportName().trim().split(/\s+/).filter(Boolean);
+    return { firstName, lastName: lastNameParts.join(' ') };
+  }
+
   saveAsDraft(): void {
     if (!this.isFormValid() || this.isUploading()) return;
-    const staff = this.supportFirstName().trim() ? {
-      firstName: this.supportFirstName(),
-      lastName: this.supportLastName(),
+    const staff = this.supportName().trim() ? {
+      ...this.supportStaffName(),
       email: this.supportEmail(),
       affiliation: this.supportAffiliation(),
     } : null;
@@ -231,9 +233,8 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
 
   continue(): void {
     if (!this.isFormValid() || this.isUploading()) return;
-    const staff = this.supportFirstName().trim() ? {
-      firstName: this.supportFirstName(),
-      lastName: this.supportLastName(),
+    const staff = this.supportName().trim() ? {
+      ...this.supportStaffName(),
       email: this.supportEmail(),
       affiliation: this.supportAffiliation(),
     } : null;

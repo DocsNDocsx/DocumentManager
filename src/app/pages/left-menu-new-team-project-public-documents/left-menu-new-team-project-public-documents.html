@@ -15,22 +15,22 @@
     </div>
 
     <nav class="step-progress" aria-label="Project creation steps">
-      <div class="step completed">
-        <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
-        <div class="step-label">Details</div>
-      </div>
+      <a class="step completed" routerLink="../details">
+        <span class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></span>
+        <span class="step-label">Details</span>
+      </a>
       <div class="step-divider completed" aria-hidden="true"></div>
-      <div class="step active" aria-current="step">
-        <div class="step-circle" aria-hidden="true">2</div>
-        <div class="step-label">Documents</div>
-      </div>
+      <a class="step active" routerLink="../documents" aria-current="step">
+        <span class="step-circle" aria-hidden="true">2</span>
+        <span class="step-label">Documents</span>
+      </a>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step">
-        <div class="step-circle" aria-hidden="true">3</div>
-        <div class="step-label">Decision</div>
-      </div>
+      <a class="step" routerLink="../decision">
+        <span class="step-circle" aria-hidden="true">3</span>
+        <span class="step-label">Decision</span>
+      </a>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step"><div class="step-circle" aria-hidden="true">4</div><div class="step-label">Payment</div></div>
+      <span class="step locked" aria-disabled="true"><span class="step-circle" aria-hidden="true">4</span><span class="step-label">Payment</span></span>
     </nav>
 
     <div class="form-container">

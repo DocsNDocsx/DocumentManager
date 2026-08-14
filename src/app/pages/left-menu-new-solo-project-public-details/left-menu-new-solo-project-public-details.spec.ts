@@ -64,8 +64,7 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
     component.projectName.set('Public Project');
     component.projectDeadline.set('2026-09-15');
     component.expectedCollaborators.set('5');
-    component.supportFirstName.set('Sam');
-    component.supportLastName.set('Support');
+    component.supportName.set('Sam Support');
     component.supportEmail.set('sam@example.com');
     component.supportAffiliation.set('DocsNDocs');
 
