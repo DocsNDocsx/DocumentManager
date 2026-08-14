@@ -127,6 +127,19 @@
         </div>
         <div class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Visible to all collaborators. Max 50 MB per file.</div>
 
+        @if (uploadingFileNames().length > 0) {
+          <div class="upload-inline-status uploading" role="status" aria-live="polite">
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+            Uploading {{ uploadingFileNames().join(', ') }}…
+          </div>
+        }
+        @if (uploadStatusMessage()) {
+          <div class="upload-inline-status" [class.error]="uploadStatusError()" role="status" aria-live="polite">
+            <i class="fas" [class.fa-check-circle]="!uploadStatusError()" [class.fa-exclamation-circle]="uploadStatusError()" aria-hidden="true"></i>
+            {{ uploadStatusMessage() }}
+          </div>
+        }
+
         @if (uploadedFiles().length > 0) {
           <div style="margin-top: 1rem;" aria-live="polite">
             <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">

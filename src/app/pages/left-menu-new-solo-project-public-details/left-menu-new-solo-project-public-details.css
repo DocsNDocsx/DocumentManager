@@ -53,6 +53,9 @@
 .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(27,94,79,0.12); }
 textarea.form-control { min-height: 120px; resize: vertical; }
 .form-help { font-size: 0.82rem; color: var(--text-light); margin-top: 0.4rem; }
+.upload-inline-status { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; padding: 0.7rem 0.9rem; border-radius: 8px; background: #ecfdf5; color: #065f46; font-size: 0.88rem; font-weight: 600; }
+.upload-inline-status.uploading { background: #eff6ff; color: #1d4ed8; }
+.upload-inline-status.error { background: #fef2f2; color: #b91c1c; }
 .support-staff-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 
 .file-upload-area { border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem; text-align: center; background: var(--bg-light); transition: all 0.3s ease; cursor: pointer; }

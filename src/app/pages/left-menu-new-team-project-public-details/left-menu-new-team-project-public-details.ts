@@ -52,6 +52,9 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   expectedCollaborators = signal('');
   minimumCollaborators = signal(1);
   uploadedFiles = signal<ProjectAttachment[]>([]);
+  uploadingFileNames = signal<string[]>([]);
+  uploadStatusMessage = signal('');
+  uploadStatusError = signal(false);
   isDragOver = signal(false);
   isUploading = signal(false);
   private pendingUploads = 0;
@@ -161,22 +164,31 @@ export class LeftMenuNewTeamProjectPublicDetailsComponent implements OnInit, OnD
   private uploadFile(file: File): void {
     this.pendingUploads += 1;
     this.isUploading.set(true);
+    this.uploadingFileNames.update(names => [...names, file.name]);
+    this.uploadStatusMessage.set('');
+    this.uploadStatusError.set(false);
 
     this.attachmentUploadService.upload(file, 'team').subscribe({
       next: attachment => {
         this.uploadedFiles.update(list => list.some(item => item.name === attachment.name) ? list : [...list, attachment]);
+        this.uploadStatusMessage.set(`${attachment.name} uploaded successfully`);
+        this.uploadStatusError.set(false);
         this.showToast(`${attachment.name} uploaded successfully`);
       },
       error: () => {
-        this.showToast(`Failed to upload ${file.name}`);
-        this.finishUpload();
+        const message = `Failed to upload ${file.name}. Please try again.`;
+        this.uploadStatusMessage.set(message);
+        this.uploadStatusError.set(true);
+        this.showToast(message);
+        this.finishUpload(file.name);
       },
-      complete: () => this.finishUpload(),
+      complete: () => this.finishUpload(file.name),
     });
   }
 
-  private finishUpload(): void {
+  private finishUpload(fileName: string): void {
     this.pendingUploads = Math.max(0, this.pendingUploads - 1);
+    this.uploadingFileNames.update(names => names.filter(name => name !== fileName));
     this.isUploading.set(this.pendingUploads > 0);
   }
 
