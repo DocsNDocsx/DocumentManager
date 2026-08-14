@@ -13,10 +13,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import type { Stripe, StripeCardElement, StripeElements } from '@stripe/stripe-js';
 import { Observable, of } from 'rxjs';
-import { LogoComponent } from '../../shared/logo/logo';
+import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { AuthService } from '../../services/auth.service';
 import { StripeService } from '../../services/stripe.service';
 import { environment } from '../../../environments/environment';
@@ -30,7 +30,7 @@ const VOUCHERS: Record<string, { percentOff: number; label: string }> = {
 
 @Component({
   selector: 'app-pricing-plan-ccard-information',
-  imports: [RouterLink, LogoComponent],
+  imports: [SharedHeaderComponent],
   templateUrl: './pricing-plan-ccard-information.html',
   styleUrl: './pricing-plan-ccard-information.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,11 +1,6 @@
-<div class="payment-container">
-  <div class="payment-header">
-    <app-logo routerLink="/dashboard" [showImage]="false" nColor="var(--text-dark)" />
-    <a routerLink="/pricing-plan" class="back-link">
-      <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Pricing
-    </a>
-  </div>
+<app-shared-header></app-shared-header>
 
+<div class="payment-container">
   <div class="payment-grid">
     <!-- Left: forms -->
     <div>
@@ -116,7 +111,7 @@
           Processing…
         } @else {
           <i class="fas fa-lock" aria-hidden="true"></i>
-          Complete Payment
+          Pay &amp; Activate Project
         }
       </button>
 
