@@ -32,7 +32,6 @@ export class ProjectAttachmentUploadService {
           handleUploadUrl: `${environment.apiUrl}/project-attachments/upload-token`,
           clientPayload,
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          multipart: true,
         })).pipe(
         map(blob => this.toAttachment(file.name, file.size, file.type, blob.url)),
       );
