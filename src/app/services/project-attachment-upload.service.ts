@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { from, map, switchMap } from 'rxjs';
-import { put } from '@vercel/blob/client';
+import { from, map } from 'rxjs';
+import { upload } from '@vercel/blob/client';
 import { environment } from '../../environments/environment';
 import { ProjectAttachment } from '../models/project.models';
+import { AuthService } from './auth.service';
 
 interface UploadProjectAttachmentResponse {
   success: boolean;
@@ -18,24 +19,21 @@ interface UploadProjectAttachmentResponse {
 @Injectable({ providedIn: 'root' })
 export class ProjectAttachmentUploadService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
 
   upload(file: File, scope: 'solo' | 'team') {
     if (environment.production) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-');
       const pathname = `project-attachments/${scope}/${crypto.randomUUID()}-${safeName}`;
       const clientPayload = JSON.stringify({ scope });
-      return this.http.post<{ clientToken: string }>(
-        `${environment.apiUrl}/project-attachments/upload-token`,
-        {
-          type: 'blob.generate-client-token',
-          payload: { pathname, clientPayload, multipart: true },
-        },
-      ).pipe(
-        switchMap(response => from(put(pathname, file, {
+      const token = this.auth.getToken();
+      return from(upload(pathname, file, {
           access: 'public',
-          token: response.clientToken,
+          handleUploadUrl: `${environment.apiUrl}/project-attachments/upload-token`,
+          clientPayload,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           multipart: true,
-        }))),
+        })).pipe(
         map(blob => this.toAttachment(file.name, file.size, file.type, blob.url)),
       );
     }

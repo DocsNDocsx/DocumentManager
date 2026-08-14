@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { ProjectAttachmentUploadService } from './project-attachment-upload.service';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 describe('ProjectAttachmentUploadService', () => {
   let service: ProjectAttachmentUploadService;
@@ -14,6 +15,7 @@ describe('ProjectAttachmentUploadService', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: AuthService, useValue: { getToken: () => 'test-token' } },
       ],
     });
     service = TestBed.inject(ProjectAttachmentUploadService);
