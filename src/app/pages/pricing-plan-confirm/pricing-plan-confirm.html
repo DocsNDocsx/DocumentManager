@@ -19,10 +19,12 @@
   <h1>Payment Successful!</h1>
   <p class="subtitle">Your payment and project activation are complete.</p>
 
-  <section class="confirmation-section project-section" aria-labelledby="projectConfirmationTitle">
-    <h2 id="projectConfirmationTitle" class="confirmation-section-title">
-      <i class="fas fa-check-circle" aria-hidden="true"></i> Project
-    </h2>
+  <details class="confirmation-section project-section" name="confirmation-sections" open>
+    <summary class="confirmation-section-title">
+      <span><i class="fas fa-check-circle" aria-hidden="true"></i> Project</span>
+      <i class="fas fa-chevron-down accordion-chevron" aria-hidden="true"></i>
+    </summary>
+    <div class="accordion-content">
     <p class="section-message"><strong>Your project is active.</strong> You can now invite collaborators to join the project.</p>
     <div class="detail-row">
       <span class="detail-label">Project type</span>
@@ -52,7 +54,8 @@
         <span class="project-code-actions">
           <span class="detail-value project-code">{{ projectCode() }}</span>
           <button type="button" class="copy-code-button" (click)="copyProjectCode()"
-            [attr.aria-label]="copyStatus() === 'copied' ? 'Project code copied' : 'Copy project code'">
+            [attr.aria-label]="copyStatus() === 'copied' ? 'Project code copied' : 'Copy project code'"
+            [attr.title]="copyStatus() === 'copied' ? 'Copied' : 'Copy project code'">
             <i class="fas" [class.fa-copy]="copyStatus() !== 'copied'" [class.fa-check]="copyStatus() === 'copied'" aria-hidden="true"></i>
             {{ copyStatus() === 'copied' ? 'Copied' : 'Copy' }}
           </button>
@@ -67,12 +70,15 @@
         <span class="detail-value">{{ projectId() }}</span>
       </div>
     }
-  </section>
+    </div>
+  </details>
 
-  <section class="confirmation-section payment-section" aria-labelledby="paymentConfirmationTitle">
-    <h2 id="paymentConfirmationTitle" class="confirmation-section-title">
-      <i class="fas fa-credit-card" aria-hidden="true"></i> Payment
-    </h2>
+  <details class="confirmation-section payment-section" name="confirmation-sections">
+    <summary class="confirmation-section-title">
+      <span><i class="fas fa-credit-card" aria-hidden="true"></i> Payment</span>
+      <i class="fas fa-chevron-down accordion-chevron" aria-hidden="true"></i>
+    </summary>
+    <div class="accordion-content">
     <div class="detail-row">
       <span class="detail-label">Amount charged</span>
       <span class="detail-value">${{ amountCharged() }}</span>
@@ -85,7 +91,8 @@
       <i class="fas fa-envelope" aria-hidden="true"></i>
       A payment receipt has been sent to your email address and is also available in Payment History.
     </p>
-  </section>
+    </div>
+  </details>
 
   <div class="action-buttons">
     <a routerLink="/dashboard" class="btn btn-primary">
