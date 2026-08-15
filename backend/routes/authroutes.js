@@ -15,6 +15,8 @@ const authLimiter = rateLimit({
 
 // Define the login route
 router.post('/auth/login', authLimiter, authController.login);
+router.post('/auth/login/verify', authLimiter, authController.verifyLoginPasscode);
+router.post('/auth/login/resend', authLimiter, authController.resendLoginPasscode);
 router.post('/auth/register', authLimiter, authController.register);
 router.post('/auth/password/forgot', authLimiter, authController.passForgot);
 router.post('/verify-otp', authLimiter, authController.verifyOtp);

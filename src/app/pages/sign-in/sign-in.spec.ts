@@ -16,6 +16,7 @@ describe('SignInComponent', () => {
   beforeEach(async () => {
     authService = {
       login: vi.fn(),
+      saveLogin: vi.fn(() => true),
       saveToken: vi.fn(),
       saveUserId: vi.fn(),
       saveUserFirstname: vi.fn(),
@@ -67,15 +68,25 @@ describe('SignInComponent', () => {
     component.onSubmit();
 
     expect(authService.login).toHaveBeenCalledWith('mridul@example.com', 'Secret123!');
-    expect(authService.saveToken).toHaveBeenCalledWith('jwt-token');
-    expect(authService.saveUserId).toHaveBeenCalledWith(123);
-    expect(authService.saveUserFirstname).toHaveBeenCalledWith('Mridul');
-    expect(authService.saveUserLastname).toHaveBeenCalledWith('Mishra');
-    expect(authService.saveUserEmail).toHaveBeenCalledWith('mridul@example.com');
-    expect(authService.saveUserAvatar).toHaveBeenCalledWith('https://blob.example.com/avatar.png');
-    expect(authService.saveUserTimezone).toHaveBeenCalledWith('UTC+1');
+    expect(authService.saveLogin).toHaveBeenCalledWith(expect.objectContaining({ token: 'jwt-token', userid: 123 }));
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     expect(component.isLoading()).toBe(false);
+  });
+
+  it('routes an unrecognized device to sign-in verification', () => {
+    authService.login.mockReturnValue(of({
+      requiresPasscode: true,
+      challengeId: 'challenge-1',
+      email: 'mridul@example.com',
+    }));
+    component.form.setValue({ email: 'mridul@example.com', password: 'Secret123!' });
+
+    component.onSubmit();
+
+    expect(authService.saveLogin).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/sign-in-passcode'], {
+      state: { email: 'mridul@example.com', challengeId: 'challenge-1' },
+    });
   });
 
   it('shows a login error when credentials are rejected', () => {

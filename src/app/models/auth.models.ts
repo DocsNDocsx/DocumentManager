@@ -4,13 +4,16 @@ export interface RegisterResponse {
 }
 
 export interface LoginResponse {
-  token: string;
-  userid: number;
-  firstname: string;
-  lastname: string;
+  token?: string;
+  userid?: number;
+  firstname?: string;
+  lastname?: string;
   email: string;
-  avatarPath: string;
-  timezone: string;
+  avatarPath?: string;
+  timezone?: string;
+  requiresPasscode?: boolean;
+  challengeId?: string;
+  deviceToken?: string;
 }
 
 export interface UploadAvatarResponse {

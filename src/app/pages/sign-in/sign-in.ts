@@ -43,15 +43,16 @@ export class SignInComponent {
     this.logger.debug('Sign-in form submitted', { email });
 
     this.authService.login(email!, password!).subscribe({
-      next: ({ token, userid, firstname, lastname, email, avatarPath, timezone }) => {
-        this.authService.saveToken(token);
-        this.authService.saveUserId(userid);
-        this.authService.saveUserFirstname(firstname);
-        this.authService.saveUserLastname(lastname);
-        this.authService.saveUserEmail(email);
-        this.authService.saveUserAvatar(avatarPath);
-        this.authService.saveUserTimezone(timezone ?? 'UTC-5');
+      next: response => {
         this.isLoading.set(false);
+        if (response.requiresPasscode && response.challengeId) {
+          this.router.navigate(['/sign-in-passcode'], { state: { email: response.email, challengeId: response.challengeId } });
+          return;
+        }
+        if (!this.authService.saveLogin(response)) {
+          this.errorMessage.set('Sign-in could not be completed. Please try again.');
+          return;
+        }
         this.logger.info('User signed in, navigating to dashboard');
         this.router.navigate(['/dashboard']);
       },

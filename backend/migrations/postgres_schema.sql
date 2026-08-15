@@ -342,6 +342,31 @@ CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   updated_at             TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Login verification challenges and 30-day trusted browser tokens. IP addresses
+-- are retained only as audit context and are never used as device identity.
+CREATE TABLE IF NOT EXISTS login_challenges (
+  id          VARCHAR(64)  PRIMARY KEY,
+  user_id     BIGINT       NOT NULL REFERENCES users (userid) ON DELETE CASCADE,
+  email       VARCHAR(255) NOT NULL,
+  otp_hash    VARCHAR(64)  NOT NULL,
+  expires_at  TIMESTAMP    NOT NULL,
+  attempts    INTEGER      NOT NULL DEFAULT 0,
+  created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_login_challenges_email ON login_challenges (email);
+
+CREATE TABLE IF NOT EXISTS trusted_devices (
+  token_hash   VARCHAR(64)  PRIMARY KEY,
+  user_id      BIGINT       NOT NULL REFERENCES users (userid) ON DELETE CASCADE,
+  expires_at   TIMESTAMP    NOT NULL,
+  created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_used_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  first_ip     VARCHAR(64),
+  last_ip      VARCHAR(64),
+  user_agent   VARCHAR(500)
+);
+CREATE INDEX IF NOT EXISTS idx_trusted_devices_user ON trusted_devices (user_id);
+
 ALTER TABLE stripe_subscriptions
   ADD COLUMN IF NOT EXISTS documents INT NOT NULL DEFAULT 0;
 

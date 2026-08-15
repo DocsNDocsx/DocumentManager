@@ -20,7 +20,9 @@ export class AuthService {
 
   login(email: string, password: string) {
     this.logger.debug('Login attempt', { email });
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { email, password }).pipe(
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, {
+      email, password, deviceToken: localStorage.getItem('trusted_device_token'),
+    }).pipe(
       tap({
         next: () => this.logger.info('Login successful', { email }),
         error: err => this.logger.warn('Login failed', err?.error?.message),
@@ -88,6 +90,27 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem('auth_token');
+  }
+
+  verifyLoginPasscode(challengeId: string, passcode: string) {
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login/verify`, { challengeId, passcode });
+  }
+
+  resendLoginPasscode(challengeId: string) {
+    return this.http.post<{ success: boolean; message: string }>(`${environment.apiUrl}/auth/login/resend`, { challengeId });
+  }
+
+  saveLogin(response: LoginResponse): boolean {
+    if (!response.token || response.userid === undefined) return false;
+    this.saveToken(response.token);
+    this.saveUserId(response.userid);
+    this.saveUserFirstname(response.firstname ?? '');
+    this.saveUserLastname(response.lastname ?? '');
+    this.saveUserEmail(response.email);
+    this.saveUserAvatar(response.avatarPath ?? '');
+    this.saveUserTimezone(response.timezone ?? 'UTC-5');
+    if (response.deviceToken) localStorage.setItem('trusted_device_token', response.deviceToken);
+    return true;
   }
 
   hasValidToken(): boolean {

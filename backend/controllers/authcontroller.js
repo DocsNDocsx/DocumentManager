@@ -13,9 +13,49 @@ const { uploadToBlob } = require('../utils/blobStorage');
 const pool = require('../utils/sql');
 
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const TRUSTED_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_LOGIN_OTP_ATTEMPTS = 5;
 
 function generateOtp() {
   return crypto.randomInt(100000, 1000000);
+}
+
+function hashValue(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+function hashLoginOtp(challengeId, otp) {
+  return hashValue(`${challengeId}:${otp}:${process.env.JWT_SECRET}`);
+}
+
+function requestAudit(req) {
+  return {
+    ip: String(req.ip ?? req.socket?.remoteAddress ?? '').slice(0, 64),
+    userAgent: String(req.get?.('user-agent') ?? '').slice(0, 500),
+  };
+}
+
+function issueLoginToken(email) {
+  return jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION || '1h' });
+}
+
+function loginPayload(user, extra = {}) {
+  return {
+    token: issueLoginToken(user.email),
+    userid: user.id ?? user.userid,
+    firstname: user.firstname,
+    lastname: user.lastname,
+    email: user.email,
+    avatarPath: user.avatarUrl ?? (user.avatar_url ? `/api/auth/profile/avatar/${user.userid}` : ''),
+    timezone: user.timezone ?? 'UTC-5',
+    ...extra,
+  };
+}
+
+async function sendLoginPasscode(email, otp) {
+  const templatePath = path.join(__dirname, '../templates-email/loginpasscode.html');
+  const body = fs.readFileSync(templatePath, 'utf8').replace('{{OTP}}', otp);
+  await sendEmail(email, 'DocsNDocs: Confirm your new device sign-in', body);
 }
 
 async function storeOtp(email, otp) {
@@ -70,7 +110,7 @@ async function markTokenUsed(tokenHash) {
 }
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, deviceToken } = req.body;
 
   const result = await loginUser(email, password);
 
@@ -78,13 +118,72 @@ exports.login = async (req, res) => {
     return res.status(401).json(result);
   }
 
-  const token = jwt.sign(
-    { email },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRATION || '1h' }
-  );
+  const audit = requestAudit(req);
+  if (deviceToken) {
+    const tokenHash = hashValue(deviceToken);
+    const [devices] = await pool.query(
+      'SELECT token_hash FROM trusted_devices WHERE token_hash = ? AND user_id = ? AND expires_at > ?',
+      [tokenHash, result.user.id, new Date()]
+    );
+    if (devices.length > 0) {
+      await pool.query('UPDATE trusted_devices SET last_used_at = ?, last_ip = ? WHERE token_hash = ?',
+        [new Date(), audit.ip, tokenHash]);
+      return res.json(loginPayload(result.user));
+    }
+  }
 
-  res.json({ token, userid: result.user.id, firstname: result.user.firstname, lastname: result.user.lastname, email: result.user.email, avatarPath: result.user.avatarUrl, timezone: result.user.timezone });
+  const challengeId = crypto.randomUUID();
+  const otp = generateOtp();
+  await pool.query('DELETE FROM login_challenges WHERE email = ? OR expires_at < ?', [result.user.email, new Date()]);
+  await pool.query(
+    'INSERT INTO login_challenges (id, user_id, email, otp_hash, expires_at, attempts) VALUES (?, ?, ?, ?, ?, ?)',
+    [challengeId, result.user.id, result.user.email, hashLoginOtp(challengeId, otp), new Date(Date.now() + OTP_TTL_MS), 0]
+  );
+  try {
+    await sendLoginPasscode(result.user.email, otp);
+  } catch (err) {
+    await pool.query('DELETE FROM login_challenges WHERE id = ?', [challengeId]);
+    console.error('[email] login passcode error:', err);
+    return res.status(503).json({ success: false, message: 'We could not send a sign-in code. Please try again.' });
+  }
+  return res.status(202).json({ requiresPasscode: true, challengeId, email: result.user.email });
+};
+
+exports.verifyLoginPasscode = async (req, res) => {
+  const { challengeId, passcode } = req.body ?? {};
+  const [rows] = await pool.query('SELECT * FROM login_challenges WHERE id = ?', [challengeId]);
+  const challenge = rows[0];
+  if (!challenge || new Date(challenge.expires_at) < new Date() || challenge.attempts >= MAX_LOGIN_OTP_ATTEMPTS) {
+    if (challenge) await pool.query('DELETE FROM login_challenges WHERE id = ?', [challengeId]);
+    return res.status(400).json({ success: false, message: 'This sign-in code has expired. Please sign in again.' });
+  }
+  if (hashLoginOtp(challengeId, passcode) !== challenge.otp_hash) {
+    await pool.query('UPDATE login_challenges SET attempts = attempts + 1 WHERE id = ?', [challengeId]);
+    return res.status(400).json({ success: false, message: 'Invalid passcode.' });
+  }
+
+  const [users] = await pool.query('SELECT * FROM users WHERE userid = ?', [challenge.user_id]);
+  if (users.length === 0) return res.status(401).json({ success: false, message: 'Account not found.' });
+  const rawDeviceToken = crypto.randomBytes(32).toString('base64url');
+  const audit = requestAudit(req);
+  await pool.query('DELETE FROM login_challenges WHERE id = ?', [challengeId]);
+  await pool.query(
+    'INSERT INTO trusted_devices (token_hash, user_id, expires_at, first_ip, last_ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
+    [hashValue(rawDeviceToken), challenge.user_id, new Date(Date.now() + TRUSTED_DEVICE_TTL_MS), audit.ip, audit.ip, audit.userAgent]
+  );
+  return res.json(loginPayload(users[0], { deviceToken: rawDeviceToken }));
+};
+
+exports.resendLoginPasscode = async (req, res) => {
+  const { challengeId } = req.body ?? {};
+  const [rows] = await pool.query('SELECT id, email FROM login_challenges WHERE id = ?', [challengeId]);
+  const challenge = rows[0];
+  if (!challenge) return res.status(400).json({ success: false, message: 'Please sign in again.' });
+  const otp = generateOtp();
+  await pool.query('UPDATE login_challenges SET otp_hash = ?, expires_at = ?, attempts = 0 WHERE id = ?',
+    [hashLoginOtp(challengeId, otp), new Date(Date.now() + OTP_TTL_MS), challengeId]);
+  await sendLoginPasscode(challenge.email, otp);
+  return res.json({ success: true, message: 'A new sign-in code was sent.' });
 };
 
 exports.register = async (req, res) => {

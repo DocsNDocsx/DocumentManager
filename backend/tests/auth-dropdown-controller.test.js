@@ -43,7 +43,7 @@ describe('authcontroller dropdown/account APIs', () => {
     uploadToBlob.mockResolvedValue('https://blob.example.com/avatars/avatar.png');
   });
 
-  it('logs in a valid user and returns token plus user details', async () => {
+  it('challenges a valid login from an unrecognized device', async () => {
     loginUser.mockResolvedValueOnce({
       success: true,
       user: {
@@ -59,14 +59,71 @@ describe('authcontroller dropdown/account APIs', () => {
     await authController.login({ body: { email: 'user@example.com', password: 'correct' } }, res);
 
     expect(loginUser).toHaveBeenCalledWith('user@example.com', 'correct');
+    expect(res.status).toHaveBeenCalledWith(202);
     expect(res.json).toHaveBeenCalledWith({
-      token: expect.any(String),
-      userid: 123,
-      firstname: 'Mridul',
-      lastname: 'Mishra',
+      requiresPasscode: true,
+      challengeId: expect.any(String),
       email: 'user@example.com',
-      avatarPath: '/api/auth/profile/avatar/123',
     });
+    expect(sendEmail).toHaveBeenCalledWith(
+      'user@example.com',
+      'DocsNDocs: Confirm your new device sign-in',
+      expect.stringContaining('<html>')
+    );
+  });
+
+  it('logs in without a passcode when the browser token is trusted', async () => {
+    loginUser.mockResolvedValueOnce({
+      success: true,
+      user: { id: 123, firstname: 'Mridul', lastname: 'Mishra', email: 'user@example.com', avatarUrl: '' },
+    });
+    pool.query.mockResolvedValueOnce([[{ token_hash: 'known' }]]).mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await authController.login({ body: { email: 'user@example.com', password: 'correct', deviceToken: 'trusted' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      token: expect.any(String), userid: 123, email: 'user@example.com',
+    }));
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('verifies a login passcode and returns a 30-day trusted-device token', async () => {
+    const challengeId = 'challenge-1';
+    const otpHash = crypto.createHash('sha256').update(`${challengeId}:123456:${process.env.JWT_SECRET}`).digest('hex');
+    pool.query
+      .mockResolvedValueOnce([[{ id: challengeId, user_id: 123, email: 'user@example.com', otp_hash: otpHash, expires_at: new Date(Date.now() + 60000), attempts: 0 }]])
+      .mockResolvedValueOnce([[{ userid: 123, firstname: 'Mridul', lastname: 'Mishra', email: 'user@example.com', timezone: 'UTC' }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await authController.verifyLoginPasscode({
+      body: { challengeId, passcode: '123456' }, ip: '203.0.113.10', get: () => 'Test Browser',
+    }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      token: expect.any(String), deviceToken: expect.any(String), userid: 123,
+    }));
+    expect(pool.query).toHaveBeenLastCalledWith(
+      expect.stringContaining('INSERT INTO trusted_devices'),
+      expect.arrayContaining([expect.any(String), 123, expect.any(Date), '203.0.113.10', '203.0.113.10', 'Test Browser'])
+    );
+  });
+
+  it('rejects an invalid login passcode and increments the attempt count', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ id: 'challenge-1', user_id: 123, otp_hash: 'not-the-code', expires_at: new Date(Date.now() + 60000), attempts: 0 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const res = mockResponse();
+
+    await authController.verifyLoginPasscode({ body: { challengeId: 'challenge-1', passcode: '000000' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid passcode.' });
+    expect(pool.query).toHaveBeenLastCalledWith(
+      'UPDATE login_challenges SET attempts = attempts + 1 WHERE id = ?', ['challenge-1']
+    );
   });
 
   it('returns 401 when login fails', async () => {

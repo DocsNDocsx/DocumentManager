@@ -9,6 +9,7 @@ import { ForpasswordNewpasswordComponent } from './pages/forpassword-newpassword
 import { SignUpPasscodeComponent } from './pages/sign-up-passcode/sign-up-passcode';
 import { SignUpConfirmAccountComponent } from './pages/sign-up-confirm-account/sign-up-confirm-account';
 import { SignInPasscodeComponent } from './pages/sign-in-passcode/sign-in-passcode';
+import { LoginPasscodeComponent } from './pages/login-passcode/login-passcode';
 import { ForPasswordPasscodeComponent } from './pages/for-password-passcode/for-password-passcode';
 import { DashboardComponent } from './pages/dashboard/dashboard';
 import { DashboardRecentActivityComponent } from './pages/dashboard-recent-activity/dashboard-recent-activity';
@@ -64,6 +65,7 @@ export const routes: Routes = [
     { path: 'sign-up-passcode', component: SignUpPasscodeComponent },
     { path: 'sign-up-confirm-account', component: SignUpConfirmAccountComponent },
     { path: 'sign-in', component: SignInComponent },
+    { path: 'sign-in-passcode', component: LoginPasscodeComponent },
     { path: 'forgot-password', component: ForgotPasswordComponent },
     { path: 'forpassword-passcode', component: SignInPasscodeComponent },
     { path: 'forpassword-change', component: ForpasswordChangeconfirmComponent },
