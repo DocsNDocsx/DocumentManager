@@ -1,6 +1,11 @@
-<app-shared-header></app-shared-header>
-
 <div class="payment-container">
+  <header class="payment-header">
+    <app-logo routerLink="/dashboard" [imageWidth]="180" [imageHeight]="50" variant="dark" ariaLabel="DocsNDocs dashboard" />
+    <a [routerLink]="returnToProjectRoute()" class="back-link">
+      <i class="fas fa-arrow-left" aria-hidden="true"></i> Return to project
+    </a>
+  </header>
+
   <div class="payment-grid">
     <!-- Left: forms -->
     <div>
