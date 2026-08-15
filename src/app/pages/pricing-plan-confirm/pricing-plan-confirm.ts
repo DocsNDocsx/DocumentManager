@@ -36,6 +36,21 @@ export class PricingPlanConfirmComponent implements OnInit {
   projectVisibility = signal('');
   timezone = signal('');
   invoiceNumber = signal('');
+  copyStatus = signal<'idle' | 'copied' | 'error'>('idle');
+
+  async copyProjectCode(): Promise<void> {
+    const code = this.projectCode();
+    if (!code || !navigator.clipboard?.writeText) {
+      this.copyStatus.set('error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(code);
+      this.copyStatus.set('copied');
+    } catch {
+      this.copyStatus.set('error');
+    }
+  }
 
   ngOnInit(): void {
     this.route.queryParams
@@ -47,6 +62,8 @@ export class PricingPlanConfirmComponent implements OnInit {
           this.loadError.set('Payment details could not be verified. Check Payment History or contact support.');
           return;
         }
+        this.isLoading.set(true);
+        this.loadError.set('');
         this.stripeService.getPaymentConfirmation(invoiceId)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({

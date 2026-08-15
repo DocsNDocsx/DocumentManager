@@ -106,6 +106,16 @@
         </div>
       </div>
 
+      @if (activationProjectId() && !isUpgrade()) {
+        <div class="activation-notice" role="note">
+          <i class="fas fa-info-circle" aria-hidden="true"></i>
+          <span>
+            Payment will activate this project and generate a shareable <strong>project code</strong>.
+            Anyone with the code can join and submit documents@if (projectType() === 'team') { as part of your team project}.
+          </span>
+        </div>
+      }
+
       @if (validationError()) {
         <div class="validation-error" role="alert">{{ validationError() }}</div>
       }

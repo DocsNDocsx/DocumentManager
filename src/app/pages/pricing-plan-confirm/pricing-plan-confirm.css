@@ -66,12 +66,37 @@ h1 {
   margin-bottom: 2rem;
 }
 
-.details-box {
-  background: var(--success-light);
+.confirmation-section {
   border-radius: 12px;
   padding: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   text-align: left;
+}
+
+.project-section {
+  background: var(--success-light);
+}
+
+.payment-section {
+  background: #f9fafb;
+  border: 1px solid var(--border-color);
+}
+
+.confirmation-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+  color: #065f46;
+  font-family: "Playfair Display", serif;
+  font-size: 1.2rem;
+}
+
+.section-message {
+  margin-bottom: 0.75rem;
+  color: #065f46;
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 .detail-row {
@@ -97,17 +122,55 @@ h1 {
   font-size: 0.9rem;
 }
 
-.receipt-info {
-  background: #f9fafb;
-  border-radius: 10px;
-  padding: 1.2rem;
-  margin-bottom: 2rem;
+.project-code-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.project-code {
+  letter-spacing: 0.04em;
+}
+
+.copy-code-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(6, 95, 70, 0.3);
+  border-radius: 7px;
+  background: #fff;
+  color: #065f46;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copy-code-button:hover {
+  border-color: #065f46;
+  background: #ecfdf5;
+}
+
+.copy-code-button:focus-visible {
+  outline: 3px solid rgba(45, 139, 111, 0.3);
+  outline-offset: 2px;
+}
+
+.copy-error {
+  margin-top: 0.75rem;
+  color: #b91c1c;
+  font-size: 0.82rem;
+}
+
+.receipt-message {
+  padding-top: 1rem;
   font-size: 0.88rem;
   color: var(--text-light);
   line-height: 1.6;
 }
 
-.receipt-info i {
+.receipt-message i {
   color: var(--primary-color);
   margin-right: 0.4rem;
 }

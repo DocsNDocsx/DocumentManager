@@ -60,6 +60,12 @@ describe('PricingPlanConfirmComponent', () => {
     expect(component.projectCode()).toBe('PRJ-2TJS-FYD7');
     expect(component.timezone()).toBe('America/Chicago');
     expect(component.invoiceNumber()).toBe('INV-123');
+
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Your project is active. You can now invite collaborators to join the project.');
+    expect(text).toContain('A payment receipt has been sent to your email address');
+    expect(text).toContain('Go to Dashboard');
   });
 
   it('does not display the internal project id for a solo private confirmation', () => {
@@ -77,6 +83,19 @@ describe('PricingPlanConfirmComponent', () => {
     expect(component.projectVisibility()).toBe('private');
     expect(text).not.toContain('Project ID');
     expect(text).not.toContain('private-project-uuid');
+  });
+
+  it('copies the public project code', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    component.projectCode.set('PRJ-2TJS-FYD7');
+
+    await component.copyProjectCode();
+
+    expect(writeText).toHaveBeenCalledWith('PRJ-2TJS-FYD7');
+    expect(component.copyStatus()).toBe('copied');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: originalClipboard });
   });
 
   it('shows the backend verification error', () => {
