@@ -263,24 +263,28 @@ export class CheckSubmissionsComponent implements OnInit {
   }
 
   showApprovalForm(): void {
+    if (this.currentReviewing()?.status === 'approved') return;
     this.decisionMode.set('approve');
     this.showCommentsForm.set(true);
     this.modalFooterMode.set('approve');
   }
 
   showRevisionForm(): void {
+    if (this.currentReviewing()?.status === 'approved') return;
     this.decisionMode.set('revise');
     this.showCommentsForm.set(true);
     this.modalFooterMode.set('revise');
   }
 
   showRejectForm(): void {
+    if (this.currentReviewing()?.status === 'approved') return;
     this.decisionMode.set('reject');
     this.showCommentsForm.set(true);
     this.modalFooterMode.set('reject');
   }
 
   submitDecision(): void {
+    if (this.currentReviewing()?.status === 'approved') return;
     const mode = this.decisionMode();
     const comments = this.reviewComments().trim();
     if ((mode === 'revise' || mode === 'reject') && !comments) return;

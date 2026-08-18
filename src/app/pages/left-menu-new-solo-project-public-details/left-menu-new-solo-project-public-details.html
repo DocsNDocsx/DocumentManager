@@ -89,7 +89,12 @@
           required
           aria-required="true"
         />
-        <div class="form-help">Approximate number of collaborators expected to join via the project code</div>
+        <div class="form-help">
+          Approximate number of collaborators expected to join via the project code.
+          @if (isActiveProject() && minimumCollaborators() > 1) {
+            It cannot be lower than the {{ minimumCollaborators() }} collaborators who have already joined.
+          }
+        </div>
       </div>
 
       <div class="form-group">

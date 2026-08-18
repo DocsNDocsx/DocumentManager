@@ -20,10 +20,10 @@ describe('CollaboratorViewComponent', () => {
     name: 'Public Project',
     description: null,
     deadline: '2026-09-15',
-    attachments: [],
+    attachments: [{ name: 'project-brief.pdf', size: '1.2 MB', iconClass: 'fa-file-pdf', url: 'https://blob.example/brief' }],
     collaborators: [{ firstName: 'Join', lastName: 'User', email: 'join@example.com', affiliation: 'Org' }],
     documents: [
-      { name: 'Resume', fileTypes: ['PDF'], maxSize: '5', sizeUnit: 'MB', templateName: '' },
+      { name: 'Resume', fileTypes: ['PDF'], maxSize: '5', sizeUnit: 'MB', templateName: 'resume-template.pdf', templateUrl: 'https://blob.example/resume-template' },
       { name: 'Transcript', fileTypes: ['PDF'], maxSize: '10', sizeUnit: 'MB', templateName: '' },
     ],
     assignments: {},
@@ -72,6 +72,7 @@ describe('CollaboratorViewComponent', () => {
 
   afterEach(() => {
     http.verify();
+    vi.restoreAllMocks();
   });
 
   it('shows all document upload slots for public projects without assignments', () => {
@@ -84,6 +85,42 @@ describe('CollaboratorViewComponent', () => {
 
     expect(component.totalCount()).toBe(2);
     expect(component.documents().map(d => d.title)).toEqual(['Resume', 'Transcript']);
+    expect(component.documents()[0].templateName).toBe('resume-template.pdf');
+    expect(component.projectFiles().map(file => file.name)).toEqual(['project-brief.pdf']);
+  });
+
+  it('downloads a template associated with a required document', () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:template');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    component.projectId.set('project-1');
+    const templateDocument = {
+      docIndex: 0, title: 'Resume', maxSize: '5 MB', acceptedFormats: ['PDF'], status: 'required' as const,
+      selectedFile: null, uploading: false, templateName: 'resume-template.pdf', templateUrl: 'https://blob.example/template',
+    };
+
+    component.downloadDocumentTemplate(templateDocument);
+    http.expectOne(`${environment.apiUrl}/projects/project-1/documents/0/template/download`)
+      .flush(new Blob(['template'], { type: 'application/pdf' }));
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:template');
+  });
+
+  it('downloads an owner-provided project file through the authenticated API', () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:project-file');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    component.projectId.set('project-1');
+
+    component.downloadProjectFile(project.attachments[0], 0);
+    http.expectOne(`${environment.apiUrl}/projects/project-1/attachments/0/download`)
+      .flush(new Blob(['brief'], { type: 'application/pdf' }));
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:project-file');
   });
 
   it('hides storage-provider details when secure upload token generation fails', () => {

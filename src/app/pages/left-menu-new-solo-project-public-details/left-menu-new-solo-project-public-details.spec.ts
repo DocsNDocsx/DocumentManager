@@ -62,6 +62,30 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
     expect(component.isFormValid()).toBe(true);
   });
 
+  it('allows an active project target to be reduced to its joined collaborator count', () => {
+    wizard.project.set({
+      status: 'active',
+      name: 'Public Project',
+      description: '',
+      deadline: '2026-09-15',
+      expectedCollaborators: 10,
+      attachments: [],
+      collaborators: [
+        { email: 'one@example.com' },
+        { email: 'two@example.com' },
+        { email: 'removed@example.com', status: 'inactive' },
+      ],
+      staff: null,
+    });
+    (component as any).populateForm();
+
+    expect(component.minimumCollaborators()).toBe(2);
+    component.expectedCollaborators.set('2');
+    expect(component.isFormValid()).toBe(true);
+    component.expectedCollaborators.set('1');
+    expect(component.isFormValid()).toBe(false);
+  });
+
   it('saves support staff when first name is present and continues to documents', () => {
     component.projectName.set('Public Project');
     component.projectDeadline.set('2026-09-15');

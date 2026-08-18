@@ -6,6 +6,8 @@ const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
 const { deadlineCalendarDate, isFutureDeadline } = require('../utils/timezone');
+const { get } = require('@vercel/blob');
+const { Readable } = require('stream');
 
 const PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'cancelled']);
 const STATUS_TRANSITIONS = {
@@ -236,6 +238,15 @@ exports.updateProject = async (req, res) => {
       ownedProject = owned[0];
     }
     const currentSolo = ownedProject ? parseProject(ownedProject) : null;
+    if (ownedProject?.status === 'active' && currentSolo?.type === 'public' && expectedCollaborators !== undefined) {
+      const joinedCollaboratorCount = activeCollaborators(currentSolo.collaborators).length;
+      if (Number(expectedCollaborators) < Math.max(1, joinedCollaboratorCount)) {
+        return res.status(409).json({
+          success: false,
+          message: `Expected collaborators cannot be lower than the ${joinedCollaboratorCount} collaborators who have already joined`,
+        });
+      }
+    }
     let paidSolo = currentSolo;
     if (ownedProject?.status === 'active') {
       const [pendingRows] = await pool.query("SELECT snapshot FROM pending_project_upgrades WHERE project_id = ? AND project_type = 'solo'", [id]);
@@ -259,9 +270,6 @@ exports.updateProject = async (req, res) => {
     if (ownedProject?.status === 'active' && deadline !== undefined &&
         deadlineCalendarDate(deadline) < deadlineCalendarDate(paidSolo.deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline cannot be earlier than its last paid deadline' });
-    }
-    if (ownedProject?.status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(paidSolo.expectedCollaborators ?? 0)) {
-      return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
     }
     const soloBillingIncreased = ownedProject?.status === 'active' && (
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(paidSolo.deadline)) ||
@@ -501,6 +509,94 @@ exports.deleteProject = async (req, res) => {
   } catch (err) {
     console.error('Delete project error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.downloadProjectAttachment = async (req, res) => {
+  try {
+    const { id, attachmentIndex } = req.params;
+    const [rows] = await pool.query(
+      'SELECT user_id, collaborators, attachments FROM projects WHERE id = ?',
+      [id],
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    const userId = await authenticatedUserId(req);
+    const isOwner = String(rows[0].user_id) === String(userId);
+    if (!isOwner && !includesCollaboratorEmail(rows[0].collaborators, req.user?.email)) {
+      return res.status(403).json({ success: false, message: 'You cannot access this project file' });
+    }
+
+    const attachments = parseProject({ attachments: rows[0].attachments }).attachments;
+    const index = Number(attachmentIndex);
+    const attachment = Number.isInteger(index) ? attachments[index] : null;
+    if (!attachment?.url) return res.status(404).json({ success: false, message: 'Project file not found' });
+
+    let result;
+    if (String(attachment.url).startsWith('/public/uploads/local/')) {
+      const absolutePath = path.join(__dirname, '..', String(attachment.url).replace(/^\//, ''));
+      if (!fs.existsSync(absolutePath)) return res.status(404).json({ success: false, message: 'Project file not found' });
+      result = { statusCode: 200, blob: { contentType: attachment.mimeType }, stream: fs.createReadStream(absolutePath) };
+    } else {
+      try {
+        result = await get(attachment.url, { access: 'private' });
+      } catch {
+        result = await get(attachment.url, { access: 'public' });
+      }
+    }
+    if (!result || result.statusCode !== 200) return res.status(404).json({ success: false, message: 'Project file not found' });
+
+    res.set('Content-Type', result.blob?.contentType || attachment.mimeType || 'application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename="${String(attachment.name || 'project-file').replace(/["\r\n]/g, '_')}"`);
+    const stream = typeof result.stream?.pipe === 'function' ? result.stream : Readable.fromWeb(result.stream);
+    stream.pipe(res);
+  } catch (err) {
+    console.error('Download project attachment error:', err);
+    res.status(500).json({ success: false, message: 'Could not download project file' });
+  }
+};
+
+exports.downloadDocumentTemplate = async (req, res) => {
+  try {
+    const { id, documentIndex } = req.params;
+    const [rows] = await pool.query(
+      'SELECT user_id, collaborators, documents FROM projects WHERE id = ?',
+      [id],
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    const userId = await authenticatedUserId(req);
+    const isOwner = String(rows[0].user_id) === String(userId);
+    if (!isOwner && !includesCollaboratorEmail(rows[0].collaborators, req.user?.email)) {
+      return res.status(403).json({ success: false, message: 'You cannot access this document template' });
+    }
+
+    const documents = parseProject({ documents: rows[0].documents }).documents;
+    const index = Number(documentIndex);
+    const document = Number.isInteger(index) ? documents[index] : null;
+    if (!document?.templateUrl) return res.status(404).json({ success: false, message: 'Document template not found' });
+
+    let result;
+    if (String(document.templateUrl).startsWith('/public/uploads/local/')) {
+      const absolutePath = path.join(__dirname, '..', String(document.templateUrl).replace(/^\//, ''));
+      if (!fs.existsSync(absolutePath)) return res.status(404).json({ success: false, message: 'Document template not found' });
+      result = { statusCode: 200, blob: { contentType: document.templateMimeType }, stream: fs.createReadStream(absolutePath) };
+    } else {
+      try {
+        result = await get(document.templateUrl, { access: 'private' });
+      } catch {
+        result = await get(document.templateUrl, { access: 'public' });
+      }
+    }
+    if (!result || result.statusCode !== 200) return res.status(404).json({ success: false, message: 'Document template not found' });
+
+    res.set('Content-Type', result.blob?.contentType || document.templateMimeType || 'application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename="${String(document.templateName || 'template').replace(/["\r\n]/g, '_')}"`);
+    const stream = typeof result.stream?.pipe === 'function' ? result.stream : Readable.fromWeb(result.stream);
+    stream.pipe(res);
+  } catch (err) {
+    console.error('Download document template error:', err);
+    res.status(500).json({ success: false, message: 'Could not download document template' });
   }
 };
 

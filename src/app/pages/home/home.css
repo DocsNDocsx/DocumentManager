@@ -54,16 +54,6 @@
         border-radius: 6px;
       }
 
-      .logo-doc {
-        color: var(--accent-orange);
-      }
-      .logo-n {
-        color: var(--primary-color);
-      }
-      .logo-docs {
-        color: var(--accent-orange);
-      }
-
       .nav-buttons {
         display: flex;
         gap: 1rem;

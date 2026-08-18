@@ -232,8 +232,13 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   }
 
   closeReviewModal(): void { this.reviewingSubmission.set(null); this.reviewSubmissions.set([]); this.reviewDecision.set(null); this.reviewComments.set(''); }
-  chooseReviewDecision(decision: Exclude<ReviewDecision, null>): void { this.reviewDecision.set(decision); this.reviewComments.set(''); }
+  chooseReviewDecision(decision: Exclude<ReviewDecision, null>): void {
+    if (this.reviewingSubmission()?.status === 'approved') return;
+    this.reviewDecision.set(decision);
+    this.reviewComments.set('');
+  }
   submitReviewDecision(): void {
+    if (this.reviewingSubmission()?.status === 'approved') return;
     const submission = this.reviewingSubmission();
     const decision = this.reviewDecision();
     const comments = this.reviewComments().trim();

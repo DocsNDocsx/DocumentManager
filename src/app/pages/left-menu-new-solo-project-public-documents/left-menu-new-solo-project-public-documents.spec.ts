@@ -6,11 +6,13 @@ import { of } from 'rxjs';
 import { LeftMenuNewSoloProjectPublicDocumentsComponent } from './left-menu-new-solo-project-public-documents';
 import { ProjectWizardService } from '../../services/project-wizard.service';
 import { AuthService } from '../../services/auth.service';
+import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 
 describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
   let component: LeftMenuNewSoloProjectPublicDocumentsComponent;
   let wizard: any;
   let router: any;
+  let uploader: any;
 
   beforeEach(async () => {
     wizard = {
@@ -22,6 +24,7 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
       reset: vi.fn(),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
+    uploader = { upload: vi.fn(() => of({ name: 'template.pdf', size: '2 KB', iconClass: 'fa-file-pdf', url: 'https://blob.example/template', mimeType: 'application/pdf' })) };
 
     await TestBed.configureTestingModule({
       imports: [LeftMenuNewSoloProjectPublicDocumentsComponent],
@@ -30,12 +33,30 @@ describe('LeftMenuNewSoloProjectPublicDocumentsComponent', () => {
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { snapshot: {}, parent: { snapshot: { paramMap: { get: () => null } } } } },
         { provide: AuthService, useValue: { currentUserId: signal('123'), currentUserFirstname: signal(''), currentUserLastname: signal(''), currentUserEmail: signal(''), currentUserAvatar: signal('') } },
+        { provide: ProjectAttachmentUploadService, useValue: uploader },
       ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(LeftMenuNewSoloProjectPublicDocumentsComponent);
     component = fixture.componentInstance;
     component.ngOnInit();
+  });
+
+  it('uploads and retains the template file metadata', () => {
+    component.documentCount.set(1);
+    component.generateForms();
+    const file = new File(['template'], 'template.pdf', { type: 'application/pdf' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [file] });
+
+    component.handleTemplateUpload(0, { target: input } as unknown as Event);
+
+    expect(uploader.upload).toHaveBeenCalledWith(file, 'solo');
+    expect(component.documents()[0]).toEqual(expect.objectContaining({
+      templateName: 'template.pdf',
+      templateUrl: 'https://blob.example/template',
+      templateMimeType: 'application/pdf',
+    }));
   });
 
   it('generates, validates, and saves public document requirements', () => {

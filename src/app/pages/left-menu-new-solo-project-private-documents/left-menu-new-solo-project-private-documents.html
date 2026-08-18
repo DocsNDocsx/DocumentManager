@@ -141,14 +141,15 @@
               <div class="template-upload" style="margin-top: 1rem">
                 <label class="form-label">Template File <span style="font-weight: 400; color: var(--text-light)">(optional)</span></label>
                 @if (!doc.templateName) {
-                  <label class="btn-upload-template" [class.disabled]="doc.status === 'inactive'">
-                    <i class="fas fa-upload" aria-hidden="true"></i> Upload Template
+                  <label class="btn-upload-template" [class.disabled]="doc.status === 'inactive' || isTemplateUploading(i)">
+                    <i class="fas" [class.fa-upload]="!isTemplateUploading(i)" [class.fa-spinner]="isTemplateUploading(i)" [class.fa-spin]="isTemplateUploading(i)" aria-hidden="true"></i>
+                    {{ isTemplateUploading(i) ? 'Uploading…' : 'Upload Template' }}
                     <input
                       type="file"
                       style="display: none"
                       accept=".pdf,.doc,.docx"
                       (change)="handleTemplateUpload(i, $event)"
-                      [disabled]="doc.status === 'inactive'"
+                      [disabled]="doc.status === 'inactive' || isTemplateUploading(i)"
                       [attr.aria-label]="'Upload template for document ' + (i + 1)"
                     />
                   </label>

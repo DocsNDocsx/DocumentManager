@@ -23,10 +23,6 @@
 .header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .back-btn { background: rgba(255,255,255,0.15); border: none; color: #fff; width: 38px; height: 38px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: background 0.2s; }
 .back-btn:hover { background: rgba(255,255,255,0.25); }
-.brand { font-family: "Playfair Display", serif; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; }
-.logo-doc { color: var(--accent-orange); }
-.logo-n { color: #fff; }
-.logo-docs { color: var(--accent-orange); }
 .user-info { display: flex; align-items: center; gap: 0.75rem; color: #fff; }
 .user-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-orange); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
 .user-name { font-weight: 600; font-size: 0.95rem; }

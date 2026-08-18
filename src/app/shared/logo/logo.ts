@@ -12,11 +12,9 @@ import { RouterLink } from '@angular/router';
 export class LogoComponent {
   routerLink = input<string | null>(null);
   href = input<string | null>(null);
-  ariaLabel = input('DocNDocs home');
-  showImage = input(true);
+  ariaLabel = input('DocsNDocs home');
   imageSize = input(32);
   imageWidth = input<number | null>(null);
   imageHeight = input<number | null>(null);
   variant = input<'dark' | 'light'>('dark');
-  nColor = input('');
 }

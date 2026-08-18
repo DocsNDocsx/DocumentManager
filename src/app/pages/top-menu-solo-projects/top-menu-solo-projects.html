@@ -183,7 +183,7 @@
                       </button>
                     }
                     @if (activeFilter() === 'Completed' || activeFilter() === 'Not Completed') {
-                      <button class="btn-icon btn-view" type="button" title="View" aria-label="View project">
+                      <button class="btn-icon btn-view" type="button" (click)="onView(project, $event)" title="View" aria-label="View project">
                         <i class="fas fa-eye" aria-hidden="true"></i>
                       </button>
                       <button class="btn-icon btn-secondary-action" type="button" (click)="onDuplicate(project, $event)" title="Duplicate" aria-label="Duplicate project">
@@ -318,9 +318,9 @@
         <section><strong>Submission Date</strong><div class="review-value">{{ formatReviewDate(sub.submittedDate) }}</div></section>
         <section><strong>Document Preview</strong><div class="review-document-preview"><i class="fas fa-file-alt"></i><p>{{ sub.fileName }}</p><button type="button" (click)="downloadReviewDocument()"><i class="fas fa-download"></i> Download Document</button></div></section>
         <section><strong>Your Decision</strong><div class="review-decisions">
-          <button type="button" class="approve" (click)="chooseReviewDecision('approve')"><i class="fas fa-check"></i> Approve</button>
-          <button type="button" class="revise" (click)="chooseReviewDecision('revise')"><i class="fas fa-redo"></i> Request Revision</button>
-          <button type="button" class="reject" (click)="chooseReviewDecision('reject')"><i class="fas fa-times"></i> Decline Permanently</button>
+          <button type="button" class="approve" (click)="chooseReviewDecision('approve')" [disabled]="sub.status === 'approved'"><i class="fas fa-check"></i> Approve</button>
+          <button type="button" class="revise" (click)="chooseReviewDecision('revise')" [disabled]="sub.status === 'approved'"><i class="fas fa-redo"></i> Request Revision</button>
+          <button type="button" class="reject" (click)="chooseReviewDecision('reject')" [disabled]="sub.status === 'approved'"><i class="fas fa-times"></i> Decline Permanently</button>
         </div></section>
         @if (reviewDecision()) {
           <section><label for="soloReviewComments"><strong>Comments {{ reviewDecision() === 'approve' ? '(optional)' : '(required)' }}</strong></label><textarea id="soloReviewComments" rows="4" [value]="reviewComments()" (input)="reviewComments.set($any($event.target).value)"></textarea></section>

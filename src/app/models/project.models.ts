@@ -22,6 +22,9 @@ export interface ProjectDocument {
   maxSize: string;
   sizeUnit: string;
   templateName: string;
+  templateUrl?: string;
+  templateSize?: string;
+  templateMimeType?: string;
   status?: 'active' | 'inactive';
   removedAt?: string | null;
 }

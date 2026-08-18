@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ProjectWizardService } from '../../services/project-wizard.service';
+import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 
 export interface DocumentRequirement {
   name: string;
@@ -11,6 +12,9 @@ export interface DocumentRequirement {
   maxSize: string;
   sizeUnit: string;
   templateName: string;
+  templateUrl?: string;
+  templateSize?: string;
+  templateMimeType?: string;
   status?: 'active' | 'inactive';
   removedAt?: string | null;
 }
@@ -31,6 +35,7 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private wizardService = inject(ProjectWizardService);
+  private attachmentUploadService = inject(ProjectAttachmentUploadService);
   readonly isActiveProject = computed(() => this.wizardService.project()?.status === 'active');
   dropdownOpen = signal(false);
 
@@ -54,6 +59,7 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
   documents = signal<DocumentRequirement[]>([]);
   activeDocumentCount = computed(() => this.documents().filter(d => d.status !== 'inactive').length);
   formsGenerated = signal(false);
+  uploadingTemplateIndices = signal<number[]>([]);
   isSaving = computed(() => this.wizardService.isSaving());
 
   readonly fileTypes = FILE_TYPES;
@@ -162,19 +168,37 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
   handleTemplateUpload(index: number, event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (file) {
-      this.documents.update(list => {
+    if (!file) return;
+    this.uploadingTemplateIndices.update(indices => [...indices, index]);
+    this.attachmentUploadService.upload(file, 'solo').subscribe({
+      next: attachment => this.documents.update(list => {
         const updated = [...list];
-        updated[index] = { ...updated[index], templateName: file.name };
+        updated[index] = {
+          ...updated[index],
+          templateName: attachment.name,
+          templateUrl: attachment.url,
+          templateSize: attachment.size,
+          templateMimeType: attachment.mimeType,
+        };
         return updated;
-      });
-    }
+      }),
+      error: () => {
+        this.uploadingTemplateIndices.update(indices => indices.filter(i => i !== index));
+        this.showToast(`Failed to upload ${file.name}. Please try again.`);
+      },
+      complete: () => this.uploadingTemplateIndices.update(indices => indices.filter(i => i !== index)),
+    });
+    input.value = '';
+  }
+
+  isTemplateUploading(index: number): boolean {
+    return this.uploadingTemplateIndices().includes(index);
   }
 
   removeTemplate(index: number): void {
     this.documents.update(list => {
       const updated = [...list];
-      updated[index] = { ...updated[index], templateName: '' };
+      updated[index] = { ...updated[index], templateName: '', templateUrl: undefined, templateSize: undefined, templateMimeType: undefined };
       return updated;
     });
   }
@@ -204,14 +228,15 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
   }
 
   saveAsDraft(): void {
-    this.showToast('Project saved as draft');
-    this.wizardService.saveDraft().subscribe({
+    if (!this.isFormValid() || this.uploadingTemplateIndices().length > 0) return;
+    this.wizardService.saveDocuments({ documents: this.documents() }).subscribe({
+      next: () => this.showToast('Project saved as draft'),
       error: () => this.showToast('Failed to save draft — please try again'),
     });
   }
 
   continue(): void {
-    if (!this.isFormValid()) return;
+    if (!this.isFormValid() || this.uploadingTemplateIndices().length > 0) return;
     this.wizardService.saveDocuments({ documents: this.documents() }).subscribe({
       next: () => this.router.navigate(['../assignments'], { relativeTo: this.route }),
       error: () => {},

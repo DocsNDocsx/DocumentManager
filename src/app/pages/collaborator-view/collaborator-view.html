@@ -1,8 +1,6 @@
 <header class="top-header">
   <div class="header-container">
-    <a routerLink="/dashboard" class="logo">
-      <span class="logo-doc">Doc</span><span class="logo-n">N</span><span class="logo-docs">Docs</span>
-    </a>
+    <app-logo routerLink="/dashboard" [imageWidth]="180" [imageHeight]="50" variant="light" />
     <div class="user-info">
       <div class="user-avatar" aria-hidden="true">{{ collaboratorInitials() }}</div>
       <span class="user-name">{{ collaboratorName() }}</span>
@@ -40,6 +38,34 @@
         <div class="meta-item"><i class="fas fa-lock" aria-hidden="true"></i><span>{{ project()?.type === 'public' ? 'Public Project' : 'Private Project' }}</span></div>
       </div>
     </div>
+
+    @if (projectFiles().length > 0) {
+      <section class="project-files-section" aria-labelledby="projectFilesTitle">
+        <div class="section-heading">
+          <div>
+            <h2 id="projectFilesTitle">Project Files</h2>
+            <p>Reference files shared by the project owner.</p>
+          </div>
+          <span class="file-count">{{ projectFiles().length }} {{ projectFiles().length === 1 ? 'file' : 'files' }}</span>
+        </div>
+        <div class="project-files-list">
+          @for (attachment of projectFiles(); track attachment.url ?? attachment.name; let attachmentIndex = $index) {
+            <div class="project-file-row">
+              <div class="project-file-info">
+                <div class="file-icon"><i class="fas {{ attachment.iconClass || 'fa-file' }}" aria-hidden="true"></i></div>
+                <div>
+                  <div class="file-name">{{ attachment.name }}</div>
+                  <div class="file-size">{{ attachment.size }}</div>
+                </div>
+              </div>
+              <button class="btn-download" type="button" (click)="downloadProjectFile(attachment, attachmentIndex)">
+                <i class="fas fa-download" aria-hidden="true"></i> Download
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    }
 
     <!-- Progress Section -->
     <div class="progress-section">
@@ -86,6 +112,13 @@
               <span class="status-badge status-revision">Declined</span>
             }
           </div>
+
+          @if (doc.templateName && doc.templateUrl) {
+            <div class="document-template">
+              <div><i class="fas fa-file-download" aria-hidden="true"></i> <span>{{ doc.templateName }}</span></div>
+              <button type="button" (click)="downloadDocumentTemplate(doc)">Download Template</button>
+            </div>
+          }
 
           @if (doc.status === 'revision' && doc.feedback) {
             <div class="feedback-box">

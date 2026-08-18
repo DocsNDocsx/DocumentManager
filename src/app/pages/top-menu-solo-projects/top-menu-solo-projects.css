@@ -526,6 +526,7 @@
 .review-document-preview button { padding: .65rem 1.15rem; border: 0; border-radius: 8px; background: #3b82f6; color: #fff; font-weight: 700; cursor: pointer; }
 .review-decisions { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
 .review-decisions button { padding: .75rem; border: 2px solid transparent; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.review-decisions button:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.35); }
 .review-decisions .approve { background: #059669; color: #fff; }
 .review-decisions .revise { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
 .review-decisions .reject { background: #4b5563; color: #fff; }

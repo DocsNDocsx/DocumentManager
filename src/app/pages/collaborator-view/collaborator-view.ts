@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Project, Submission } from '../../models/project.models';
+import { Project, ProjectAttachment, Submission } from '../../models/project.models';
 import { LoggingService } from '../../services/logging.service';
 import { put } from '@vercel/blob/client';
 import { from, switchMap } from 'rxjs';
+import { LogoComponent } from '../../shared/logo/logo';
 
 type DocStatus = 'required' | 'submitted' | 'approved' | 'revision' | 'rejected';
 
@@ -22,6 +23,8 @@ interface DocumentSlot {
   feedback?: string;
   selectedFile: File | null;
   uploading: boolean;
+  templateName?: string;
+  templateUrl?: string;
 }
 
 @Component({
@@ -29,7 +32,7 @@ interface DocumentSlot {
   templateUrl: './collaborator-view.html',
   styleUrl: './collaborator-view.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, LogoComponent],
 })
 export class CollaboratorViewComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -47,6 +50,7 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
   toastVisible = signal(false);
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   documents = signal<DocumentSlot[]>([]);
+  projectFiles = computed(() => this.project()?.attachments ?? []);
 
   collaboratorName = computed(() => {
     const p = this.project();
@@ -179,6 +183,8 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
         feedback: sub?.feedback ?? undefined,
         selectedFile: null,
         uploading: false,
+        templateName: pd.templateName || undefined,
+        templateUrl: pd.templateUrl,
       };
     });
     this.documents.set(slots);
@@ -286,6 +292,41 @@ export class CollaboratorViewComponent implements OnInit, OnDestroy {
 
   closeSuccessModal(): void {
     this.showSuccessModal.set(false);
+  }
+
+  downloadProjectFile(attachment: ProjectAttachment, attachmentIndex: number): void {
+    this.http.get(
+      `${environment.apiUrl}/projects/${this.projectId()}/attachments/${attachmentIndex}/download`,
+      { responseType: 'blob' },
+    ).subscribe({
+      next: blob => {
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = attachment.name;
+        link.click();
+        URL.revokeObjectURL(objectUrl);
+      },
+      error: () => this.showErrorToast('Project file could not be downloaded. Please try again.'),
+    });
+  }
+
+  downloadDocumentTemplate(doc: DocumentSlot): void {
+    if (!doc.templateUrl) return;
+    this.http.get(
+      `${environment.apiUrl}/projects/${this.projectId()}/documents/${doc.docIndex}/template/download`,
+      { responseType: 'blob' },
+    ).subscribe({
+      next: blob => {
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = doc.templateName || 'template';
+        link.click();
+        URL.revokeObjectURL(objectUrl);
+      },
+      error: () => this.showErrorToast('Document template could not be downloaded. Please try again.'),
+    });
   }
 
   viewSubmittedDocument(doc: DocumentSlot): void {

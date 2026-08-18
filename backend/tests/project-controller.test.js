@@ -295,6 +295,59 @@ describe('projectcontroller', () => {
     });
   });
 
+  it('allows an active public project to reduce expected collaborators without reducing paid capacity', async () => {
+    const activePublic = projectRow({
+      status: 'active',
+      type: 'public',
+      expected_collaborators: 10,
+      collaborators: JSON.stringify([{ email: 'one@example.com' }, { email: 'two@example.com' }]),
+    });
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '123' }]])
+      .mockResolvedValueOnce([[activePublic]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ collaborators: 10, documents: 1 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[{ ...activePublic, expected_collaborators: 2 }]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'owner@example.com' },
+      body: { expectedCollaborators: 2 },
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(pool.query).toHaveBeenCalledWith(
+      'UPDATE projects SET expected_collaborators = ? WHERE id = ?',
+      [2, 'project-1'],
+    );
+  });
+
+  it('does not allow expected collaborators below the number already joined', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '123' }]])
+      .mockResolvedValueOnce([[projectRow({
+        status: 'active',
+        type: 'public',
+        expected_collaborators: 10,
+        collaborators: JSON.stringify([{ email: 'one@example.com' }, { email: 'two@example.com' }]),
+      })]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'owner@example.com' },
+      body: { expectedCollaborators: 1 },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'Expected collaborators cannot be lower than the 2 collaborators who have already joined',
+    });
+  });
+
   it('blocks completion until every required public document is approved', async () => {
     pool.query
       .mockResolvedValueOnce([[projectRow({

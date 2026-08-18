@@ -6,12 +6,14 @@ import { of } from 'rxjs';
 import { LeftMenuNewSoloProjectPrivateDocumentsComponent } from './left-menu-new-solo-project-private-documents';
 import { ProjectWizardService } from '../../services/project-wizard.service';
 import { AuthService } from '../../services/auth.service';
+import { ProjectAttachmentUploadService } from '../../services/project-attachment-upload.service';
 
 describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
   let component: LeftMenuNewSoloProjectPrivateDocumentsComponent;
   let fixture: ComponentFixture<LeftMenuNewSoloProjectPrivateDocumentsComponent>;
   let wizard: any;
   let router: any;
+  let uploader: any;
 
   beforeEach(async () => {
     wizard = {
@@ -24,6 +26,7 @@ describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
       saveDraft: vi.fn(() => of({})),
     };
     router = { navigate: vi.fn(), events: of({}), createUrlTree: vi.fn(() => ({})), serializeUrl: vi.fn(() => ''), isActive: vi.fn(() => false) };
+    uploader = { upload: vi.fn(() => of({ name: 'template.pdf', size: '1 KB', iconClass: 'fa-file-pdf', url: 'https://blob.example/template', mimeType: 'application/pdf' })) };
 
     await TestBed.configureTestingModule({
       imports: [LeftMenuNewSoloProjectPrivateDocumentsComponent],
@@ -32,6 +35,7 @@ describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { parent: { snapshot: { paramMap: { get: () => null } } } } },
         { provide: AuthService, useValue: { currentUserId: signal('123'), currentUserFirstname: signal(''), currentUserLastname: signal(''), currentUserEmail: signal(''), currentUserAvatar: signal('') } },
+        { provide: ProjectAttachmentUploadService, useValue: uploader },
       ],
     }).compileComponents();
 
@@ -67,6 +71,8 @@ describe('LeftMenuNewSoloProjectPrivateDocumentsComponent', () => {
 
     expect(component.documents()[0].sizeUnit).toBe('KB');
     expect(component.documents()[0].templateName).toBe('template.pdf');
+    expect(component.documents()[0].templateUrl).toBe('https://blob.example/template');
+    expect(uploader.upload).toHaveBeenCalledWith(expect.any(File), 'solo');
 
     component.removeTemplate(0);
     component.removeDocument(1);

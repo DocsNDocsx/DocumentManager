@@ -4,15 +4,11 @@
   [attr.href]="routerLink() ? null : href()"
   [attr.aria-label]="ariaLabel()"
 >
-  @if (showImage()) {
-    <img
-      [ngSrc]="variant() === 'light' ? 'docsndocslogo-light-v2.png' : 'docsndocslogo-dark.png'"
-      alt="DocsNDocs logo"
-      [width]="imageWidth() || imageSize() * 3"
-      [height]="imageHeight() || imageSize()"
-      priority
-    />
-  } @else {
-    <div><span class="logo-docs-1">Doc</span><span class="logo-n" [style.color]="nColor() || null">N</span><span class="logo-docs-2">Docs</span></div>
-  }
+  <img
+    [ngSrc]="variant() === 'light' ? 'docsndocslogo-light-v2.png' : 'docsndocslogo-dark.png'"
+    alt="DocsNDocs logo"
+    [width]="imageWidth() || imageSize() * 3"
+    [height]="imageHeight() || imageSize()"
+    priority
+  />
 </a>

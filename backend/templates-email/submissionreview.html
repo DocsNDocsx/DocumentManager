@@ -10,8 +10,6 @@
     .email-wrapper { width: 100%; background-color: #f9fafb; padding: 40px 16px; box-sizing: border-box; }
     .email-container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
     .email-header { background-color: #1b5e4f; padding: 28px 36px; text-align: center; }
-    .logo-text { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: #ffffff; margin: 0; letter-spacing: 1px; }
-    .logo-accent { color: #f59e0b; }
     .accent-bar { height: 4px; background: linear-gradient(90deg, #1b5e4f 0%, #f59e0b 60%, #d97706 100%); }
     .email-content { padding: 36px 36px 28px; }
     .email-content h2 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: #1f2937; margin: 0 0 16px; }
@@ -38,7 +36,7 @@
     <div class="email-container">
 
       <div class="email-header">
-        <p class="logo-text">Docs<span class="logo-accent">N</span>Docs</p>
+        <img src="{{EMAIL_LOGO_URL}}" width="180" height="50" alt="DocsNDocs" style="display:block;width:180px;height:50px;margin:0 auto;border:0;object-fit:contain;" />
       </div>
       <div class="accent-bar"></div>
 

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
+import { LogoComponent } from '../../shared/logo/logo';
 
 type DocStatus = 'required' | 'submitted' | 'revision';
 
@@ -58,7 +59,7 @@ interface UploadSubmission {
   templateUrl: './team-project-upload.html',
   styleUrl: './team-project-upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [],
+  imports: [LogoComponent],
 })
 export class TeamProjectUploadComponent implements OnInit {
   private route = inject(ActivatedRoute);

@@ -3,9 +3,7 @@
     <button class="back-btn" type="button" (click)="goBack()" aria-label="Back to team projects">
       <i class="fas fa-arrow-left" aria-hidden="true"></i>
     </button>
-    <div class="brand">
-      <span class="logo-doc">Doc</span><span class="logo-n">N</span><span class="logo-docs">Docs</span>
-    </div>
+    <app-logo [imageWidth]="180" [imageHeight]="50" variant="light" />
     <div class="user-info">
       <div class="user-avatar" aria-hidden="true">{{ collaboratorInitials() }}</div>
       <span class="user-name">{{ collaboratorName() }}</span>

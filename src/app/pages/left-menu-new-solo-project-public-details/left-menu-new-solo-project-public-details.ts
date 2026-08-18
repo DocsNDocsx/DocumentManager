@@ -98,7 +98,8 @@ export class LeftMenuNewSoloProjectPublicDetailsComponent implements OnInit, OnD
       this.projectDeadline.set(deadline);
       if (proj.status === 'active' && deadline > this.minimumDeadline) this.minimumDeadline = deadline;
       this.expectedCollaborators.set(proj.expectedCollaborators ? String(proj.expectedCollaborators) : '');
-      this.minimumCollaborators.set(proj.status === 'active' ? Number(proj.expectedCollaborators ?? 1) : 1);
+      const joinedCollaborators = (proj.collaborators ?? []).filter(collaborator => collaborator.status !== 'inactive').length;
+      this.minimumCollaborators.set(proj.status === 'active' ? Math.max(1, joinedCollaborators) : 1);
       this.uploadedFiles.set(proj.attachments ?? []);
       if (proj.staff) {
         this.supportName.set([proj.staff.firstName, proj.staff.lastName].filter(Boolean).join(' '));

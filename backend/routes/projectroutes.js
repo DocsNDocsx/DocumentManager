@@ -54,6 +54,8 @@ router.post('/project-attachments', projectAttachmentUpload.single('file'), proj
 router.post('/projects', projectController.createProject);
 router.get('/projects', projectController.getProjects);
 router.get('/projects/:id', projectController.getProject);
+router.get('/projects/:id/attachments/:attachmentIndex/download', projectController.downloadProjectAttachment);
+router.get('/projects/:id/documents/:documentIndex/template/download', projectController.downloadDocumentTemplate);
 router.patch('/projects/:id/activate', projectController.validateActivation, requireActiveSubscription, projectController.activateProject);
 router.patch('/projects/:id/cancel', projectController.cancelProject);
 router.post('/projects/:id/discard-pending-upgrade', projectController.discardPendingUpgrade);
