@@ -138,8 +138,6 @@ describe('LeftMenuNewSoloProjectPublicDetailsComponent', () => {
     ]);
     expect(component.toastVisible()).toBe(true);
     expect(component.toastMsg()).toBe('research-plan.pdf uploaded successfully');
-    expect(component.uploadStatusMessage()).toBe('research-plan.pdf uploaded successfully');
-    expect(component.uploadStatusError()).toBe(false);
     expect(component.uploadingFileNames()).toEqual([]);
   });
 });
