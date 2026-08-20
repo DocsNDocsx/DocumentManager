@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     version="1.2"
+     baseProfile="tiny-ps"
+     viewBox="0 0 512 512">
+  <title>DocsNDocs</title>
+  <desc>DocsNDocs document and approval mark</desc>
+  <defs>
+    <linearGradient id="documentGradient" x1="180" y1="55" x2="430" y2="405" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00dc68"/>
+      <stop offset="0.58" stop-color="#00c866"/>
+      <stop offset="1" stop-color="#00a878"/>
+    </linearGradient>
+    <linearGradient id="pageGradient" x1="72" y1="132" x2="309" y2="468" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#087df0"/>
+      <stop offset="0.7" stop-color="#075ce1"/>
+      <stop offset="1" stop-color="#064acb"/>
+    </linearGradient>
+    <linearGradient id="checkGradient" x1="315" y1="337" x2="408" y2="391" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00dc72"/>
+      <stop offset="1" stop-color="#00c860"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="#ffffff"/>
+
+  <!-- Rear document and folded corner -->
+  <path d="M181 153V70c0-18 14-32 32-32h145c9 0 17 3 23 9l73 72c7 7 10 15 10 24v211c0 24-16 45-40 51l-177 45v-36l168-43c8-2 14-9 14-17V155h-43c-18 0-32-14-32-32V73H215v95z"
+        fill="url(#documentGradient)"/>
+  <path d="M370 73v49c0 9 7 17 17 17h48z" fill="#00d568"/>
+
+  <!-- Front page/folder silhouette -->
+  <path fill="url(#pageGradient)" fill-rule="evenodd"
+        d="M91 112c9 0 17 3 24 8l113 84c12 9 19 23 19 38v176l151-39v35l-178 46c-10 3-21 1-29-5L79 382c-13-9-20-24-20-40V157c0-25 13-45 32-45zm10 59c-4 0-7 4-7 10v151c0 8 3 15 10 19l91 61c4 3 7 1 7-5V252c0-7-3-13-9-17l-85-62c-2-1-5-2-7-2z"/>
+
+  <!-- Document text lines -->
+  <rect x="272" y="189" width="121" height="21" rx="11" fill="#064fcf"/>
+  <rect x="272" y="235" width="121" height="21" rx="11" fill="#064fcf"/>
+  <rect x="272" y="280" width="121" height="21" rx="11" fill="#064fcf"/>
+
+  <!-- Approval check -->
+  <path d="M319 349a12 12 0 0 1 17 0l11 11 40-40a12 12 0 1 1 17 17l-49 49a12 12 0 0 1-17 0l-19-20a12 12 0 0 1 0-17z"
+        fill="url(#checkGradient)"/>
+</svg>

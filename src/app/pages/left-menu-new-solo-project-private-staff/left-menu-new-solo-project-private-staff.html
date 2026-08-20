@@ -10,37 +10,37 @@
     </div>
 
     <nav class="step-progress" aria-label="Project creation steps">
-      <div class="step completed">
+      <div class="step completed" routerLink="../details" role="link" tabindex="0">
         <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
         <div class="step-label">Details</div>
       </div>
       <div class="step-divider completed" aria-hidden="true"></div>
-      <div class="step completed">
+      <div class="step completed" routerLink="../collaborators" role="link" tabindex="0">
         <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
         <div class="step-label">Collaborators</div>
       </div>
       <div class="step-divider completed" aria-hidden="true"></div>
-      <div class="step completed">
+      <div class="step completed" routerLink="../documents" role="link" tabindex="0">
         <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
         <div class="step-label">Documents</div>
       </div>
       <div class="step-divider completed" aria-hidden="true"></div>
-      <div class="step completed">
+      <div class="step completed" routerLink="../assignments" role="link" tabindex="0">
         <div class="step-circle" aria-hidden="true"><i class="fas fa-check" style="font-size:0.8rem"></i></div>
         <div class="step-label">Assignments</div>
       </div>
       <div class="step-divider completed" aria-hidden="true"></div>
-      <div class="step active" aria-current="step">
+      <div class="step active" routerLink="../staff" role="link" tabindex="0" aria-current="step">
         <div class="step-circle" aria-hidden="true">5</div>
         <div class="step-label">Staff</div>
       </div>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step">
+      <div class="step" routerLink="../decision" role="link" tabindex="0">
         <div class="step-circle" aria-hidden="true">6</div>
         <div class="step-label">Decision</div>
       </div>
       <div class="step-divider" aria-hidden="true"></div>
-      <div class="step"><div class="step-circle" aria-hidden="true">7</div><div class="step-label">Payment</div></div>
+      <div class="step locked" aria-disabled="true"><div class="step-circle" aria-hidden="true">7</div><div class="step-label">Payment</div></div>
     </nav>
 
     <div class="form-container">

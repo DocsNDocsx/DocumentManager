@@ -74,7 +74,7 @@ function projectNotificationRow(overrides = {}) {
   };
 }
 
-function uploadProjectRow() {
+function uploadProjectRow(overrides = {}) {
   return {
     id: 'project-1',
     type: 'public',
@@ -86,6 +86,8 @@ function uploadProjectRow() {
       { name: 'Transcript', fileTypes: ['PDF'], maxSize: '5', sizeUnit: 'MB' },
     ]),
     assignments: JSON.stringify({}),
+    collaboratorTimezone: 'America/New_York',
+    ...overrides,
   };
 }
 
@@ -153,6 +155,47 @@ describe('submissioncontroller', () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Project not found' });
+  });
+
+  it('accepts a submission throughout the project deadline day', async () => {
+    const deadlineToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    pool.query
+      .mockResolvedValueOnce([[uploadProjectRow({ deadline: deadlineToday })]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[submissionRow()]])
+      .mockResolvedValueOnce([[projectNotificationRow()]]);
+    const res = mockResponse();
+
+    await submissionController.createSubmission({
+      params: { projectId: 'project-1' },
+      body: { collabIndex: '0', docIndex: '1' },
+      file: { ...uploadFile(), mimetype: 'application/pdf' },
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+
+  it('keeps the deadline open for a PST collaborator after midnight EST', async () => {
+    pool.query.mockResolvedValueOnce([[uploadProjectRow({
+      deadline: '2026-08-04',
+      collaboratorTimezone: 'America/Los_Angeles',
+    })]]);
+    const res = mockResponse();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-05T02:00:00Z'));
+
+    await submissionController.createSubmission({
+      params: { projectId: 'project-1' },
+      user: { email: 'ava@example.com' },
+      body: { collabIndex: '0', docIndex: '1' },
+      file: uploadFile({ size: 6 * 1024 * 1024 }),
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(409);
+    expect(res.status).toHaveBeenCalledWith(400);
+    jest.useRealTimers();
   });
 
   it('rejects a file that exceeds the configured document size', async () => {

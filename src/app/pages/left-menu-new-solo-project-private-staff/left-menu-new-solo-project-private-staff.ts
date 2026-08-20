@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -10,7 +10,7 @@ import { ProjectWizardService } from '../../services/project-wizard.service';
   templateUrl: './left-menu-new-solo-project-private-staff.html',
   styleUrl: './left-menu-new-solo-project-private-staff.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent],
+  imports: [SharedHeaderComponent, FormsModule, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },

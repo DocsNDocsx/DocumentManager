@@ -149,7 +149,7 @@ exports.getProjects = async (req, res) => {
     }
 
     await pool.query(
-      "UPDATE projects SET status = 'not_completed' WHERE status = 'active' AND deadline IS NOT NULL AND deadline < CURRENT_DATE",
+      "UPDATE projects SET status = 'completed' WHERE status = 'active' AND deadline IS NOT NULL AND deadline < CURRENT_DATE",
     );
 
     const [ownedRows] = await pool.query(

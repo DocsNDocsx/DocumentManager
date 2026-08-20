@@ -4,6 +4,7 @@ const submissionController = require('../controllers/submissioncontroller');
 const submissionUpload = require('../utils/submissionUpload');
 const pool = require('../utils/sql');
 const { handleUpload } = require('@vercel/blob/client');
+const { hasDeadlinePassed } = require('../utils/timezone');
 const router = express.Router();
 
 const ALLOWED_UPLOAD_TYPES = [
@@ -59,9 +60,16 @@ router.post('/projects/:projectId/submissions/upload-token', verifyJwt, async (r
       request: req,
       body: req.body,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        const [projects] = await pool.query('SELECT id, user_id, status, deadline, collaborators, documents FROM projects WHERE id = ?', [projectId]);
+        const [projects] = await pool.query(
+          `SELECT p.id, p.user_id, p.status, p.deadline, p.collaborators, p.documents,
+                  collaborator_user.timezone AS "collaboratorTimezone"
+           FROM projects p
+           LEFT JOIN users collaborator_user ON LOWER(collaborator_user.email) = LOWER(?)
+           WHERE p.id = ?`,
+          [req.user?.email ?? '', projectId],
+        );
         if (projects.length === 0) throw new Error('Project not found');
-        if (projects[0].status !== 'active' || (projects[0].deadline && new Date(projects[0].deadline) < new Date())) {
+        if (projects[0].status !== 'active' || hasDeadlinePassed(projects[0].deadline, projects[0].collaboratorTimezone)) {
           throw new Error('Project is not accepting submissions');
         }
         const payload = JSON.parse(clientPayload ?? '{}');

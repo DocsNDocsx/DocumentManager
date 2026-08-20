@@ -177,8 +177,8 @@ function installSoloSqlMock(initialProject) {
       return [{ affectedRows: 1 }];
     }
 
-    if (text.startsWith('SELECT id, type, collaborators, documents, assignments, deadline, status FROM projects')) {
-      return [[project]];
+    if (text.startsWith('SELECT p.id, p.user_id, p.type, p.collaborators')) {
+      return [[{ ...project, collaboratorTimezone: 'America/New_York' }]];
     }
 
     if (text === 'SELECT id FROM projects WHERE id = ?') {

@@ -55,4 +55,10 @@ function isFutureDeadline(deadline, timeZone, now = new Date()) {
   return isFuture;
 }
 
-module.exports = { calendarDateInTimeZone, deadlineCalendarDate, isFutureDeadline, resolveTimeZone };
+function hasDeadlinePassed(deadline, timeZone, now = new Date()) {
+  const dueDate = deadlineCalendarDate(deadline);
+  if (!dueDate) return false;
+  return dueDate < calendarDateInTimeZone(now, resolveTimeZone(timeZone));
+}
+
+module.exports = { calendarDateInTimeZone, deadlineCalendarDate, hasDeadlinePassed, isFutureDeadline, resolveTimeZone };

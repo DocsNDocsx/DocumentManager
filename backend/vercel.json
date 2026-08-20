@@ -10,6 +10,14 @@
     {
       "path": "/api/internal/deadline-reminders",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/internal/stale-project-cleanup",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/internal/stale-project-cleanup",
+      "schedule": "30 4 * * *"
     }
   ]
 }

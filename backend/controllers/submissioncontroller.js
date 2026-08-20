@@ -6,6 +6,7 @@ const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
 const { get, head } = require('@vercel/blob');
+const { hasDeadlinePassed } = require('../utils/timezone');
 const { Readable } = require('stream');
 
 const SIZE_MULTIPLIERS = { KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
@@ -102,8 +103,12 @@ exports.createSubmission = async (req, res) => {
     }
 
     const [projects] = await pool.query(
-      'SELECT id, user_id, type, collaborators, documents, assignments, deadline, status FROM projects WHERE id = ?',
-      [projectId]
+      `SELECT p.id, p.user_id, p.type, p.collaborators, p.documents, p.assignments, p.deadline, p.status,
+              collaborator_user.timezone AS "collaboratorTimezone"
+       FROM projects p
+       LEFT JOIN users collaborator_user ON LOWER(collaborator_user.email) = LOWER(?)
+       WHERE p.id = ?`,
+      [req.user?.email ?? '', projectId]
     );
     if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
@@ -134,7 +139,7 @@ exports.createSubmission = async (req, res) => {
     if (project.status !== 'active') {
       return res.status(409).json({ success: false, message: 'Project is not accepting submissions' });
     }
-    if (project.deadline && new Date(project.deadline) < new Date()) {
+    if (hasDeadlinePassed(project.deadline, project.collaboratorTimezone)) {
       return res.status(409).json({ success: false, message: 'Project deadline has passed' });
     }
     if (project.type !== 'public') {

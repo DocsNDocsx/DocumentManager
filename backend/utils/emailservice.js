@@ -1,5 +1,5 @@
 async function sendEmail(to, subject, htmlBody) {
-  const appBaseUrl = (process.env.APP_BASE_URL || 'https://docsndocs.com').replace(/\/$/, '');
+  const appBaseUrl = (process.env.APP_BASE_URL || 'https://www.docsndocs.com').replace(/\/$/, '');
   const emailLogoUrl = process.env.EMAIL_LOGO_URL
     || `${appBaseUrl}/docsndocslogo-light-v2.png?v=20260811`;
   const brandedHtmlBody = String(htmlBody).replaceAll('{{EMAIL_LOGO_URL}}', emailLogoUrl);
@@ -10,7 +10,7 @@ async function sendEmail(to, subject, htmlBody) {
     body: JSON.stringify({
       api_key: process.env.SMTP2GO_API_KEY,
       to: [to],
-      sender: 'DocsNDocs <mmridul@docsndocs.com>',
+      sender: 'DocsNDocs <noreply@docsndocs.com>',
       subject,
       html_body: brandedHtmlBody,
     }),

@@ -235,3 +235,4 @@ textarea.form-control { min-height: 120px; resize: vertical; }
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+.step[routerLink], a.step { color: inherit; cursor: pointer; text-decoration: none; }

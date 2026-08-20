@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
@@ -12,7 +12,7 @@ import { BillingEstimateService } from '../../services/billing-estimate.service'
   templateUrl: './left-menu-new-solo-project-private-decision.html',
   styleUrl: './left-menu-new-solo-project-private-decision.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, SharedSidebarComponent, ConfirmModalComponent],
+  imports: [SharedHeaderComponent, SharedSidebarComponent, ConfirmModalComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },

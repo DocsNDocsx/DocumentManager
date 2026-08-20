@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
 import { ProjectWizardService } from '../../services/project-wizard.service';
@@ -23,7 +23,7 @@ interface DocSummary {
   templateUrl: './left-menu-new-solo-project-private-assignments.html',
   styleUrl: './left-menu-new-solo-project-private-assignments.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, SharedSidebarComponent],
+  imports: [SharedHeaderComponent, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },

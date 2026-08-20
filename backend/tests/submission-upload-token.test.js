@@ -18,13 +18,15 @@ function app() {
   return instance;
 }
 
-function projectRow() {
+function projectRow(overrides = {}) {
   return {
     id: 'project-1',
     status: 'active',
     deadline: new Date(Date.now() + 86400000).toISOString(),
     collaborators: JSON.stringify([{ email: 'ava@example.com' }]),
     documents: JSON.stringify([{ fileTypes: ['PDF'], maxSize: 5, sizeUnit: 'MB' }]),
+    collaboratorTimezone: 'America/New_York',
+    ...overrides,
   };
 }
 
@@ -69,6 +71,48 @@ describe('private Blob client token route', () => {
       addRandomSuffix: true,
     });
     expect(handleUpload.mock.calls[0][0].token).toBe('vercel_blob_rw_test');
+  });
+
+  it('generates an upload token throughout the project deadline day', async () => {
+    const deadlineToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    pool.query.mockResolvedValueOnce([[projectRow({ deadline: deadlineToday })]]);
+
+    const response = await request(app())
+      .post('/api/projects/project-1/submissions/upload-token')
+      .send({
+        type: 'blob.generate-client-token',
+        payload: {
+          pathname: 'submissions/solo/project-1/0/doc-0-resume.pdf',
+          clientPayload: JSON.stringify({ collabIndex: 0, docIndex: 0 }),
+          multipart: true,
+        },
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.clientToken).toBe('client-token');
+  });
+
+  it('uses the collaborator timezone when EST has already reached the next day', async () => {
+    pool.query.mockResolvedValueOnce([[projectRow({
+      deadline: '2026-08-04',
+      collaboratorTimezone: 'America/Los_Angeles',
+    })]]);
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-05T02:00:00Z'));
+
+    const response = await request(app())
+      .post('/api/projects/project-1/submissions/upload-token')
+      .send({
+        type: 'blob.generate-client-token',
+        payload: {
+          pathname: 'submissions/solo/project-1/0/doc-0-resume.pdf',
+          clientPayload: JSON.stringify({ collabIndex: 0, docIndex: 0 }),
+          multipart: true,
+        },
+      });
+
+    expect(response.status).toBe(200);
+    jest.useRealTimers();
   });
 
   it('rejects a token request for another collaborator slot', async () => {

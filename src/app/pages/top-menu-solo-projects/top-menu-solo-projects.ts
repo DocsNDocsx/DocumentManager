@@ -64,7 +64,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
       case 'Active':        return this.activeOnlyProjects();
       case 'Draft':         return all.filter(p => p.status === 'draft');
       case 'Completed':     return all.filter(p => p.status === 'completed');
-      case 'Not Completed': return all.filter(p => p.status === 'not_completed' || (p.status === 'active' && this.daysFromNow(p.deadline) < 0));
+      case 'Not Completed': return all.filter(p => p.status === 'not_completed');
       case 'Deleted':       return all.filter(p => p.status === 'cancelled');
       default:              return [];
     }
@@ -309,14 +309,14 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   }
 
   statusLabel(project: Project): string {
-    if (project.status === 'not_completed' || (project.status === 'active' && this.daysFromNow(project.deadline) < 0)) return 'Expired';
+    if (project.status === 'not_completed') return 'Not Completed';
     if (project.status === 'cancelled') return 'Deleted';
-    const map: Record<string, string> = { draft: 'Draft', active: 'Active', completed: 'Completed', not_completed: 'Expired' };
+    const map: Record<string, string> = { draft: 'Draft', active: 'Active', completed: 'Completed', not_completed: 'Not Completed' };
     return map[project.status] ?? project.status;
   }
 
   statusClass(project: Project): string {
-    if (project.status === 'not_completed' || (project.status === 'active' && this.daysFromNow(project.deadline) < 0)) return 'status-badge status-expired';
+    if (project.status === 'not_completed') return 'status-badge status-expired';
     if (project.status === 'cancelled') return 'status-badge status-deleted';
     const map: Record<string, string> = { draft: 'status-badge status-draft', active: 'status-badge status-active', completed: 'status-badge status-completed', not_completed: 'status-badge status-expired' };
     return map[project.status] ?? 'status-badge';
