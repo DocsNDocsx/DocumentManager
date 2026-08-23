@@ -118,11 +118,13 @@
                     </span>
                   </td>
                   <td>
-                    @if (project.userRole) {
-                      @switch (project.userRole) {
+                    @for (role of project.roles ?? []; track role) {
+                      @switch (role) {
                         @case ('host') { <span class="role-badge host"><i class="fas fa-crown" aria-hidden="true"></i> Host</span> }
                         @case ('supervisor') { <span class="role-badge supervisor"><i class="fas fa-user-shield" aria-hidden="true"></i> Supervisor</span> }
                         @case ('contributor') { <span class="role-badge contributor"><i class="fas fa-user-edit" aria-hidden="true"></i> Contributor</span> }
+                        @case ('staff') { <span class="role-badge staff"><i class="fas fa-headset" aria-hidden="true"></i> Support Staff</span> }
+                        @case ('collaborator') { <span class="role-badge collaborator"><i class="fas fa-users" aria-hidden="true"></i> Collaborator</span> }
                       }
                     }
                   </td>
@@ -148,17 +150,17 @@
                           <i class="fas fa-eye" aria-hidden="true"></i>
                         </button>
                       }
-                      @if ((project.status === 'draft' || project.status === 'active') && project.userRole !== 'contributor') {
+                      @if ((project.status === 'draft' || project.status === 'active') && canManage(project)) {
                         <button class="btn-icon btn-edit" type="button" (click)="onEdit(project)" title="Edit" aria-label="Edit project">
                           <i class="fas fa-edit" aria-hidden="true"></i>
                         </button>
                       }
-                      @if (project.status === 'active' && project.userRole === 'contributor') {
+                      @if (project.status === 'active' && hasRole(project, 'collaborator')) {
                         <button class="btn-icon btn-secondary-action" type="button" (click)="onUpload(project)" title="Upload" aria-label="Upload documents">
                           <i class="fas fa-upload" aria-hidden="true"></i>
                         </button>
                       }
-                      @if (project.status === 'active' && project.type === 'private' && project.userRole !== 'contributor') {
+                      @if (project.status === 'active' && project.type === 'private' && canManage(project)) {
                         <button class="btn-icon btn-secondary-action" type="button"
                           (click)="onCopyInviteCode(project, $event)"
                           [attr.aria-label]="copiedProjectId() === project.id ? 'Invite code copied' : 'Copy invite code'"
@@ -166,14 +168,14 @@
                           <i class="fas" [class.fa-check]="copiedProjectId() === project.id" [class.fa-user-plus]="copiedProjectId() !== project.id" aria-hidden="true"></i>
                         </button>
                       }
-                      @if (project.status === 'active' && project.type === 'public' && project.userRole !== 'contributor') {
+                      @if (project.status === 'active' && project.type === 'public' && canManage(project)) {
                         <button class="btn-icon btn-secondary-action" type="button"
                           (click)="onCopyInviteCode(project, $event)"
                           title="Share">
                           <i class="fas" [class.fa-check]="copiedProjectId() === project.id" [class.fa-share]="copiedProjectId() !== project.id" aria-hidden="true"></i>
                         </button>
                       }
-                      @if (project.status === 'active' && project.type === 'private' && (project.userRole === 'host' || project.userRole === 'supervisor')) {
+                      @if (project.status === 'active' && project.type === 'private' && canManage(project)) {
                         <button class="btn-icon btn-complete" type="button"
                           [disabled]="completingProjectId() === project.id"
                           (click)="onMarkComplete(project, $event)" title="Mark Complete">

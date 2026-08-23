@@ -8,6 +8,7 @@ const { uploadToBlob } = require('../utils/blobStorage');
 const { get, head } = require('@vercel/blob');
 const { hasDeadlinePassed } = require('../utils/timezone');
 const { Readable } = require('stream');
+const { soloProjectRoles } = require('../utils/projectRoles');
 
 const SIZE_MULTIPLIERS = { KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
 const configuredSubmittedWeight = Number(process.env.SUBMITTED_COMPLETION_WEIGHT ?? 0.25);
@@ -295,8 +296,12 @@ exports.updateSubmission = async (req, res) => {
     }
     if (req.user?.email) {
       const ownerId = await ownerIdForEmail(req.user.email);
-      const [owned] = await pool.query('SELECT id FROM projects WHERE id = ? AND user_id = ?', [projectId, ownerId]);
-      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can review submissions' });
+      const [projects] = await pool.query('SELECT user_id, staff FROM projects WHERE id = ?', [projectId]);
+      if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+      const roles = soloProjectRoles(projects[0], { id: ownerId, email: req.user.email });
+      if (!roles.includes('host') && !roles.includes('staff')) {
+        return res.status(403).json({ success: false, message: 'Only the project host or support staff can review submissions' });
+      }
     }
 
     const [result] = await pool.query(
@@ -381,16 +386,20 @@ exports.getSubmissionStats = async (req, res) => {
       ids
     );
     const [projects] = await pool.query(
-      `SELECT id, type, documents, collaborators, assignments
+      `SELECT id, user_id, type, documents, collaborators, assignments, staff
        FROM projects WHERE id IN (${placeholders})`,
       ids
     );
+    const requestUserId = req.user?.email ? await ownerIdForEmail(req.user.email) : null;
+    const accessibleProjects = req.user?.email
+      ? projects.filter(project => soloProjectRoles(project, { id: requestUserId, email: req.user.email }).length > 0)
+      : projects;
     const counts = Object.fromEntries(rows.map(row => [row.project_id, {
       approved: Number(row.approved),
       submitted: Number(row.submitted),
     }]));
     const stats = {};
-    for (const project of projects) {
+    for (const project of accessibleProjects) {
       const approved = counts[project.id]?.approved ?? 0;
       const submitted = counts[project.id]?.submitted ?? 0;
       const totalSlots = projectRequirementSlots(project);
@@ -416,15 +425,16 @@ exports.getSubmissions = async (req, res) => {
     const { collabIndex } = req.query;
 
     if (req.user?.email) {
-      const [projects] = await pool.query('SELECT user_id, collaborators FROM projects WHERE id = ?', [projectId]);
+      const [projects] = await pool.query('SELECT user_id, collaborators, staff FROM projects WHERE id = ?', [projectId]);
       if (projects.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
       const ownerId = await ownerIdForEmail(req.user.email);
-      const isOwner = String(projects[0].user_id) === String(ownerId);
+      const roles = soloProjectRoles(projects[0], { id: ownerId, email: req.user.email });
+      const isReviewer = roles.includes('host') || roles.includes('staff');
       const collaborators = parseArray(projects[0].collaborators);
       const isRequestedCollaborator = collabIndex !== undefined
         && collaborators[Number(collabIndex)]?.status !== 'inactive'
         && String(collaborators[Number(collabIndex)]?.email ?? '').toLowerCase() === String(req.user.email).toLowerCase();
-      if (!isOwner && !isRequestedCollaborator) {
+      if (!isReviewer && !isRequestedCollaborator) {
         return res.status(403).json({ success: false, message: 'You cannot view these submissions' });
       }
     }
@@ -451,7 +461,7 @@ exports.downloadSubmission = async (req, res) => {
   try {
     const ownerId = await ownerIdForEmail(req.user?.email);
     const [rows] = await pool.query(
-      `SELECT s.file_name, s.file_path, s.collaborator_index, p.user_id, p.collaborators
+      `SELECT s.file_name, s.file_path, s.collaborator_index, p.user_id, p.collaborators, p.staff
        FROM submissions s
        JOIN projects p ON p.id = s.project_id
        WHERE s.id = ? AND s.project_id = ?`,
@@ -462,10 +472,11 @@ exports.downloadSubmission = async (req, res) => {
     const collaborators = parseArray(submission.collaborators);
     const collaborator = collaborators[Number(submission.collaborator_index)];
     const requestEmail = String(req.user?.email ?? '').toLowerCase();
-    const isOwner = String(submission.user_id) === String(ownerId);
+    const roles = soloProjectRoles(submission, { id: ownerId, email: req.user?.email });
+    const isReviewer = roles.includes('host') || roles.includes('staff');
     const isSubmittingCollaborator = collaborator?.status !== 'inactive'
       && String(collaborator?.email ?? '').toLowerCase() === requestEmail;
-    if (!isOwner && !isSubmittingCollaborator) {
+    if (!isReviewer && !isSubmittingCollaborator) {
       return res.status(403).json({ success: false, message: 'You cannot download this submission' });
     }
 
@@ -483,13 +494,18 @@ exports.downloadSubmission = async (req, res) => {
 exports.downloadApprovedSubmissions = async (req, res) => {
   try {
     const ownerId = await ownerIdForEmail(req.user?.email);
+    const [projectRows] = await pool.query('SELECT user_id, staff FROM projects WHERE id = ?', [req.params.projectId]);
+    if (projectRows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+    const roles = soloProjectRoles(projectRows[0], { id: ownerId, email: req.user?.email });
+    if (!roles.includes('host') && !roles.includes('staff')) {
+      return res.status(403).json({ success: false, message: 'Only the project host or support staff can download approved documents' });
+    }
     const [rows] = await pool.query(
       `SELECT s.file_name, s.file_path, s.collaborator_index, s.document_index
        FROM submissions s
-       JOIN projects p ON p.id = s.project_id
-       WHERE s.project_id = ? AND s.status = 'approved' AND p.user_id = ?
+       WHERE s.project_id = ? AND s.status = 'approved'
        ORDER BY s.collaborator_index, s.document_index`,
-      [req.params.projectId, ownerId]
+      [req.params.projectId]
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'No approved documents found' });
 

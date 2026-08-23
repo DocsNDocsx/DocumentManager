@@ -223,6 +223,24 @@ describe('projectcontroller', () => {
     });
   });
 
+  it('includes a project assigned to the signed-in support staff with a staff role', async () => {
+    pool.query
+      .mockResolvedValueOnce([{ affectedRows: 0 }])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ email: 'sam@example.com' }]])
+      .mockResolvedValueOnce([[
+        projectRow({ id: 'staff-project', user_id: '999', status: 'active' }),
+      ]]);
+    const res = mockResponse();
+
+    await projectController.getProjects({ query: { userid: '456' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      projects: [expect.objectContaining({ id: 'staff-project', roles: ['staff'] })],
+    });
+  });
+
   it('gets one project with owner name', async () => {
     pool.query.mockResolvedValueOnce([[
       projectRow({
@@ -245,6 +263,25 @@ describe('projectcontroller', () => {
         ownerName: 'Owner Person',
         documents: [{ name: 'Transcript' }],
       }),
+    });
+  });
+
+  it('lets support staff read a project and returns the staff role', async () => {
+    pool.query
+      .mockResolvedValueOnce([[
+        projectRow({ user_id: '999', owner_firstname: 'Owner', owner_lastname: 'Person' }),
+      ]])
+      .mockResolvedValueOnce([[{ userid: '456' }]]);
+    const res = mockResponse();
+
+    await projectController.getProject({
+      params: { id: 'project-1' },
+      user: { email: 'SAM@example.com' },
+    }, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      project: expect.objectContaining({ id: 'project-1', roles: ['staff'] }),
     });
   });
 

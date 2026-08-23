@@ -5,9 +5,11 @@ const { deadlineCalendarDate, isFutureDeadline } = require('../utils/timezone');
 const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
+const { isSupportStaff, normalizeEmail, normalizeStaff } = require('../utils/projectRoles');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonLen = col => isMySQL ? `JSON_LENGTH(${col})` : `jsonb_array_length(${col}::jsonb)`;
+const jsonText = col => isMySQL ? `CAST(${col} AS CHAR)` : `${col}::text`;
 const emailCollate = isMySQL ? 'COLLATE utf8mb4_unicode_ci' : '';
 const TEAM_PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'deleted']);
 const TEAM_STATUS_TRANSITIONS = {
@@ -24,11 +26,11 @@ async function authenticatedUserId(req) {
   return rows[0]?.userid == null ? null : String(rows[0].userid);
 }
 
-async function canAccessTeamProject(projectId, userId, requireManager = false) {
+async function canAccessTeamProject(projectId, userId, email, requireManager = false) {
   if (!userId) return false;
   const roleFilter = requireManager ? "AND tpr.role IN ('host', 'supervisor')" : '';
   const [rows] = await pool.query(
-    `SELECT tp.id FROM team_projects tp
+    `SELECT tp.id, tp.support_staff FROM team_projects tp
      JOIN teams t ON t.id = tp.team_id
      LEFT JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ? ${roleFilter}
      LEFT JOIN team_project_collaborators tpc ON tpc.project_id = tp.id AND tpc.user_id = ?
@@ -36,13 +38,17 @@ async function canAccessTeamProject(projectId, userId, requireManager = false) {
      LIMIT 1`,
     [userId, userId, projectId, userId]
   );
-  return rows.length > 0;
+  if (rows.length > 0) return true;
+  if (requireManager || !normalizeEmail(email)) return false;
+  const staffResult = await pool.query('SELECT support_staff FROM team_projects WHERE id = ?', [projectId]);
+  const staffRows = Array.isArray(staffResult?.[0]) ? staffResult[0] : [];
+  return staffRows.length > 0 && isSupportStaff(staffRows[0], email, 'support_staff');
 }
 
 async function requireTeamProjectAccess(req, res, requireManager = false) {
   if (!req.user?.email) return true;
   const userId = await authenticatedUserId(req);
-  if (await canAccessTeamProject(req.params.id, userId, requireManager)) return true;
+  if (await canAccessTeamProject(req.params.id, userId, req.user.email, requireManager)) return true;
   res.status(403).json({ success: false, message: requireManager
     ? 'Only the team owner, host, or supervisor can modify this project'
     : 'You cannot access this project' });
@@ -390,6 +396,10 @@ exports.deleteTeam = async (req, res) => {
 exports.createTeamProject = async (req, res) => {
   try {
     const { userId, teamId, name, description, deadline, type, completedStep, expectedCollaborators, supportStaff, attachments } = req.body;
+    const normalizedSupportStaff = normalizeStaff(supportStaff);
+    if (supportStaff != null && normalizedSupportStaff === undefined) {
+      return res.status(400).json({ success: false, message: 'Support staff must have a valid email address' });
+    }
 
     if (!userId)  return res.status(400).json({ success: false, message: 'userId is required' });
     if (!teamId)  return res.status(400).json({ success: false, message: 'teamId is required' });
@@ -417,7 +427,7 @@ exports.createTeamProject = async (req, res) => {
       [
         projectId, teamId, name, description ?? null, type ?? 'private', deadline ?? null,
         stepValue, expectedCollaborators ?? null, JSON.stringify(attachments ?? []),
-        supportStaff ? JSON.stringify(supportStaff) : null,
+        normalizedSupportStaff ? JSON.stringify(normalizedSupportStaff) : null,
       ]
     );
 
@@ -439,6 +449,10 @@ exports.updateTeamProject = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, deadline, status, completedStep, expectedCollaborators, supportStaff, attachments } = req.body;
+    const normalizedSupportStaff = supportStaff === undefined ? undefined : normalizeStaff(supportStaff);
+    if (supportStaff != null && normalizedSupportStaff === undefined) {
+      return res.status(400).json({ success: false, message: 'Support staff must have a valid email address' });
+    }
 
     if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
       return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
@@ -492,7 +506,7 @@ exports.updateTeamProject = async (req, res) => {
     if (expectedCollaborators !== undefined){ setClauses.push('expected_collaborators = ?');values.push(expectedCollaborators); }
     if (attachments !== undefined)           { setClauses.push('attachments = ?');           values.push(JSON.stringify(attachments)); }
     if (completedStep !== undefined)        { setClauses.push('completed_step = ?');        values.push(completedStep); }
-    if (supportStaff !== undefined)         { setClauses.push('support_staff = ?');         values.push(supportStaff ? JSON.stringify(supportStaff) : null); }
+    if (supportStaff !== undefined)         { setClauses.push('support_staff = ?');         values.push(normalizedSupportStaff ? JSON.stringify(normalizedSupportStaff) : null); }
 
     if (status !== undefined) {
       setClauses.push('status = ?');
@@ -549,18 +563,24 @@ exports.updateTeamProject = async (req, res) => {
             ...project.supportStaff,
             firstName: project.supportStaff.firstName,
             lastName: project.supportStaff.lastName,
+            recipientRole: 'staff',
           });
         }
 
         await Promise.all(
           recipients.filter(c => c.email).map(c => {
             const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Collaborator';
+            const staffAccessUrl = `${process.env.APP_BASE_URL ?? 'https://www.docsndocs.com'}/check-submissions?projectId=${encodeURIComponent(project.id)}`;
+            const accessBlock = c.recipientRole === 'staff'
+              ? `<p><strong>Your role:</strong> Support Staff</p><p><a href="${staffAccessUrl}">Open project as support staff</a></p>`
+              : '';
             const body = template
               .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
               .replace('{{COLLABORATOR_NAME}}', name)
               .replace('{{PROJECT_NAME}}', project.name)
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
-              .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock);
+              .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock)
+              .replace('{{ACCESS_BLOCK}}', accessBlock);
             return sendEmail(c.email, c.subject ?? `DocsNDocs: "${project.name}" is now active - submit your documents`, body);
           })
         );
@@ -790,6 +810,7 @@ exports.getTeamProjects = async (req, res) => {
          tp.deadline,
          tp.expected_collaborators AS "expectedCollaborators",
          tp.project_code  AS "projectCode",
+         MIN(${jsonText('tp.support_staff')}) AS "supportStaffRaw",
          tp.created_at    AS "createdAt",
          tp.updated_at    AS "updatedAt",
          COUNT(DISTINCT tpr_all.id) AS "collaboratorCount",
@@ -819,6 +840,7 @@ exports.getTeamProjects = async (req, res) => {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       myCollaboratorId: row.myCollaboratorId ?? null,
+      roles: [],
     });
 
     let projects = [];
@@ -888,6 +910,40 @@ exports.getTeamProjects = async (req, res) => {
         seenIds.add(row.id);
       }
     }
+
+    const userEmail = String(req.user?.email ?? '').trim().toLowerCase();
+    const staffProjectIds = new Set();
+    if (userEmail) {
+      const [staffRows] = await pool.query(
+        `SELECT ${projectSqlFields}
+         FROM team_projects tp
+         JOIN teams t ON t.id = tp.team_id
+         LEFT JOIN team_project_roles tpr_all ON tpr_all.project_id = tp.id
+         LEFT JOIN team_project_roles tpr_user ON tpr_user.project_id = tp.id AND tpr_user.user_id = ?
+         LEFT JOIN team_project_collaborators tpc_me ON tpc_me.project_id = tp.id AND tpc_me.user_id = ?
+         WHERE LOWER(${jsonText('tp.support_staff')}) LIKE LOWER(?) AND tp.status != 'deleted'
+         GROUP BY tp.id, tp.team_id, t.name, tp.name, tp.type, tp.status, tp.deadline, tp.project_code, tp.created_at, tp.updated_at, tp.documents, tpr_user.role
+         ORDER BY tp.created_at DESC`,
+        [userid, userid, `%${userEmail}%`]
+      );
+      for (const row of staffRows) {
+        if (!isSupportStaff({ support_staff: row.supportStaffRaw }, userEmail, 'support_staff')) continue;
+        staffProjectIds.add(String(row.id));
+        if (!seenIds.has(row.id)) {
+          projects.push(mapProjectRow(row));
+          seenIds.add(row.id);
+        }
+      }
+    }
+
+    projects = projects.map(project => {
+      const roles = [];
+      if (hostedTeams.some(team => String(team.id) === String(project.teamId))) roles.push('host');
+      if (project.userRole) roles.push(project.userRole);
+      if (staffProjectIds.has(String(project.id))) roles.push('staff');
+      if (project.myCollaboratorId) roles.push('collaborator');
+      return { ...project, roles: [...new Set(roles)] };
+    });
 
     if (projects.length > 0) {
       const placeholders = projects.map(() => '?').join(', ');
@@ -1088,7 +1144,8 @@ exports.joinProject = async (req, res) => {
           .replace('{{COLLABORATOR_NAME}}', [user.firstname, user.lastname].filter(Boolean).join(' ') || 'Collaborator')
           .replace('{{PROJECT_NAME}}', soloProject.name)
           .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
-          .replace('{{PROJECT_CODE_BLOCK}}', `<p><a href="${process.env.APP_BASE_URL ?? ''}${workspacePath}">Open your submission workspace</a></p>`);
+          .replace('{{PROJECT_CODE_BLOCK}}', `<p><a href="${process.env.APP_BASE_URL ?? ''}${workspacePath}">Open your submission workspace</a></p>`)
+          .replace('{{ACCESS_BLOCK}}', '');
         await sendEmail(user.email, `DocsNDocs: You joined "${soloProject.name}"`, body);
       } catch (emailErr) {
         console.error('[email] Project join email failed (non-fatal):', emailErr);

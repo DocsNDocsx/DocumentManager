@@ -8,6 +8,10 @@ const { uploadToBlob } = require('../utils/blobStorage');
 const { deadlineCalendarDate, isFutureDeadline } = require('../utils/timezone');
 const { get } = require('@vercel/blob');
 const { Readable } = require('stream');
+const { soloProjectRoles, normalizeStaff } = require('../utils/projectRoles');
+
+const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
+const jsonText = col => isMySQL ? `CAST(${col} AS CHAR)` : `${col}::text`;
 
 const PROJECT_STATUSES = new Set(['draft', 'active', 'completed', 'not_completed', 'cancelled']);
 const STATUS_TRANSITIONS = {
@@ -77,6 +81,7 @@ function parseProject(row) {
     pendingBillingUpgrade,
     paidCollaboratorCapacity: parsed.paid_collaborator_capacity == null ? null : Number(parsed.paid_collaborator_capacity),
     paidDocumentCapacity: parsed.paid_document_capacity == null ? null : Number(parsed.paid_document_capacity),
+    roles: Array.isArray(parsed.roles) ? parsed.roles : [],
   };
 }
 
@@ -98,6 +103,10 @@ exports.createProject = async (req, res) => {
     if (!name) return res.status(400).json({ success: false, message: 'name is required' });
     if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
       return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
+    }
+    const normalizedStaff = normalizeStaff(staff);
+    if (staff != null && normalizedStaff === undefined) {
+      return res.status(400).json({ success: false, message: 'Support staff must have a valid email address' });
     }
     if (req.user?.email) {
       const authenticatedId = await authenticatedUserId(req);
@@ -124,7 +133,7 @@ exports.createProject = async (req, res) => {
         JSON.stringify(documents ?? []),
         JSON.stringify(assignments ?? {}),
         JSON.stringify(attachments ?? []),
-        JSON.stringify(staff ?? null),
+        JSON.stringify(normalizedStaff),
         expectedCollaborators ?? null,
       ]
     );
@@ -160,24 +169,24 @@ exports.getProjects = async (req, res) => {
       'SELECT email FROM users WHERE userid = ?',
       [userid]
     );
-    const [activeRows] = await pool.query(
-      "SELECT * FROM projects WHERE user_id != ? AND status = 'active' ORDER BY created_at DESC",
-      [userid]
-    );
+    const user = { id: userid, email: userRows[0]?.email };
+    const userEmail = String(user.email ?? '').trim().toLowerCase();
+    const [accessibleRows] = userEmail
+      ? await pool.query(
+        `SELECT * FROM projects
+         WHERE user_id != ? AND (LOWER(${jsonText('collaborators')}) LIKE LOWER(?) OR LOWER(${jsonText('staff')}) LIKE LOWER(?))
+         ORDER BY created_at DESC`,
+        [userid, `%${userEmail}%`, `%${userEmail}%`]
+      )
+      : [[]];
+    const roleRows = [...ownedRows, ...accessibleRows]
+      .map(row => ({ row, roles: soloProjectRoles(row, user) }))
+      .filter(entry => entry.roles.length > 0);
 
-    const userEmail = String(userRows[0]?.email ?? '').toLowerCase();
-    const collaboratorRows = activeRows.filter(row => {
-      const collaborators = parseProject(row).collaborators;
-      return collaborators.some(collaborator => {
-        const collaboratorUserId = collaborator?.userId ?? collaborator?.userid ?? collaborator?.user_id;
-        const collaboratorEmail = String(collaborator?.email ?? '').toLowerCase();
-        return String(collaboratorUserId ?? '') === String(userid)
-          || (userEmail && collaboratorEmail === userEmail);
-      });
+    res.json({
+      success: true,
+      projects: roleRows.map(({ row, roles }) => parseProject({ ...row, roles })),
     });
-    const rows = [...ownedRows, ...collaboratorRows];
-
-    res.json({ success: true, projects: rows.map(parseProject) });
   } catch (err) {
     console.error('Get projects error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -206,10 +215,11 @@ exports.getProject = async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
     if (req.user?.email) {
       const userId = await authenticatedUserId(req);
-      const isOwner = String(rows[0].user_id) === String(userId);
-      if (!isOwner && !includesCollaboratorEmail(rows[0].collaborators, req.user.email)) {
+      const roles = soloProjectRoles(rows[0], { id: userId, email: req.user.email });
+      if (roles.length === 0) {
         return res.status(403).json({ success: false, message: 'You cannot access this project' });
       }
+      rows[0].roles = roles;
     }
 
     const project = parseProject(rows[0]);
@@ -228,6 +238,10 @@ exports.updateProject = async (req, res) => {
 
     if (expectedCollaborators !== undefined && (!Number.isInteger(Number(expectedCollaborators)) || Number(expectedCollaborators) <= 0)) {
       return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
+    }
+    const normalizedStaff = staff === undefined ? undefined : normalizeStaff(staff);
+    if (staff != null && normalizedStaff === undefined) {
+      return res.status(400).json({ success: false, message: 'Support staff must have a valid email address' });
     }
 
     let ownedProject = null;
@@ -334,7 +348,7 @@ exports.updateProject = async (req, res) => {
     if (collaborators !== undefined) { setClauses.push('collaborators = ?'); values.push(JSON.stringify(collaborators)); }
     if (documents !== undefined) { setClauses.push('documents = ?'); values.push(JSON.stringify(documents)); }
     if (assignments !== undefined) { setClauses.push('assignments = ?'); values.push(JSON.stringify(assignments)); }
-    if (staff !== undefined) { setClauses.push('staff = ?'); values.push(JSON.stringify(staff)); }
+    if (staff !== undefined) { setClauses.push('staff = ?'); values.push(JSON.stringify(normalizedStaff)); }
     if (expectedCollaborators !== undefined) { setClauses.push('expected_collaborators = ?'); values.push(expectedCollaborators); }
     if (status !== undefined) { setClauses.push('status = ?'); values.push(status); }
     if (completedStep !== undefined) { setClauses.push('completed_step = GREATEST(completed_step, ?)'); values.push(completedStep); }
@@ -435,6 +449,7 @@ exports.activateProject = async (req, res) => {
         recipients.push({
           ...project.staff,
           name: [project.staff.firstName, project.staff.lastName].filter(Boolean).join(' ') || 'Support Staff',
+          recipientRole: 'staff',
         });
       }
 
@@ -449,7 +464,11 @@ exports.activateProject = async (req, res) => {
               .replace('{{PROJECT_NAME}}', project.name)
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
               .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock);
-            return sendEmail(c.email, c.subject ?? `DocsNDocs: "${project.name}" is now active`, body);
+            const staffAccessUrl = `${process.env.APP_BASE_URL ?? 'https://www.docsndocs.com'}/top-menu-solo-projects?projectId=${encodeURIComponent(project.id)}`;
+            const accessBlock = c.recipientRole === 'staff'
+              ? `<p><strong>Your role:</strong> Support Staff</p><p><a href="${staffAccessUrl}">Open project as support staff</a></p>`
+              : '';
+            return sendEmail(c.email, c.subject ?? `DocsNDocs: "${project.name}" is now active`, body.replace('{{ACCESS_BLOCK}}', accessBlock));
           })
       );
     } catch (emailErr) {
@@ -516,14 +535,14 @@ exports.downloadProjectAttachment = async (req, res) => {
   try {
     const { id, attachmentIndex } = req.params;
     const [rows] = await pool.query(
-      'SELECT user_id, collaborators, attachments FROM projects WHERE id = ?',
+      'SELECT user_id, collaborators, staff, attachments FROM projects WHERE id = ?',
       [id],
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
     const userId = await authenticatedUserId(req);
-    const isOwner = String(rows[0].user_id) === String(userId);
-    if (!isOwner && !includesCollaboratorEmail(rows[0].collaborators, req.user?.email)) {
+    const roles = soloProjectRoles(rows[0], { id: userId, email: req.user?.email });
+    if (roles.length === 0) {
       return res.status(403).json({ success: false, message: 'You cannot access this project file' });
     }
 
@@ -560,14 +579,14 @@ exports.downloadDocumentTemplate = async (req, res) => {
   try {
     const { id, documentIndex } = req.params;
     const [rows] = await pool.query(
-      'SELECT user_id, collaborators, documents FROM projects WHERE id = ?',
+      'SELECT user_id, collaborators, staff, documents FROM projects WHERE id = ?',
       [id],
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
 
     const userId = await authenticatedUserId(req);
-    const isOwner = String(rows[0].user_id) === String(userId);
-    if (!isOwner && !includesCollaboratorEmail(rows[0].collaborators, req.user?.email)) {
+    const roles = soloProjectRoles(rows[0], { id: userId, email: req.user?.email });
+    if (roles.length === 0) {
       return res.status(403).json({ success: false, message: 'You cannot access this document template' });
     }
 

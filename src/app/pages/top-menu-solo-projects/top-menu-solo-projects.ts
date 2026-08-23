@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
@@ -33,6 +33,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   private auth = inject(AuthService);
   private logger = inject(LoggingService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
@@ -53,6 +54,14 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     if (this.listService.isLoading() || this.pendingPaymentProject()) return;
     const pending = this.listService.projects().find(project => project.status === 'active' && project.pendingBillingUpgrade);
     if (pending) this.pendingPaymentProject.set(pending);
+  });
+  private requestedProjectId = this.route.snapshot.queryParamMap.get('projectId');
+  private readonly directProjectEffect = effect(() => {
+    if (!this.requestedProjectId || this.listService.isLoading()) return;
+    const project = this.listService.projects().find(item => item.id === this.requestedProjectId);
+    if (!project) return;
+    this.viewingProject.set(project);
+    this.requestedProjectId = null;
   });
 
   private nonCancelledProjects = computed(() => this.listService.projects().filter(p => p.status !== 'cancelled'));
@@ -93,11 +102,15 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   });
 
   userRolesMap = computed(() => {
-    const uid = this.auth.currentUserId();
+    const uid = String(this.auth.currentUserId());
+    const email = this.auth.currentUserEmail().trim().toLowerCase();
     return Object.fromEntries(
       this.listService.projects().map(p => {
-        const roles: ('host' | 'collaborator' | 'support')[] = [];
+        if (p.roles) return [p.id, p.roles];
+        const roles: ('host' | 'staff' | 'collaborator')[] = [];
         if (String(p.userId) === uid) roles.push('host');
+        if (email && p.staff?.email.trim().toLowerCase() === email) roles.push('staff');
+        if (email && p.collaborators.some(c => c.status !== 'inactive' && c.email.trim().toLowerCase() === email)) roles.push('collaborator');
         return [p.id, roles];
       })
     );
@@ -150,7 +163,11 @@ export class TopMenuSoloProjectsComponent implements OnInit {
   closeViewModal(): void { this.viewingProject.set(null); this.reviewEmptyIndex.set(null); }
 
   isProjectOwner(project: Project): boolean {
-    return String(project.userId) === String(this.auth.currentUserId());
+    return this.userRolesMap()[project.id]?.includes('host') ?? false;
+  }
+
+  isProjectReviewer(project: Project): boolean {
+    return this.userRolesMap()[project.id]?.some(role => role === 'host' || role === 'staff') ?? false;
   }
 
   isCurrentUserCollaborator(project: Project, collaboratorIndex: number): boolean {
@@ -160,7 +177,7 @@ export class TopMenuSoloProjectsComponent implements OnInit {
 
   visibleCollaborators(project: Project): { collaborator: Project['collaborators'][number]; index: number }[] {
     const entries = project.collaborators.map((collaborator, index) => ({ collaborator, index }));
-    if (this.isProjectOwner(project)) return entries;
+    if (this.isProjectReviewer(project)) return entries;
     const email = this.auth.currentUserEmail().trim().toLowerCase();
     return entries.filter(entry => entry.collaborator.status !== 'inactive' && entry.collaborator.email.trim().toLowerCase() === email);
   }

@@ -124,6 +124,7 @@ export interface TeamProjectItem {
     documents: TeamProjectDocumentRequirement[];
     collaborators: TeamProjectCollaboratorInput[];
   } | null;
+  roles?: ('host' | 'supervisor' | 'contributor' | 'staff' | 'collaborator')[];
 }
 
 export interface TeamProjectsApiResponse {

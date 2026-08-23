@@ -213,6 +213,14 @@ export class TopMenuTeamProjectsComponent implements OnInit {
     this.router.navigate(['/team-project-upload', project.id, project.myCollaboratorId]);
   }
 
+  hasRole(project: TeamProjectItem, role: NonNullable<TeamProjectItem['roles']>[number]): boolean {
+    return project.roles?.includes(role) ?? false;
+  }
+
+  canManage(project: TeamProjectItem): boolean {
+    return this.hasRole(project, 'host') || this.hasRole(project, 'supervisor');
+  }
+
   collectionProgress(project: TeamProjectItem): number {
     const total = project.documentCount * project.collabUploadCount;
     if (total === 0) return 0;

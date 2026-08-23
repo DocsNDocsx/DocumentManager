@@ -68,6 +68,7 @@ export interface Project {
   } | null;
   paidCollaboratorCapacity?: number | null;
   paidDocumentCapacity?: number | null;
+  roles?: ('host' | 'staff' | 'collaborator')[];
 }
 
 export interface ProjectApiResponse {

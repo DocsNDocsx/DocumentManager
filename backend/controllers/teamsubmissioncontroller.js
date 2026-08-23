@@ -4,13 +4,14 @@ const path = require('path');
 const pool = require('../utils/sql');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
+const { isSupportStaff } = require('../utils/projectRoles');
 
 async function requireTeamProjectReviewer(req, res) {
   if (!req.user?.email) return true;
   const [users] = await pool.query('SELECT userid FROM users WHERE LOWER(email) = LOWER(?)', [req.user.email]);
   const userId = users[0]?.userid;
   const [rows] = await pool.query(
-    `SELECT tp.id FROM team_projects tp
+    `SELECT tp.id, tp.support_staff FROM team_projects tp
      JOIN teams t ON t.id = tp.team_id
      LEFT JOIN team_project_roles tpr ON tpr.project_id = tp.id AND tpr.user_id = ? AND tpr.role IN ('host', 'supervisor')
      WHERE tp.id = ? AND (t.user_id = ? OR tpr.user_id IS NOT NULL)
@@ -18,7 +19,9 @@ async function requireTeamProjectReviewer(req, res) {
     [userId, req.params.id, userId]
   );
   if (rows.length > 0) return true;
-  res.status(403).json({ success: false, message: 'Only the team owner, host, or supervisor can review submissions' });
+  const [staffRows] = await pool.query('SELECT support_staff FROM team_projects WHERE id = ?', [req.params.id]);
+  if (staffRows.length > 0 && isSupportStaff(staffRows[0], req.user.email, 'support_staff')) return true;
+  res.status(403).json({ success: false, message: 'Only the team owner, host, supervisor, or support staff can review submissions' });
   return false;
 }
 

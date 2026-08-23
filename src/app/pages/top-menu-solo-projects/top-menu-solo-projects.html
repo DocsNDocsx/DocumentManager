@@ -105,7 +105,7 @@
                         <span class="role-badge host"><i class="fas fa-user-tie" aria-hidden="true"></i> Host</span>
                       } @else if (role === 'collaborator') {
                         <span class="role-badge collaborator"><i class="fas fa-users" aria-hidden="true"></i> Collaborator</span>
-                      } @else if (role === 'support') {
+                      } @else if (role === 'staff') {
                         <span class="role-badge support"><i class="fas fa-headset" aria-hidden="true"></i> Support Staff</span>
                       }
                     }
@@ -221,7 +221,7 @@
         <div>
           <h2 class="view-modal-title">{{ vp.name }}</h2>
           <p class="view-modal-subtitle">
-            {{ isProjectOwner(vp) ? 'Review document submissions from each collaborator.' : 'View your documents, upload files, and submit them for review.' }}
+            {{ isProjectReviewer(vp) ? 'Review document submissions from each collaborator.' : 'View your documents, upload files, and submit them for review.' }}
           </p>
         </div>
         <button class="view-modal-close" type="button" (click)="closeViewModal()" aria-label="Close modal">
@@ -242,7 +242,7 @@
               <div class="collab-email">{{ collab.email }}</div>
             </div>
             <div class="collab-actions">
-              @if (isProjectOwner(vp)) {
+              @if (isProjectReviewer(vp)) {
                 <button class="copy-btn collab-copy-btn" type="button"
                   [disabled]="reviewLoadingIndex() === entry.index"
                   (click)="openCollaboratorReview(vp, entry.index)"

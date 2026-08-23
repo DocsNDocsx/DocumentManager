@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const { list } = require('@vercel/blob');
 const pool = require('../utils/sql');
+const { isSupportStaff } = require('../utils/projectRoles');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonLen = col => isMySQL ? `JSON_LENGTH(${col})` : `jsonb_array_length(${col}::jsonb)`;
@@ -315,17 +316,18 @@ exports.getRecentProjects = async (req, res) => {
          p.description,
          p.documents,
          p.collaborators,
+         p.staff,
          p.expected_collaborators,
          p.deadline,
          p.updated_at,
          (SELECT COUNT(DISTINCT s.collaborator_index) FROM submissions s WHERE s.project_id = p.id) AS submitted_count
        FROM projects p
-       WHERE p.status = ? AND (p.user_id = ?${email ? ` OR LOWER(${jsonText('p.collaborators')}) LIKE LOWER(?)` : ''})
+       WHERE p.status = ? AND (p.user_id = ?${email ? ` OR LOWER(${jsonText('p.collaborators')}) LIKE LOWER(?) OR LOWER(${jsonText('p.staff')}) LIKE LOWER(?)` : ''})
        ORDER BY p.updated_at DESC
        LIMIT 20`,
-      email ? ['active', userid, `%${email}%`] : ['active', userid]
+      email ? ['active', userid, `%${email}%`, `%${email}%`] : ['active', userid]
     );
-    const soloRows = soloCandidates.filter(row => String(row.user_id) === String(userid) || isActiveCollaborator(row, email));
+    const soloRows = soloCandidates.filter(row => String(row.user_id) === String(userid) || isActiveCollaborator(row, email) || isSupportStaff(row, email));
 
     const [teamRows] = await pool.query(
       `SELECT
@@ -373,6 +375,11 @@ exports.getRecentProjects = async (req, res) => {
         deadline: row.deadline ? row.deadline.toISOString().split('T')[0] : null,
         isOngoing: !row.deadline,
         updatedAt: row.updated_at,
+        roles: [
+          ...(String(row.user_id) === String(userid) ? ['host'] : []),
+          ...(isSupportStaff(row, email) ? ['staff'] : []),
+          ...(isActiveCollaborator(row, email) ? ['collaborator'] : []),
+        ],
       };
     });
 
