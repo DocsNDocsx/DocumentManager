@@ -245,19 +245,59 @@ exports.updateProject = async (req, res) => {
     }
 
     let ownedProject = null;
+    let requesterRoles = [];
     if (req.user?.email) {
       const userId = await authenticatedUserId(req);
-      const [owned] = await pool.query('SELECT * FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
-      if (owned.length === 0) return res.status(403).json({ success: false, message: 'Only the project owner can update this project' });
-      ownedProject = owned[0];
+      const [accessible] = await pool.query('SELECT * FROM projects WHERE id = ?', [id]);
+      if (accessible.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
+      requesterRoles = soloProjectRoles(accessible[0], { id: userId, email: req.user.email });
+      if (!requesterRoles.includes('host') && !requesterRoles.includes('staff')) {
+        return res.status(403).json({ success: false, message: 'Only the project host or support staff can update this project' });
+      }
+      ownedProject = accessible[0];
     }
     const currentSolo = ownedProject ? parseProject(ownedProject) : null;
+    if (ownedProject && requesterRoles.includes('staff') && !requesterRoles.includes('host')) {
+      const changesPricing =
+        (deadline !== undefined && deadlineCalendarDate(deadline) !== deadlineCalendarDate(currentSolo.deadline)) ||
+        (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(currentSolo.expectedCollaborators)) ||
+        (collaborators !== undefined && activeCollaborators(collaborators).length !== activeCollaborators(currentSolo.collaborators).length) ||
+        (documents !== undefined && activeDocuments(documents).length > activeDocuments(currentSolo.documents).length);
+      const changesHostOnlyState = status !== undefined && status !== currentSolo.status;
+      const changesStaffAssignment = staff !== undefined
+        && JSON.stringify(normalizeStaff(currentSolo.staff)) !== JSON.stringify(normalizedStaff);
+      if (changesPricing) {
+        return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only the project host can change pricing-related project settings' });
+      }
+      if (changesHostOnlyState || changesStaffAssignment) {
+        return res.status(403).json({ success: false, code: 'HOST_REQUIRED', message: 'Only the project host can change project status or support staff assignment' });
+      }
+    }
     if (ownedProject?.status === 'active' && currentSolo?.type === 'public' && expectedCollaborators !== undefined) {
       const joinedCollaboratorCount = activeCollaborators(currentSolo.collaborators).length;
       if (Number(expectedCollaborators) < Math.max(1, joinedCollaboratorCount)) {
         return res.status(409).json({
           success: false,
           message: `Expected collaborators cannot be lower than the ${joinedCollaboratorCount} collaborators who have already joined`,
+        });
+      }
+    }
+    if (ownedProject?.status === 'active' && documents !== undefined &&
+        activeDocuments(documents).length < activeDocuments(currentSolo.documents).length) {
+      const [submittedDocumentRows] = await pool.query(
+        'SELECT DISTINCT document_index FROM submissions WHERE project_id = ?',
+        [id]
+      );
+      const invalidatesSubmission = submittedDocumentRows.some(row => {
+        const index = Number(row.document_index);
+        const previousDocument = currentSolo.documents[index];
+        const nextDocument = documents[index];
+        return !nextDocument || nextDocument.status === 'inactive' || nextDocument.name !== previousDocument?.name;
+      });
+      if (invalidatesSubmission) {
+        return res.status(409).json({
+          success: false,
+          message: 'A document with existing submissions cannot be removed or moved',
         });
       }
     }

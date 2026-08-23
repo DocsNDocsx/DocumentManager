@@ -66,7 +66,7 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
     if (proj && proj.documents.length > 0) {
       this.documents.set(proj.documents);
       this.documentCount.set(proj.documents.length);
-      this.minimumDocumentCount.set(proj.status === 'active' ? proj.documents.length : 1);
+      this.minimumDocumentCount.set(1);
       this.formsGenerated.set(true);
     }
   }

@@ -55,6 +55,15 @@ async function requireTeamProjectAccess(req, res, requireManager = false) {
   return false;
 }
 
+async function teamEditorRoles(req, project) {
+  if (!req.user?.email) return { isManager: true, isStaff: false };
+  const userId = await authenticatedUserId(req);
+  return {
+    isManager: await canAccessTeamProject(project.id, userId, req.user.email, true),
+    isStaff: isSupportStaff(project, req.user.email, 'support_staff'),
+  };
+}
+
 function generateProjectCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const part = n => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -458,19 +467,36 @@ exports.updateTeamProject = async (req, res) => {
       return res.status(400).json({ success: false, message: 'expectedCollaborators must be a positive integer' });
     }
 
-    if (!await requireTeamProjectAccess(req, res, true)) return;
-
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
-    if (existing[0].status === 'active' && Array.isArray(documents) && documents.length < parseJsonArray(existing[0].documents).length) {
-      return res.status(409).json({ success: false, message: 'The document count of an active project cannot be reduced' });
+    const editor = await teamEditorRoles(req, existing[0]);
+    if (!editor.isManager && !editor.isStaff) {
+      return res.status(403).json({ success: false, message: 'Only a project manager or support staff can update this project' });
+    }
+    if (!editor.isManager) {
+      const changesPricing =
+        (deadline !== undefined && deadlineCalendarDate(deadline) !== deadlineCalendarDate(existing[0].deadline)) ||
+        (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(existing[0].expected_collaborators));
+      if (changesPricing) {
+        return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only a project manager can change pricing-related project settings' });
+      }
+      const existingSupportStaff = parseProjectRow(existing[0]).supportStaff;
+      const changesSupportStaff = supportStaff !== undefined
+        && JSON.stringify(normalizeStaff(existingSupportStaff)) !== JSON.stringify(normalizedSupportStaff);
+      if ((status !== undefined && status !== existing[0].status) || changesSupportStaff) {
+        return res.status(403).json({ success: false, code: 'HOST_REQUIRED', message: 'Only a project manager can change project status or support staff assignment' });
+      }
     }
     if (existing[0].status === 'active' && deadline !== undefined &&
         deadlineCalendarDate(deadline) < deadlineCalendarDate(existing[0].deadline)) {
       return res.status(409).json({ success: false, message: 'An active project deadline can only be extended' });
     }
     if (existing[0].status === 'active' && expectedCollaborators !== undefined && Number(expectedCollaborators) < Number(existing[0].expected_collaborators ?? 0)) {
-      return res.status(409).json({ success: false, message: 'The expected collaborator count of an active project cannot be reduced' });
+      const [joinedRows] = await pool.query('SELECT COUNT(*) AS count FROM team_project_collaborators WHERE project_id = ?', [id]);
+      const joinedCount = Number(joinedRows[0]?.count ?? 0);
+      if (Number(expectedCollaborators) < Math.max(1, joinedCount)) {
+        return res.status(409).json({ success: false, message: `Expected collaborators cannot be lower than the ${joinedCount} collaborators who have already joined` });
+      }
     }
     const teamBillingIncreased = existing[0].status === 'active' && (
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(existing[0].deadline)) ||
@@ -622,16 +648,25 @@ exports.saveProjectCollaborators = async (req, res) => {
   try {
     const { id } = req.params;
     const { collaborators } = req.body;
-    if (!await requireTeamProjectAccess(req, res, true)) return;
-
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
-    if (existing[0].status === 'active' && Array.isArray(collaborators)) {
+    const editor = await teamEditorRoles(req, existing[0]);
+    if (!editor.isManager && !editor.isStaff) {
+      return res.status(403).json({ success: false, message: 'Only a project manager or support staff can edit collaborators' });
+    }
+    let currentCount = Array.isArray(collaborators) ? collaborators.length : 0;
+    if (!editor.isManager || existing[0].status === 'active') {
       const [currentCollaborators] = await pool.query('SELECT COUNT(*) AS count FROM team_project_collaborators WHERE project_id = ?', [id]);
-      if (collaborators.length < Number(currentCollaborators[0]?.count ?? 0)) {
+      currentCount = Number(currentCollaborators[0]?.count ?? 0);
+    }
+    if (!editor.isManager && Array.isArray(collaborators) && collaborators.length !== currentCount) {
+      return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only a project manager can change the collaborator count' });
+    }
+    if (existing[0].status === 'active' && Array.isArray(collaborators)) {
+      if (collaborators.length < currentCount) {
         return res.status(409).json({ success: false, message: 'The collaborator count of an active project cannot be reduced' });
       }
-      if (collaborators.length > Number(currentCollaborators[0]?.count ?? 0)) await preservePaidTeamConfiguration(existing[0]);
+      if (collaborators.length > currentCount) await preservePaidTeamConfiguration(existing[0]);
     }
 
     await pool.query('DELETE FROM team_project_collaborators WHERE project_id = ?', [id]);
@@ -680,11 +715,34 @@ exports.saveProjectDocuments = async (req, res) => {
   try {
     const { id } = req.params;
     const { documents } = req.body;
-    if (!await requireTeamProjectAccess(req, res, true)) return;
-
     const [existing] = await pool.query('SELECT * FROM team_projects WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Project not found' });
-    if (existing[0].status === 'active' && Array.isArray(documents) && documents.length > parseJsonArray(existing[0].documents).length) {
+    const editor = await teamEditorRoles(req, existing[0]);
+    if (!editor.isManager && !editor.isStaff) {
+      return res.status(403).json({ success: false, message: 'Only a project manager or support staff can edit documents' });
+    }
+    const currentDocuments = parseJsonArray(existing[0].documents);
+    const currentDocumentCount = currentDocuments.length;
+    if (!editor.isManager && Array.isArray(documents) && documents.length > currentDocumentCount) {
+      return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only a project manager can change the document count' });
+    }
+    if (existing[0].status === 'active' && Array.isArray(documents) && documents.length < currentDocumentCount) {
+      const [submittedDocumentRows] = await pool.query(
+        'SELECT DISTINCT document_index FROM team_project_submissions WHERE project_id = ?',
+        [id]
+      );
+      const invalidatesSubmission = submittedDocumentRows.some(row => {
+        const index = Number(row.document_index);
+        return !documents[index] || documents[index].name !== currentDocuments[index]?.name;
+      });
+      if (invalidatesSubmission) {
+        return res.status(409).json({
+          success: false,
+          message: 'A document with existing submissions cannot be removed or moved',
+        });
+      }
+    }
+    if (existing[0].status === 'active' && Array.isArray(documents) && documents.length > currentDocumentCount) {
       await preservePaidTeamConfiguration(existing[0]);
     }
 

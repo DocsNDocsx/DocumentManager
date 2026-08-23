@@ -167,7 +167,7 @@ export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, O
     if (existing.length > 0) {
       this.documents.set(existing);
       this.documentCount.set(existing.length);
-      this.minimumDocumentCount.set(project?.status === 'active' ? existing.length : 1);
+      this.minimumDocumentCount.set(1);
       this.formsGenerated.set(true);
     }
   }

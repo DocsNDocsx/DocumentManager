@@ -221,6 +221,10 @@ export class TopMenuTeamProjectsComponent implements OnInit {
     return this.hasRole(project, 'host') || this.hasRole(project, 'supervisor');
   }
 
+  canEdit(project: TeamProjectItem): boolean {
+    return this.canManage(project) || this.hasRole(project, 'staff');
+  }
+
   collectionProgress(project: TeamProjectItem): number {
     const total = project.documentCount * project.collabUploadCount;
     if (total === 0) return 0;

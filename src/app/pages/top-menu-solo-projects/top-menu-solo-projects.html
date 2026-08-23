@@ -154,11 +154,13 @@
                       <button class="btn-icon btn-view" type="button" (click)="onView(project, $event)" title="View" aria-label="View project">
                         <i class="fas fa-eye" aria-hidden="true"></i>
                       </button>
-                      @if (userRolesMap()[project.id].includes('host')) {
+                      @if (userRolesMap()[project.id].includes('host') || userRolesMap()[project.id].includes('staff')) {
                         <button class="btn-icon btn-edit" type="button"
                           [routerLink]="['/new-solo-project', project.type, project.id, 'details']" title="Edit" aria-label="Edit project">
                           <i class="fas fa-edit" aria-hidden="true"></i>
                         </button>
+                      }
+                      @if (userRolesMap()[project.id].includes('host')) {
                         <button class="btn-icon btn-complete" type="button"
                           (click)="onMarkComplete(project, $event)" title="Mark Complete" aria-label="Mark project complete">
                           <i class="fas fa-check-circle" aria-hidden="true"></i>
@@ -171,37 +173,45 @@
                       }
                     }
                     @if (activeFilter() === 'Draft') {
-                      <button class="btn-icon btn-edit" type="button"
-                        [routerLink]="['/new-solo-project', project.type, project.id, 'details']" title="Edit" aria-label="Edit project">
-                        <i class="fas fa-edit" aria-hidden="true"></i>
-                      </button>
-                      <button class="btn-icon btn-secondary-action" type="button" (click)="onActivate(project, $event)" title="Activate" aria-label="Activate project">
-                        <i class="fas fa-play" aria-hidden="true"></i>
-                      </button>
-                      <button class="btn-icon btn-delete" type="button" (click)="onSoftDelete(project, $event)" aria-label="Delete project">
-                        <i class="fas fa-trash" aria-hidden="true"></i>
-                      </button>
+                      @if (userRolesMap()[project.id].includes('host') || userRolesMap()[project.id].includes('staff')) {
+                        <button class="btn-icon btn-edit" type="button"
+                          [routerLink]="['/new-solo-project', project.type, project.id, 'details']" title="Edit" aria-label="Edit project">
+                          <i class="fas fa-edit" aria-hidden="true"></i>
+                        </button>
+                      }
+                      @if (userRolesMap()[project.id].includes('host')) {
+                        <button class="btn-icon btn-secondary-action" type="button" (click)="onActivate(project, $event)" title="Activate" aria-label="Activate project">
+                          <i class="fas fa-play" aria-hidden="true"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" type="button" (click)="onSoftDelete(project, $event)" aria-label="Delete project">
+                          <i class="fas fa-trash" aria-hidden="true"></i>
+                        </button>
+                      }
                     }
                     @if (activeFilter() === 'Completed' || activeFilter() === 'Not Completed') {
                       <button class="btn-icon btn-view" type="button" (click)="onView(project, $event)" title="View" aria-label="View project">
                         <i class="fas fa-eye" aria-hidden="true"></i>
                       </button>
-                      <button class="btn-icon btn-secondary-action" type="button" (click)="onDuplicate(project, $event)" title="Duplicate" aria-label="Duplicate project">
-                        <i class="fas fa-copy" aria-hidden="true"></i>
-                      </button>
-                      <button class="btn-icon btn-delete" type="button" (click)="onSoftDelete(project, $event)" aria-label="Delete project">
-                        <i class="fas fa-trash" aria-hidden="true"></i>
-                      </button>
+                      @if (userRolesMap()[project.id].includes('host')) {
+                        <button class="btn-icon btn-secondary-action" type="button" (click)="onDuplicate(project, $event)" title="Duplicate" aria-label="Duplicate project">
+                          <i class="fas fa-copy" aria-hidden="true"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" type="button" (click)="onSoftDelete(project, $event)" aria-label="Delete project">
+                          <i class="fas fa-trash" aria-hidden="true"></i>
+                        </button>
+                      }
                     }
                     @if (activeFilter() === 'Deleted') {
-                      <button class="btn-icon btn-secondary-action" type="button" (click)="onRestore(project, $event)" title="Restore" aria-label="Restore project">
-                        <i class="fas fa-undo" aria-hidden="true"></i>
-                      </button>
-                      <button class="btn-icon btn-delete" type="button"
-                        (click)="onHardDelete(project, $event)"
-                        aria-label="Permanently delete this project" title="Delete Forever">
-                        <i class="fas fa-eraser" aria-hidden="true"></i>
-                      </button>
+                      @if (userRolesMap()[project.id].includes('host')) {
+                        <button class="btn-icon btn-secondary-action" type="button" (click)="onRestore(project, $event)" title="Restore" aria-label="Restore project">
+                          <i class="fas fa-undo" aria-hidden="true"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" type="button"
+                          (click)="onHardDelete(project, $event)"
+                          aria-label="Permanently delete this project" title="Delete Forever">
+                          <i class="fas fa-eraser" aria-hidden="true"></i>
+                        </button>
+                      }
                     }
                   </div>
                 </td>

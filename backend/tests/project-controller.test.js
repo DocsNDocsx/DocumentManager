@@ -285,6 +285,115 @@ describe('projectcontroller', () => {
     });
   });
 
+  it('lets support staff edit non-pricing project content', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[projectRow({ user_id: '999', status: 'draft' })]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[projectRow({ user_id: '999', name: 'Updated by Staff' })]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'SAM@example.com' },
+      body: { name: 'Updated by Staff' },
+    }, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      project: expect.objectContaining({ name: 'Updated by Staff' }),
+    });
+  });
+
+  it('blocks support staff from changing pricing dimensions', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[projectRow({ user_id: '999', status: 'active' })]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'sam@example.com' },
+      body: { expectedCollaborators: 4 },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'HOST_REQUIRED_FOR_PRICING' }));
+  });
+
+  it('lets support staff reduce expected collaborators when the joined count still fits', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[projectRow({ user_id: '999', status: 'draft', expected_collaborators: 3 })]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[projectRow({ user_id: '999', status: 'draft', expected_collaborators: 2 })]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'sam@example.com' },
+      body: { expectedCollaborators: 2 },
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(pool.query).toHaveBeenCalledWith(
+      'UPDATE projects SET expected_collaborators = ? WHERE id = ?',
+      [2, 'project-1'],
+    );
+  });
+
+  it('lets support staff reduce active document requirements without existing submissions', async () => {
+    const activeProject = projectRow({
+      user_id: '999',
+      status: 'active',
+      documents: JSON.stringify([{ name: 'A' }, { name: 'B' }, { name: 'C' }]),
+    });
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[activeProject]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ collaborators: 1, documents: 3 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[{ ...activeProject, documents: JSON.stringify([{ name: 'A' }, { name: 'B' }]) }]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'sam@example.com' },
+      body: { documents: [{ name: 'A' }, { name: 'B' }] },
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(pool.query).toHaveBeenCalledWith(
+      'UPDATE projects SET documents = ? WHERE id = ?',
+      [JSON.stringify([{ name: 'A' }, { name: 'B' }]), 'project-1'],
+    );
+  });
+
+  it('does not let support staff remove an active document with submissions', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[projectRow({
+        user_id: '999', status: 'active',
+        documents: JSON.stringify([{ name: 'A' }, { name: 'B' }, { name: 'C' }]),
+      })]])
+      .mockResolvedValueOnce([[{ document_index: 2 }]]);
+    const res = mockResponse();
+
+    await projectController.updateProject({
+      params: { id: 'project-1' },
+      user: { email: 'sam@example.com' },
+      body: { documents: [{ name: 'A' }, { name: 'B' }] },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'A document with existing submissions cannot be removed or moved',
+    });
+  });
+
   it('returns 404 when getting a missing project', async () => {
     pool.query.mockResolvedValueOnce([[]]);
     const res = mockResponse();

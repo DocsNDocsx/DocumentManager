@@ -348,6 +348,30 @@ describe('teamcontroller', () => {
     });
   });
 
+  it('lets support staff reduce expected collaborators when the joined count still fits', async () => {
+    const activeProject = teamProjectRow({ status: 'active', expected_collaborators: 5 });
+    pool.query
+      .mockResolvedValueOnce([[activeProject]])
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ count: 2 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[teamProjectRow({ status: 'active', expected_collaborators: 3 })]]);
+    const res = mockResponse();
+
+    await teamController.updateTeamProject({
+      params: { id: 'team-project-1' },
+      user: { email: 'support@example.com' },
+      body: { expectedCollaborators: 3 },
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(pool.query).toHaveBeenCalledWith(
+      'UPDATE team_projects SET expected_collaborators = ? WHERE id = ?',
+      [3, 'team-project-1'],
+    );
+  });
+
   it('saves collaborators and advances completed step', async () => {
     pool.query
       .mockResolvedValueOnce([[{ id: 'team-project-1' }]])
@@ -399,6 +423,57 @@ describe('teamcontroller', () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       project: expect.objectContaining({ completedStep: 3, documents: [{ name: 'Transcript' }] }),
+    });
+  });
+
+  it('lets support staff reduce active team document requirements without existing submissions', async () => {
+    const activeProject = teamProjectRow({
+      status: 'active',
+      documents: JSON.stringify([{ name: 'A' }, { name: 'B' }, { name: 'C' }]),
+    });
+    pool.query
+      .mockResolvedValueOnce([[activeProject]])
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[teamProjectRow({ status: 'active', documents: JSON.stringify([{ name: 'A' }, { name: 'B' }]) })]]);
+    const res = mockResponse();
+
+    await teamController.saveProjectDocuments({
+      params: { id: 'team-project-1' },
+      user: { email: 'support@example.com' },
+      body: { documents: [{ name: 'A' }, { name: 'B' }] },
+    }, res);
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(pool.query).toHaveBeenCalledWith(
+      'UPDATE team_projects SET documents = ?, completed_step = GREATEST(completed_step, 3) WHERE id = ?',
+      [JSON.stringify([{ name: 'A' }, { name: 'B' }]), 'team-project-1'],
+    );
+  });
+
+  it('does not let support staff remove a team document with submissions', async () => {
+    pool.query
+      .mockResolvedValueOnce([[teamProjectRow({
+        status: 'active',
+        documents: JSON.stringify([{ name: 'A' }, { name: 'B' }, { name: 'C' }]),
+      })]])
+      .mockResolvedValueOnce([[{ userid: '456' }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ document_index: 2 }]]);
+    const res = mockResponse();
+
+    await teamController.saveProjectDocuments({
+      params: { id: 'team-project-1' },
+      user: { email: 'support@example.com' },
+      body: { documents: [{ name: 'A' }, { name: 'B' }] },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'A document with existing submissions cannot be removed or moved',
     });
   });
 
