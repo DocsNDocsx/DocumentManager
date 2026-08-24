@@ -1,15 +1,57 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>New device sign-in</title></head>
-<body style="margin:0;background:#f3f4f6;font-family:Arial,sans-serif;color:#1f2937">
-  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb">
-    <div style="background:#1b5e4f;padding:24px;text-align:center"><img src="{{EMAIL_LOGO_URL}}" width="180" height="50" alt="DocsNDocs" style="display:block;width:180px;height:50px;margin:0 auto;border:0;object-fit:contain;" /></div>
-    <div style="padding:32px">
-    <h1 style="margin:0 0 16px;color:#1b5e4f;font-size:26px">Confirm your sign-in</h1>
-    <p>We received a sign-in attempt from a browser or device we do not recognize.</p>
-    <p>Enter this code to continue:</p>
-    <div style="margin:24px 0;padding:20px;text-align:center;background:#f0fdf9;border:2px dashed #2d8b6f;border-radius:12px;font-size:38px;font-weight:700;letter-spacing:10px;color:#1b5e4f">{{OTP}}</div>
-    <p style="font-size:13px;color:#6b7280">This code expires in 10 minutes. If you did not try to sign in, change your password.</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocsNDocs New Device Sign-In</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; color: #1f2937; }
+    .email-wrapper { width: 100%; background-color: #f9fafb; padding: 40px 16px; box-sizing: border-box; }
+    .email-container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .email-header { background-color: #1b5e4f; padding: 28px 36px; text-align: center; }
+    .accent-bar { height: 4px; background-color: #f59e0b; }
+    .email-content { padding: 36px 36px 28px; }
+    .email-content h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1f2937; margin: 0 0 16px; }
+    .email-content p { font-size: 15px; line-height: 1.75; color: #374151; margin: 0 0 14px; }
+    .otp-wrapper { text-align: center; margin: 28px 0; }
+    .otp-box { display: inline-block; background-color: #f0fdf9; border: 2px dashed #2d8b6f; border-radius: 14px; padding: 24px 36px; }
+    .otp-label { font-size: 11px !important; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #2d8b6f !important; margin: 0 0 10px !important; }
+    .otp-code { font-size: 44px !important; font-weight: 700; letter-spacing: 12px; color: #1b5e4f !important; font-family: 'Courier New', monospace; margin: 0 !important; }
+    .otp-expiry { font-size: 12px !important; color: #6b7280 !important; margin: 10px 0 0 !important; }
+    .alert-note { background-color: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 10px; padding: 13px 18px; margin: 20px 0; font-size: 14px; color: #78350f; line-height: 1.6; }
+    .email-divider { height: 1px; background-color: #e5e7eb; margin: 24px 0; }
+    .signature { font-size: 14px !important; color: #374151 !important; }
+    .signature strong { color: #1b5e4f; }
+    .email-footer { background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 36px; text-align: center; }
+    .email-footer p { font-size: 12px; color: #9ca3af; margin: 0 0 4px; }
+    .email-footer a { color: #1b5e4f; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="email-header">
+        <img src="{{EMAIL_LOGO_URL}}" width="180" height="50" alt="DocsNDocs" style="display:block;width:180px;height:50px;margin:0 auto;border:0;object-fit:contain;" />
+      </div>
+      <div class="accent-bar"></div>
+      <div class="email-content">
+        <h2>Confirm Your Sign-In</h2>
+        <p>We received a sign-in attempt from a browser or device we do not recognize. Use the one-time code below to continue. It expires in <strong>10 minutes</strong>.</p>
+        <div class="otp-wrapper">
+          <div class="otp-box">
+            <p class="otp-label">Your sign-in code</p>
+            <p class="otp-code">{{OTP}}</p>
+            <p class="otp-expiry">Valid for 10 minutes</p>
+          </div>
+        </div>
+        <div class="alert-note">If you did not try to sign in, please change your password to keep your account secure.</div>
+        <div class="email-divider"></div>
+        <p class="signature">Regards,<br><strong>The DocsNDocs Team</strong></p>
+      </div>
+      <div class="email-footer">
+        <p>&copy; 2026 DocsNDocs, Inc. All rights reserved.</p>
+        <p><a href="{{BASE_URL}}">docsndocs.com</a></p>
+      </div>
     </div>
   </div>
 </body>

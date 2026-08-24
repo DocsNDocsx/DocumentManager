@@ -54,7 +54,10 @@ function loginPayload(user, extra = {}) {
 
 async function sendLoginPasscode(email, otp) {
   const templatePath = path.join(__dirname, '../templates-email/loginpasscode.html');
-  const body = fs.readFileSync(templatePath, 'utf8').replace('{{OTP}}', otp);
+  const baseUrl = (process.env.APP_BASE_URL || 'https://www.docsndocs.com').replace(/\/$/, '');
+  const body = fs.readFileSync(templatePath, 'utf8')
+    .replace('{{OTP}}', otp)
+    .replaceAll('{{BASE_URL}}', baseUrl);
   await sendEmail(email, 'DocsNDocs: Confirm your new device sign-in', body);
 }
 
