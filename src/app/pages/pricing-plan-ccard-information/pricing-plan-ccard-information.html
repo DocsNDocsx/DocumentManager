@@ -106,7 +106,7 @@
         </div>
       </div>
 
-      @if (activationProjectId() && !isUpgrade()) {
+      @if (activationProjectId() && !isUpgrade() && projectVisibility() === 'public') {
         <div class="activation-notice" role="note">
           <i class="fas fa-info-circle" aria-hidden="true"></i>
           <span>
@@ -130,11 +130,7 @@
         }
       </button>
 
-      <p class="terms-text">
-        By completing this payment, you agree to our
-        <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
-        You only pay for collaborators, documents, and duration.
-      </p>
+      
     </div>
 
     <!-- Right: order summary -->

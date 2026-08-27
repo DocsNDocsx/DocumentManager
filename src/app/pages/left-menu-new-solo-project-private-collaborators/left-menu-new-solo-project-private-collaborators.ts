@@ -152,7 +152,7 @@ export class LeftMenuNewSoloProjectPrivateCollaboratorsComponent implements OnIn
     if (!this.isFormValid()) return;
     this.wizardService.saveCollaborators({ collaborators: this.collaborators() }).subscribe({
       next: () => this.router.navigate(['../documents'], { relativeTo: this.route }),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to update collaborators — please try again'),
     });
   }
 }

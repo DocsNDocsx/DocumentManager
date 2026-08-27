@@ -219,7 +219,7 @@ export class LeftMenuNewSoloProjectPublicDocumentsComponent implements OnInit, O
     if (!this.isFormValid() || this.uploadingTemplateIndices().length > 0) return;
     this.wizardService.savePublicDocuments({ documents: this.documents() }).subscribe({
       next: project => this.router.navigate(['/new-solo-project/public', project.id, 'decision']),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to update documents — please try again'),
     });
   }
 

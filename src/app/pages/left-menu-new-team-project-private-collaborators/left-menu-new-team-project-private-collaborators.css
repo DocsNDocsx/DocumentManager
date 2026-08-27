@@ -95,3 +95,21 @@
   .btn-action { width: 100%; justify-content: center; }
   .form-row { grid-template-columns: 1fr; }
 }
+.toast-msg {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(440px, calc(100vw - 2rem));
+  padding: 0.9rem 1.25rem;
+  border-radius: 10px;
+  background: #991b1b;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}

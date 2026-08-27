@@ -26,6 +26,16 @@ export class LeftMenuNewTeamProjectPrivateDocumentsComponent implements OnInit {
   minimumDocumentCount = signal(1);
   documents = signal<TeamProjectDocumentRequirement[]>([]);
   formsGenerated = signal(false);
+  toastMsg = signal('');
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private showToast(message: string): void {
+    this.toastMsg.set(message);
+    this.toastVisible.set(true);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastVisible.set(false), 5000);
+  }
 
   readonly fileTypes = FILE_TYPES;
 
@@ -159,7 +169,7 @@ export class LeftMenuNewTeamProjectPrivateDocumentsComponent implements OnInit {
     if (!this.isFormValid() || this.wizardService.isSaving()) return;
     this.wizardService.saveDocuments(this.documents()).subscribe({
       next: () => this.router.navigate(['/new-team-project/private/assignments']),
-      error: () => { /* error shown via wizardService.saveError() */ },
+      error: err => this.showToast(err?.error?.message ?? 'Failed to update documents — please try again'),
     });
   }
 }

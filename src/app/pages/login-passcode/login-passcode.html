@@ -3,7 +3,7 @@
     <app-logo routerLink="/" [imageWidth]="180" [imageHeight]="50" variant="dark" />
     <div class="shield"><i class="fas fa-shield-alt" aria-hidden="true"></i></div>
     <h1 id="loginVerificationTitle">Verify your new device</h1>
-    <p>We sent a six-digit sign-in code to <strong>{{ email() }}</strong>.</p>
+    <p>We sent a six-digit pass-code to <strong>{{ email() }}</strong>.</p>
     <form (submit)="submit($event)" autocomplete="off">
       <label for="loginPasscode">Passcode</label>
       <input id="loginPasscode" type="text" inputmode="numeric" autocomplete="one-time-code"

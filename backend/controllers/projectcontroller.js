@@ -267,7 +267,7 @@ exports.updateProject = async (req, res) => {
       const changesStaffAssignment = staff !== undefined
         && JSON.stringify(normalizeStaff(currentSolo.staff)) !== JSON.stringify(normalizedStaff);
       if (changesPricing) {
-        return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only the project host can change pricing-related project settings' });
+        return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'This change can affect the project price. Please ask the project host to make it.' });
       }
       if (changesHostOnlyState || changesStaffAssignment) {
         return res.status(403).json({ success: false, code: 'HOST_REQUIRED', message: 'Only the project host can change project status or support staff assignment' });

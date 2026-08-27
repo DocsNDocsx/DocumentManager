@@ -184,7 +184,7 @@ export class LeftMenuNewTeamProjectPublicDocumentsComponent implements OnInit, O
     if (!this.isFormValid() || this.teamWizardService.isSaving()) return;
     this.teamWizardService.saveDocuments(this.documents()).subscribe({
       next: () => this.router.navigate(['/new-team-project/public/decision']),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to update documents — please try again'),
     });
   }
 

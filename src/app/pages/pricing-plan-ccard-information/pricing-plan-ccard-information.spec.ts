@@ -134,6 +134,19 @@ describe('PricingPlanCcardInformationComponent', () => {
     });
   });
 
+  it.each([
+    ['solo', 'public', '/new-solo-project/public'],
+    ['solo', 'private', '/new-solo-project/private'],
+    ['team', 'public', '/new-team-project/public'],
+    ['team', 'private', '/new-team-project/private'],
+  ] as const)('returns to the matching %s %s project decision page', (type, visibility, base) => {
+    component.projectType.set(type);
+    component.projectVisibility.set(visibility);
+    component.activationProjectId.set('project-123');
+
+    expect(component.returnToProjectRoute()).toEqual([base, 'project-123', 'decision']);
+  });
+
   it('shows a setup-intent error when Stripe backend initialization fails', async () => {
     stripeService.createSetupIntent.mockReturnValueOnce(throwError(() => ({ error: { message: 'Stripe unavailable' } })));
 

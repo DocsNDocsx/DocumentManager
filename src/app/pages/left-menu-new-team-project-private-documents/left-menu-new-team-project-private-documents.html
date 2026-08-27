@@ -188,3 +188,9 @@
     </div>
   </main>
 </div>
+
+@if (toastVisible()) {
+  <div class="toast-msg" role="alert" aria-live="assertive">
+    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ toastMsg() }}
+  </div>
+}

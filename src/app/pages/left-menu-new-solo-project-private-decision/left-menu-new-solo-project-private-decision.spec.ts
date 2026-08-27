@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 
 import { LeftMenuNewSoloProjectPrivateDecisionComponent } from './left-menu-new-solo-project-private-decision';
 import { ProjectWizardService } from '../../services/project-wizard.service';
@@ -58,21 +58,10 @@ describe('LeftMenuNewSoloProjectPrivateDecisionComponent', () => {
     expect(component.getAssignedDocNames(99)).toBe('No documents assigned');
   });
 
-  it('activates successfully and returns to solo projects', () => {
-    component.openModal();
-    component.confirmActivation();
+  it('routes directly to payment using the private project configuration', () => {
+    component.goToPayment();
 
-    expect(component.modalOpen()).toBe(false);
-    expect(wizard.reset).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/top-menu-solo-projects']);
-  });
-
-  it('routes subscription-required activation to billing', () => {
-    wizard.activateProject.mockReturnValueOnce(throwError(() => ({ error: { code: 'SUBSCRIPTION_REQUIRED' } })));
-
-    component.confirmActivation();
-
-    expect(component.toastMsg()).toBe('Please subscribe before activating a project');
+    expect(wizard.activateProject).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/pricing-plan-ccard-information'], {
       queryParams: { type: 'solo' },
     });

@@ -478,7 +478,7 @@ exports.updateTeamProject = async (req, res) => {
         (deadline !== undefined && deadlineCalendarDate(deadline) !== deadlineCalendarDate(existing[0].deadline)) ||
         (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(existing[0].expected_collaborators));
       if (changesPricing) {
-        return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only a project manager can change pricing-related project settings' });
+        return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'This change can affect the project price. Please ask the project host to make it.' });
       }
       const existingSupportStaff = parseProjectRow(existing[0]).supportStaff;
       const changesSupportStaff = supportStaff !== undefined
@@ -660,7 +660,7 @@ exports.saveProjectCollaborators = async (req, res) => {
       currentCount = Number(currentCollaborators[0]?.count ?? 0);
     }
     if (!editor.isManager && Array.isArray(collaborators) && collaborators.length !== currentCount) {
-      return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only a project manager can change the collaborator count' });
+      return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Increasing the collaborator count can affect the project price. Please ask the project host to make this change.' });
     }
     if (existing[0].status === 'active' && Array.isArray(collaborators)) {
       if (collaborators.length < currentCount) {
@@ -724,7 +724,7 @@ exports.saveProjectDocuments = async (req, res) => {
     const currentDocuments = parseJsonArray(existing[0].documents);
     const currentDocumentCount = currentDocuments.length;
     if (!editor.isManager && Array.isArray(documents) && documents.length > currentDocumentCount) {
-      return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Only a project manager can change the document count' });
+      return res.status(403).json({ success: false, code: 'HOST_REQUIRED_FOR_PRICING', message: 'Increasing the document count can affect the project price. Please ask the project host to make this change.' });
     }
     if (existing[0].status === 'active' && Array.isArray(documents) && documents.length < currentDocumentCount) {
       const [submittedDocumentRows] = await pool.query(

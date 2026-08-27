@@ -28,6 +28,16 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
   minimumCollaboratorCount = signal(1);
   collaborators = signal<TeamProjectCollaboratorInput[]>([]);
   formsGenerated = signal(false);
+  toastMsg = signal('');
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private showToast(message: string): void {
+    this.toastMsg.set(message);
+    this.toastVisible.set(true);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastVisible.set(false), 5000);
+  }
 
   isFormValid = computed(() => {
     const list = this.collaborators();
@@ -110,7 +120,7 @@ export class LeftMenuNewTeamProjectPrivateCollaboratorsComponent implements OnIn
     if (!this.isFormValid() || this.teamWizardService.isSaving()) return;
     this.teamWizardService.saveCollaborators(this.collaborators()).subscribe({
       next: () => this.router.navigate(['/new-team-project/private/documents']),
-      error: () => { /* error shown via teamWizardService.saveError() */ },
+      error: err => this.showToast(err?.error?.message ?? 'Failed to update collaborators — please try again'),
     });
   }
 

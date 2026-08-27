@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal
 import { Router, RouterLink } from '@angular/router';
 import { SharedHeaderComponent } from '../../shared/shared-header/shared-header';
 import { SharedSidebarComponent } from '../../shared/shared-sidebar/shared-sidebar';
-import { ConfirmModalComponent } from '../../shared/confirm-modal/confirm-modal';
 import { ProjectWizardService } from '../../services/project-wizard.service';
 import { LoggingService } from '../../services/logging.service';
 import { BillingEstimateService } from '../../services/billing-estimate.service';
@@ -12,7 +11,7 @@ import { BillingEstimateService } from '../../services/billing-estimate.service'
   templateUrl: './left-menu-new-solo-project-private-decision.html',
   styleUrl: './left-menu-new-solo-project-private-decision.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SharedHeaderComponent, SharedSidebarComponent, ConfirmModalComponent, RouterLink],
+  imports: [SharedHeaderComponent, SharedSidebarComponent, RouterLink],
   host: {
     '(document:click)': 'closeDropdown()',
   },
@@ -24,7 +23,6 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
   private billingEstimate = inject(BillingEstimateService);
 
   dropdownOpen = signal(false);
-  modalOpen = signal(false);
   isSaving = computed(() => this.wizardService.isSaving());
 
   toastMsg = signal('');
@@ -86,40 +84,16 @@ export class LeftMenuNewSoloProjectPrivateDecisionComponent implements OnDestroy
     this.router.navigate(['/new-solo-project/private/staff']);
   }
 
-  openModal(): void {
-    this.modalOpen.set(true);
-  }
-
-  closeModal(): void {
-    this.modalOpen.set(false);
-  }
-
-  confirmActivation(): void {
-    this.modalOpen.set(false);
-    this.logger.info('User confirmed project activation');
-    this.wizardService.activateProject().subscribe({
-      next: () => {
-        this.logger.info('Project activated, navigating to projects list');
-        this.wizardService.reset();
-        this.router.navigate(['/top-menu-solo-projects']);
-      },
-      error: err => {
-        if (err?.status === 402 || err?.error?.code === 'SUBSCRIPTION_REQUIRED') {
-          this.showToast('Please subscribe before activating a project');
-          const project = this.project();
-          if (project) {
-            const queryParams = this.billingEstimate.buildSoloActivationQuery(project, this.collabCount());
-            if (!queryParams) {
-              this.showToast('Please add a valid deadline before activating this project');
-              return;
-            }
-            this.router.navigate(['/pricing-plan-ccard-information'], {
-              queryParams,
-            });
-          }
-        }
-      },
-    });
+  goToPayment(): void {
+    const project = this.project();
+    const queryParams = project
+      ? this.billingEstimate.buildSoloActivationQuery(project, this.collabCount(), this.documentCount())
+      : null;
+    if (!queryParams) {
+      this.showToast('Please add a valid deadline before continuing to payment');
+      return;
+    }
+    this.router.navigate(['/pricing-plan-ccard-information'], { queryParams });
   }
 
   finishEditing(): void {

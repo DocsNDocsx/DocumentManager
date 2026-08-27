@@ -117,8 +117,8 @@
           </button>
         </div>
       } @else {
-        <button class="btn-action btn-activate" type="button" (click)="openModal()">
-          <i class="fas fa-rocket" aria-hidden="true"></i> Activate Project
+        <button class="btn-action btn-activate" type="button" (click)="goToPayment()">
+          <i class="fas fa-credit-card" aria-hidden="true"></i> Payment
         </button>
       }
     </div>
@@ -131,14 +131,3 @@
   </div>
 }
 
-@if (modalOpen()) {
-  <app-confirm-modal
-    title="Activate Project?"
-    confirmLabel="Yes, Activate"
-    confirmIcon="fas fa-rocket"
-    modalId="modalTitle"
-    (confirm)="confirmActivation()"
-    (cancel)="closeModal()">
-    <p>This will send invitation emails to all <strong>{{ totalEmails() }} recipient{{ totalEmails() !== 1 ? 's' : '' }}</strong> and make the project active. Are you sure you want to proceed?</p>
-  </app-confirm-modal>
-}

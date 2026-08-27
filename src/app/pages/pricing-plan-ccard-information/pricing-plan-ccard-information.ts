@@ -54,7 +54,10 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   monthlyBase   = signal(0);
   activationProjectId = signal('');
   returnToProjectRoute = computed(() => {
-    const base = this.projectType() === 'team' ? '/new-team-project/public' : '/new-solo-project/public';
+    const visibility = this.projectVisibility() === 'private' ? 'private' : 'public';
+    const base = this.projectType() === 'team'
+      ? `/new-team-project/${visibility}`
+      : `/new-solo-project/${visibility}`;
     const projectId = this.activationProjectId();
     return projectId ? [base, projectId, 'decision'] : [base, 'decision'];
   });
@@ -133,14 +136,14 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
-        this.projectType.set((params['type'] || 'solo') as 'solo' | 'team');
+        this.projectType.set(params['type'] === 'team' ? 'team' : 'solo');
         this.projects.set(+params['projects'] || 1);
         this.collaborators.set(+params['collaborators'] || 1);
         this.documents.set(+params['documents'] || 1);
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
         this.activationProjectId.set(String(params['projectId'] || ''));
-        this.projectVisibility.set(String(params['visibility'] || ''));
+        this.projectVisibility.set(params['visibility'] === 'private' ? 'private' : 'public');
         this.isUpgrade.set(params['upgrade'] === '1');
         this.extensionDays.set(Math.max(0, Number(params['extensionDays']) || 0));
         if (this.isUpgrade() && this.activationProjectId()) this.loadUpgradePreview();

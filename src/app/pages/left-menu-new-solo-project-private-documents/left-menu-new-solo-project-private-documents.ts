@@ -239,7 +239,7 @@ export class LeftMenuNewSoloProjectPrivateDocumentsComponent implements OnInit, 
     if (!this.isFormValid() || this.uploadingTemplateIndices().length > 0) return;
     this.wizardService.saveDocuments({ documents: this.documents() }).subscribe({
       next: () => this.router.navigate(['../assignments'], { relativeTo: this.route }),
-      error: () => {},
+      error: err => this.showToast(err?.error?.message ?? 'Failed to update documents — please try again'),
     });
   }
 }
