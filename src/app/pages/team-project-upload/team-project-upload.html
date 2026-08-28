@@ -33,7 +33,10 @@
         <span class="team-label">{{ project()?.teamName }}</span>
       </div>
       <h1 class="project-title">{{ project()?.name }}</h1>
-      <p>Please submit all required documents by the deadline. You'll receive feedback if any revisions are needed.</p>
+      @if (project()?.description; as description) {
+        <p class="project-description">{{ description }}</p>
+      }
+      <p class="project-instructions">Please submit all required documents by the deadline. You'll receive feedback if any revisions are needed.</p>
       <div class="project-meta">
         <div class="meta-item"><i class="fas fa-calendar" aria-hidden="true"></i><span>Deadline: {{ formattedDeadline() }}</span></div>
         <div class="meta-item"><i class="fas fa-id-badge" aria-hidden="true"></i><span>Role: {{ collaborator()?.role }}</span></div>

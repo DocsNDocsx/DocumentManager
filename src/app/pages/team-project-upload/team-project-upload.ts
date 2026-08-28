@@ -31,6 +31,7 @@ interface DocumentSlot {
 interface UploadProjectInfo {
   id: string;
   name: string;
+  description: string | null;
   teamName: string;
   deadline: string | null;
   documents: DocumentRequirement[];

@@ -58,6 +58,7 @@ describe('teamsubmissioncontroller', () => {
       .mockResolvedValueOnce([[{
         id: 'team-project-1',
         name: 'Team Intake',
+        description: 'Upload the required intake documents for this review.',
         teamName: 'Review Team',
         documents: JSON.stringify([{ name: 'CV' }]),
         deadline: '2026-09-15',
@@ -83,6 +84,7 @@ describe('teamsubmissioncontroller', () => {
       project: expect.objectContaining({
         id: 'team-project-1',
         name: 'Team Intake',
+        description: 'Upload the required intake documents for this review.',
         documents: [{ name: 'CV' }],
       }),
       collaborator: expect.objectContaining({ id: 'collab-1', email: 'ava@example.com' }),

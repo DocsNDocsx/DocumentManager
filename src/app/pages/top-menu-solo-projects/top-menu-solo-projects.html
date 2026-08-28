@@ -233,6 +233,9 @@
           <p class="view-modal-subtitle">
             {{ isProjectReviewer(vp) ? 'Review document submissions from each collaborator.' : 'View your documents, upload files, and submit them for review.' }}
           </p>
+          @if (vp.description) {
+            <p class="view-modal-description">{{ vp.description }}</p>
+          }
         </div>
         <button class="view-modal-close" type="button" (click)="closeViewModal()" aria-label="Close modal">
           <i class="fas fa-times" aria-hidden="true"></i>

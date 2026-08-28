@@ -37,7 +37,9 @@
 .banner-top { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; opacity: 0.85; margin-bottom: 0.5rem; }
 .team-label { font-weight: 600; }
 .project-title { font-family: "Playfair Display", serif; font-size: 1.8rem; font-weight: 900; margin-bottom: 0.5rem; }
-.project-banner p { opacity: 0.9; margin-bottom: 1rem; font-size: 0.95rem; }
+.project-banner p { margin-bottom: 1rem; font-size: 0.95rem; }
+.project-description { line-height: 1.55; white-space: pre-line; }
+.project-instructions { opacity: 0.9; }
 .project-meta { display: flex; gap: 2rem; flex-wrap: wrap; }
 .meta-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; opacity: 0.9; }
 

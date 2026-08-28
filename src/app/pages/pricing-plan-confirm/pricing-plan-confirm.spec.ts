@@ -63,7 +63,7 @@ describe('PricingPlanConfirmComponent', () => {
 
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Your project is active. You can now invite collaborators to join the project.');
+    expect(text).toContain('Your project is active. Your collaborators have been invited for submitting their documents.');
     expect(text).toContain('A payment receipt has been sent to your email address');
     expect(text).toContain('Go to Dashboard');
   });

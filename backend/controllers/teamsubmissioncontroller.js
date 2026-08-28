@@ -32,7 +32,7 @@ exports.getUploadInfo = async (req, res) => {
     if (!collaboratorId) return res.status(400).json({ success: false, message: 'collaboratorId is required' });
 
     const [projectRows] = await pool.query(
-      `SELECT tp.id, tp.name, tp.documents, tp.deadline, tp.status, t.name AS teamName
+      `SELECT tp.id, tp.name, tp.description, tp.documents, tp.deadline, tp.status, t.name AS teamName
        FROM team_projects tp
        JOIN teams t ON t.id = tp.team_id
        WHERE tp.id = ?`,
@@ -72,6 +72,7 @@ exports.getUploadInfo = async (req, res) => {
       project: {
         id: row.id,
         name: row.name,
+        description: row.description ?? null,
         teamName: row.teamName,
         deadline: row.deadline ?? null,
         status: row.status,
