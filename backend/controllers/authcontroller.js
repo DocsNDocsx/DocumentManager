@@ -9,6 +9,7 @@ const { insertUser } = require('../utils/createUser');
 const { loginUser } = require('../utils/loginUser');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
+const { ALLOWED_AVATAR_MIME_TYPES, declaredAvatarType, detectedAvatarType, safeAvatarFileName } = require('../utils/avatarImage');
 
 const pool = require('../utils/sql');
 
@@ -367,6 +368,14 @@ exports.uploadAvatar = async (req, res) => {
     const user = users[0];
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
+    const declaredType = declaredAvatarType(req.file);
+    const detectedType = detectedAvatarType(req.file.buffer);
+    if (!declaredType || detectedType !== declaredType) {
+      return res.status(400).json({ success: false, message: 'Profile photo content must be a valid JPG or PNG image' });
+    }
+    req.file.mimetype = detectedType;
+    req.file.originalname = safeAvatarFileName(req.file.originalname, detectedType);
+
     const avatarPath = await uploadToBlob({
       folder: 'avatars',
       prefix: String(user.userid),
@@ -376,7 +385,7 @@ exports.uploadAvatar = async (req, res) => {
 
     await pool.query(
       'UPDATE users SET avatar_url = ?, avatar_data = NULL, avatar_mime_type = ?, avatar_filename = ? WHERE userid = ?',
-      [avatarPath, req.file.mimetype, req.file.originalname, user.userid]
+      [avatarPath, detectedType, req.file.originalname, user.userid]
     );
 
     res.json({ success: true, avatarPath: `/api/auth/profile/avatar/${user.userid}?v=${Date.now()}` });
@@ -407,21 +416,29 @@ exports.getAvatar = async (req, res) => {
         token: process.env.BLOB_READ_WRITE_TOKEN,
       });
       if (!result) return res.status(404).json({ success: false, message: 'Avatar not found' });
-      res.set('Content-Type', result.blob.contentType || avatar.avatar_mime_type || 'application/octet-stream');
+      const contentType = String(result.blob.contentType || avatar.avatar_mime_type || '').toLowerCase();
+      if (!ALLOWED_AVATAR_MIME_TYPES.has(contentType)) {
+        return res.status(415).json({ success: false, message: 'Unsupported profile photo format' });
+      }
+      res.set('Content-Type', contentType);
       res.set('Cache-Control', 'private, max-age=300');
       const stream = typeof result.stream?.pipe === 'function' ? result.stream : Readable.fromWeb(result.stream);
       return stream.pipe(res);
     }
 
-    if (!avatar.avatar_data || !avatar.avatar_mime_type) {
+    const contentType = String(avatar.avatar_mime_type ?? '').toLowerCase();
+    if (!avatar.avatar_data || !ALLOWED_AVATAR_MIME_TYPES.has(contentType)) {
       return res.status(404).json({ success: false, message: 'Avatar not found' });
     }
 
     const image = Buffer.from(avatar.avatar_data, 'base64');
-    res.set('Content-Type', avatar.avatar_mime_type);
+    if (detectedAvatarType(image) !== contentType) {
+      return res.status(415).json({ success: false, message: 'Unsupported profile photo format' });
+    }
+    res.set('Content-Type', contentType);
     res.set('Cache-Control', 'private, max-age=300');
     if (avatar.avatar_filename) {
-      res.set('Content-Disposition', `inline; filename="${avatar.avatar_filename}"`);
+      res.set('Content-Disposition', `inline; filename="${safeAvatarFileName(avatar.avatar_filename, contentType)}"`);
     }
     return res.send(image);
   } catch (err) {

@@ -5,6 +5,7 @@ const pool = require('../utils/sql');
 const { sendEmail } = require('../utils/emailservice');
 const { uploadToBlob } = require('../utils/blobStorage');
 const { isSupportStaff } = require('../utils/projectRoles');
+const { escapeHtml } = require('../utils/html');
 
 async function requireTeamProjectReviewer(req, res) {
   if (!req.user?.email) return true;
@@ -173,17 +174,17 @@ exports.updateSubmission = async (req, res) => {
         const documentName = documents[row.documentIndex]?.name ?? row.fileName;
 
         const feedbackBlock = feedback
-          ? `<div class="feedback-box"><p class="feedback-label">Feedback from Reviewer</p><p class="feedback-text">${feedback}</p></div>`
+          ? `<div class="feedback-box"><p class="feedback-label">Feedback from Reviewer</p><p class="feedback-text">${escapeHtml(feedback)}</p></div>`
           : '';
 
         const templatePath = path.join(__dirname, '../templates-email/submissionreview.html');
         const body = fs.readFileSync(templatePath, 'utf8')
           .replaceAll('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-          .replaceAll('{{COLLABORATOR_NAME}}', collaboratorName)
-          .replaceAll('{{PROJECT_NAME}}', row.projectName)
+          .replaceAll('{{COLLABORATOR_NAME}}', escapeHtml(collaboratorName))
+          .replaceAll('{{PROJECT_NAME}}', escapeHtml(row.projectName))
           .replaceAll('{{STATUS_CLASS}}', isApproved ? 'status-approved' : 'status-revision')
           .replaceAll('{{STATUS_LABEL}}', isApproved ? 'Approved' : 'Revision Required')
-          .replaceAll('{{DOCUMENT_NAME}}', documentName)
+          .replaceAll('{{DOCUMENT_NAME}}', escapeHtml(documentName))
           .replaceAll('{{FEEDBACK_BLOCK}}', feedbackBlock)
           .replaceAll('{{STATUS_MESSAGE}}', isApproved
             ? 'Your document has been approved. No further action is required.'
@@ -286,10 +287,10 @@ exports.createSubmission = async (req, res) => {
         const templatePath = path.join(__dirname, '../templates-email/newsubmission.html');
         const body = fs.readFileSync(templatePath, 'utf8')
           .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-          .replace('{{OWNER_NAME}}', ownerName)
-          .replace('{{COLLABORATOR_NAME}}', collabName)
-          .replace('{{PROJECT_NAME}}', host.projectName)
-          .replace('{{DOCUMENT_NAME}}', documentName);
+          .replace('{{OWNER_NAME}}', escapeHtml(ownerName))
+          .replace('{{COLLABORATOR_NAME}}', escapeHtml(collabName))
+          .replace('{{PROJECT_NAME}}', escapeHtml(host.projectName))
+          .replace('{{DOCUMENT_NAME}}', escapeHtml(documentName));
 
         await sendEmail(host.email, `DocsNDocs: New submission in "${host.projectName}"`, body);
       }

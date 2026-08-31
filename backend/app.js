@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 
 
@@ -25,6 +26,11 @@ if (global.__coverage__) {
 
 // Trust the first proxy hop (required on Vercel/any reverse proxy for rate limiting to work correctly)
 app.set('trust proxy', 1);
+
+app.use(helmet({
+  // Profile images are served by api.docsndocs.com and displayed by www.docsndocs.com.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
 app.use(cors({
   origin: [
@@ -57,7 +63,7 @@ app.use((err, _req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({ success: false, message: 'Profile photo must be 2 MB or smaller' });
   }
-  if (err.message === 'Only image files are allowed') {
+  if (err.message === 'Only JPG and PNG profile photos are allowed') {
     return res.status(400).json({ success: false, message: err.message });
   }
   return next(err);

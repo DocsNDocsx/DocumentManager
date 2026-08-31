@@ -9,6 +9,7 @@ const { get, head } = require('@vercel/blob');
 const { hasDeadlinePassed } = require('../utils/timezone');
 const { Readable } = require('stream');
 const { soloProjectRoles } = require('../utils/projectRoles');
+const { escapeHtml } = require('../utils/html');
 
 const SIZE_MULTIPLIERS = { KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
 const configuredSubmittedWeight = Number(process.env.SUBMITTED_COMPLETION_WEIGHT ?? 0.25);
@@ -263,10 +264,10 @@ exports.createSubmission = async (req, res) => {
           const templatePath = path.join(__dirname, '../templates-email/newsubmission.html');
           const body = fs.readFileSync(templatePath, 'utf8')
             .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-            .replace('{{OWNER_NAME}}', ownerName)
-            .replace('{{COLLABORATOR_NAME}}', collaboratorName)
-            .replace('{{PROJECT_NAME}}', project.name)
-            .replace('{{DOCUMENT_NAME}}', documentName);
+            .replace('{{OWNER_NAME}}', escapeHtml(ownerName))
+            .replace('{{COLLABORATOR_NAME}}', escapeHtml(collaboratorName))
+            .replace('{{PROJECT_NAME}}', escapeHtml(project.name))
+            .replace('{{DOCUMENT_NAME}}', escapeHtml(documentName));
 
           await sendEmail(project.ownerEmail, `DocsNDocs: New submission in "${project.name}"`, body);
         }
@@ -333,17 +334,17 @@ exports.updateSubmission = async (req, res) => {
           const documentName = document?.name ?? submission.file_name;
 
           const feedbackBlock = feedback
-            ? `<div class="feedback-box"><p class="feedback-label">Feedback from Reviewer</p><p class="feedback-text">${feedback}</p></div>`
+            ? `<div class="feedback-box"><p class="feedback-label">Feedback from Reviewer</p><p class="feedback-text">${escapeHtml(feedback)}</p></div>`
             : '';
 
           const templatePath = path.join(__dirname, '../templates-email/submissionreview.html');
           const body = fs.readFileSync(templatePath, 'utf8')
             .replaceAll('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-            .replaceAll('{{COLLABORATOR_NAME}}', collaboratorName)
-            .replaceAll('{{PROJECT_NAME}}', project.name)
+            .replaceAll('{{COLLABORATOR_NAME}}', escapeHtml(collaboratorName))
+            .replaceAll('{{PROJECT_NAME}}', escapeHtml(project.name))
             .replaceAll('{{STATUS_CLASS}}', isApproved ? 'status-approved' : (isRejected ? 'status-rejected' : 'status-revision'))
             .replaceAll('{{STATUS_LABEL}}', isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Revision Required'))
-            .replaceAll('{{DOCUMENT_NAME}}', documentName)
+            .replaceAll('{{DOCUMENT_NAME}}', escapeHtml(documentName))
             .replaceAll('{{FEEDBACK_BLOCK}}', feedbackBlock)
             .replaceAll('{{STATUS_MESSAGE}}', isApproved
               ? 'Your document has been approved. No further action is required.'

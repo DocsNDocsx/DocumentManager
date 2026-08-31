@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendEmail } = require('./emailservice');
+const { escapeHtml } = require('./html');
 
 async function sendPaymentReceiptEmail({ user, subscriptionId, invoice, amountCents, voucherCode }) {
   try {
@@ -10,7 +11,7 @@ async function sendPaymentReceiptEmail({ user, subscriptionId, invoice, amountCe
     const template = fs.readFileSync(templatePath, 'utf8');
     const receiptUrl = invoice?.hosted_invoice_url || invoice?.invoice_pdf || '';
     const receiptBlock = receiptUrl
-      ? `<p><a class="button" href="${receiptUrl}">View receipt</a></p>`
+      ? `<p><a class="button" href="${escapeHtml(receiptUrl)}">View receipt</a></p>`
       : '';
     const name = `${user.firstname ?? ''} ${user.lastname ?? ''}`.trim() || 'there';
     const paidAtSeconds = invoice?.status_transitions?.paid_at ?? invoice?.created;
@@ -21,14 +22,14 @@ async function sendPaymentReceiptEmail({ user, subscriptionId, invoice, amountCe
     const resolvedSubscriptionId = subscriptionId || invoice?.subscription || invoice?.id || '';
 
     const body = template
-      .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-      .replace('{{CUSTOMER_NAME}}', name)
-      .replace('{{AMOUNT}}', amount)
-      .replace('{{CURRENCY}}', (invoice?.currency ?? 'usd').toUpperCase())
-      .replace('{{SUBSCRIPTION_ID}}', resolvedSubscriptionId)
-      .replace('{{INVOICE_NUMBER}}', invoice?.number ?? invoice?.id ?? resolvedSubscriptionId)
-      .replace('{{PAID_AT}}', paidAt)
-      .replace('{{VOUCHER_BLOCK}}', voucherCode ? `<p class="detail-row"><strong>Voucher:</strong> ${voucherCode}</p>` : '')
+      .replace('{{BASE_URL}}', escapeHtml(process.env.APP_BASE_URL ?? ''))
+      .replace('{{CUSTOMER_NAME}}', escapeHtml(name))
+      .replace('{{AMOUNT}}', escapeHtml(amount))
+      .replace('{{CURRENCY}}', escapeHtml((invoice?.currency ?? 'usd').toUpperCase()))
+      .replace('{{SUBSCRIPTION_ID}}', escapeHtml(resolvedSubscriptionId))
+      .replace('{{INVOICE_NUMBER}}', escapeHtml(invoice?.number ?? invoice?.id ?? resolvedSubscriptionId))
+      .replace('{{PAID_AT}}', escapeHtml(paidAt))
+      .replace('{{VOUCHER_BLOCK}}', voucherCode ? `<p class="detail-row"><strong>Voucher:</strong> ${escapeHtml(voucherCode)}</p>` : '')
       .replace('{{RECEIPT_BLOCK}}', receiptBlock);
 
     await sendEmail(user.email, 'DocsNDocs: Payment receipt', body);

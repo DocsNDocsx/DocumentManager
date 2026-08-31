@@ -6,6 +6,8 @@ const pool = require('../utils/sql');
 const logActivity = require('../utils/logActivity');
 const { sendEmail } = require('../utils/emailservice');
 const { isSupportStaff, normalizeEmail, normalizeStaff } = require('../utils/projectRoles');
+const { generateProjectCode } = require('../utils/projectCode');
+const { escapeHtml } = require('../utils/html');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonLen = col => isMySQL ? `JSON_LENGTH(${col})` : `jsonb_array_length(${col}::jsonb)`;
@@ -64,12 +66,6 @@ async function teamEditorRoles(req, project) {
   };
 }
 
-function generateProjectCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const part = n => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `${part(4)}-${part(4)}`;
-}
-
 function parseProjectRow(p) {
   const docs = p.documents == null
     ? []
@@ -113,15 +109,6 @@ function collaboratorMilestones(expectedCollaborators, collaboratorCount) {
   if (collaboratorCount === expected) return [100];
   if (collaboratorCount === eightyPercentCount) return [80];
   return [];
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 async function notifyOwnerOfCollaboratorMilestones(project, collaboratorCount) {
@@ -574,7 +561,7 @@ exports.updateTeamProject = async (req, res) => {
           ? `<p class="detail-row"><strong>Deadline:</strong> ${new Date(project.deadline).toDateString()}</p>`
           : '';
         const projectCodeBlock = project.projectCode
-          ? `<div class="code-section"><p class="code-label">Project Code</p><div class="code-box"><p class="code-value">${project.projectCode}</p></div></div>`
+          ? `<div class="code-section"><p class="code-label">Project Code</p><div class="code-box"><p class="code-value">${escapeHtml(project.projectCode)}</p></div></div>`
           : '';
         const recipients = [
           ...ownerRows.map(owner => ({
@@ -598,12 +585,12 @@ exports.updateTeamProject = async (req, res) => {
             const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Collaborator';
             const staffAccessUrl = `${process.env.APP_BASE_URL ?? 'https://www.docsndocs.com'}/check-submissions?projectId=${encodeURIComponent(project.id)}`;
             const accessBlock = c.recipientRole === 'staff'
-              ? `<p><strong>Your role:</strong> Support Staff</p><p><a href="${staffAccessUrl}">Open project as support staff</a></p>`
+              ? `<p><strong>Your role:</strong> Support Staff</p><p><a href="${escapeHtml(staffAccessUrl)}">Open project as support staff</a></p>`
               : '';
             const body = template
               .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-              .replace('{{COLLABORATOR_NAME}}', name)
-              .replace('{{PROJECT_NAME}}', project.name)
+              .replace('{{COLLABORATOR_NAME}}', escapeHtml(name))
+              .replace('{{PROJECT_NAME}}', escapeHtml(project.name))
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
               .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock)
               .replace('{{ACCESS_BLOCK}}', accessBlock);
@@ -1199,10 +1186,10 @@ exports.joinProject = async (req, res) => {
           : '';
         const body = template
           .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-          .replace('{{COLLABORATOR_NAME}}', [user.firstname, user.lastname].filter(Boolean).join(' ') || 'Collaborator')
-          .replace('{{PROJECT_NAME}}', soloProject.name)
+          .replace('{{COLLABORATOR_NAME}}', escapeHtml([user.firstname, user.lastname].filter(Boolean).join(' ') || 'Collaborator'))
+          .replace('{{PROJECT_NAME}}', escapeHtml(soloProject.name))
           .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
-          .replace('{{PROJECT_CODE_BLOCK}}', `<p><a href="${process.env.APP_BASE_URL ?? ''}${workspacePath}">Open your submission workspace</a></p>`)
+          .replace('{{PROJECT_CODE_BLOCK}}', `<p><a href="${escapeHtml(`${process.env.APP_BASE_URL ?? ''}${workspacePath}`)}">Open your submission workspace</a></p>`)
           .replace('{{ACCESS_BLOCK}}', '');
         await sendEmail(user.email, `DocsNDocs: You joined "${soloProject.name}"`, body);
       } catch (emailErr) {

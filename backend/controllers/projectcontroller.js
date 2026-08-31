@@ -9,6 +9,8 @@ const { deadlineCalendarDate, isFutureDeadline } = require('../utils/timezone');
 const { get } = require('@vercel/blob');
 const { Readable } = require('stream');
 const { soloProjectRoles, normalizeStaff } = require('../utils/projectRoles');
+const { generateProjectCode } = require('../utils/projectCode');
+const { escapeHtml } = require('../utils/html');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const jsonText = col => isMySQL ? `CAST(${col} AS CHAR)` : `${col}::text`;
@@ -442,8 +444,7 @@ exports.activateProject = async (req, res) => {
     }
 
     const isPublic = existing[0].type === 'public';
-    const rand = () => Math.random().toString(36).toUpperCase().slice(2, 6);
-    const projectCode = isPublic ? `PRJ-${rand()}-${rand()}` : null;
+    const projectCode = isPublic ? generateProjectCode('PRJ') : null;
 
     await pool.query(
       "UPDATE projects SET status = 'active', completed_step = 6, project_code = ? WHERE id = ?",
@@ -482,7 +483,7 @@ exports.activateProject = async (req, res) => {
         ? `<p class="detail-row"><strong>Deadline:</strong> ${new Date(project.deadline).toDateString()}</p>`
         : '';
       const projectCodeBlock = project.projectCode
-        ? `<div class="code-section"><p class="code-label">Project Code</p><div class="code-box"><p class="code-value">${project.projectCode}</p></div></div>`
+        ? `<div class="code-section"><p class="code-label">Project Code</p><div class="code-box"><p class="code-value">${escapeHtml(project.projectCode)}</p></div></div>`
         : '';
 
       if (project.staff?.email) {
@@ -500,13 +501,13 @@ exports.activateProject = async (req, res) => {
             const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name || 'Collaborator';
             const body = template
               .replace('{{BASE_URL}}', process.env.APP_BASE_URL ?? '')
-              .replace('{{COLLABORATOR_NAME}}', name)
-              .replace('{{PROJECT_NAME}}', project.name)
+              .replace('{{COLLABORATOR_NAME}}', escapeHtml(name))
+              .replace('{{PROJECT_NAME}}', escapeHtml(project.name))
               .replace('{{DEADLINE_BLOCK}}', deadlineBlock)
               .replace('{{PROJECT_CODE_BLOCK}}', projectCodeBlock);
             const staffAccessUrl = `${process.env.APP_BASE_URL ?? 'https://www.docsndocs.com'}/top-menu-solo-projects?projectId=${encodeURIComponent(project.id)}`;
             const accessBlock = c.recipientRole === 'staff'
-              ? `<p><strong>Your role:</strong> Support Staff</p><p><a href="${staffAccessUrl}">Open project as support staff</a></p>`
+              ? `<p><strong>Your role:</strong> Support Staff</p><p><a href="${escapeHtml(staffAccessUrl)}">Open project as support staff</a></p>`
               : '';
             return sendEmail(c.email, c.subject ?? `DocsNDocs: "${project.name}" is now active`, body.replace('{{ACCESS_BLOCK}}', accessBlock));
           })

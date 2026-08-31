@@ -2,6 +2,11 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const { Readable } = require('stream');
 
+const pngBytes = (suffix = 'avatar') => Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from(suffix),
+]);
+
 function loadApp() {
   jest.resetModules();
 
@@ -57,7 +62,7 @@ describe('POST /api/auth/profile/avatar', () => {
     pool.query
       .mockResolvedValueOnce([[{ userid: '123' }]])
       .mockResolvedValueOnce([{ affectedRows: 1 }]);
-    const avatar = Buffer.from('avatar');
+    const avatar = pngBytes();
 
     const res = await request(app)
       .post('/api/auth/profile/avatar')
@@ -86,11 +91,47 @@ describe('POST /api/auth/profile/avatar', () => {
       'UPDATE users SET avatar_url = ?, avatar_data = NULL, avatar_mime_type = ?, avatar_filename = ? WHERE userid = ?',
       ['https://blob.example.com/avatars/avatar.png', 'image/png', 'avatar.png', '123'],
     );
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['cross-origin-resource-policy']).toBe('cross-origin');
+  });
+
+  it('rejects SVG profile photos before storage', async () => {
+    const { app, pool, blobStorage } = loadApp();
+
+    const res = await request(app)
+      .post('/api/auth/profile/avatar')
+      .set('Authorization', authHeader())
+      .attach('avatar', Buffer.from('<svg><script>alert(1)</script></svg>'), {
+        filename: 'avatar.svg',
+        contentType: 'image/svg+xml',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Only JPG and PNG profile photos are allowed');
+    expect(pool.query).not.toHaveBeenCalled();
+    expect(blobStorage.uploadToBlob).not.toHaveBeenCalled();
+  });
+
+  it('rejects a file whose PNG declaration does not match its content', async () => {
+    const { app, pool, blobStorage } = loadApp();
+    pool.query.mockResolvedValueOnce([[{ userid: '123' }]]);
+
+    const res = await request(app)
+      .post('/api/auth/profile/avatar')
+      .set('Authorization', authHeader())
+      .attach('avatar', Buffer.from('<svg><script>alert(1)</script></svg>'), {
+        filename: 'avatar.png',
+        contentType: 'image/png',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Profile photo content must be a valid JPG or PNG image');
+    expect(blobStorage.uploadToBlob).not.toHaveBeenCalled();
   });
 
   it('serves profile photo bytes through the real API route', async () => {
     const { app, pool } = loadApp();
-    const avatar = Buffer.from('avatar');
+    const avatar = pngBytes();
     pool.query.mockResolvedValueOnce([[{
       avatar_data: avatar.toString('base64'),
       avatar_mime_type: 'image/png',
@@ -106,6 +147,22 @@ describe('POST /api/auth/profile/avatar', () => {
       'SELECT avatar_url, avatar_data, avatar_mime_type, avatar_filename FROM users WHERE userid = ?',
       ['123'],
     );
+  });
+
+  it('does not serve legacy avatar bytes that are mislabeled as PNG', async () => {
+    const { app, pool } = loadApp();
+    pool.query.mockResolvedValueOnce([[[
+      {
+        avatar_data: Buffer.from('<svg><script>alert(1)</script></svg>').toString('base64'),
+        avatar_mime_type: 'image/png',
+        avatar_filename: 'avatar.png',
+      },
+    ]]]);
+
+    const res = await request(app).get('/api/auth/profile/avatar/123');
+
+    expect(res.status).toBe(415);
+    expect(res.body.message).toBe('Unsupported profile photo format');
   });
 
   it('streams a private Blob profile photo through the API URL', async () => {

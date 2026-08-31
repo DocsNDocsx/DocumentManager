@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const verifyJwt = require('../middleware/auth');
 const requireActiveSubscription = require('../middleware/subscription');
 const teamController = require('../controllers/teamcontroller');
@@ -6,8 +7,16 @@ const teamSubmissionController = require('../controllers/teamsubmissioncontrolle
 const teamSubmissionUpload = require('../utils/teamSubmissionUpload');
 const router = express.Router();
 
+const projectJoinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many project-code attempts. Please try again in 15 minutes.' },
+});
+
 // Public routes — external collaborators access without login
-router.post('/teams/projects/join', verifyJwt, teamController.joinProject);
+router.post('/teams/projects/join', projectJoinLimiter, verifyJwt, teamController.joinProject);
 router.get('/teams/projects/:id/upload-info/:collaboratorId', verifyJwt, teamSubmissionController.getUploadInfo);
 router.post('/teams/projects/:id/submissions', verifyJwt, teamSubmissionUpload.single('file'), teamSubmissionController.createSubmission);
 

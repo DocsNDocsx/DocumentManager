@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('./sql');
 const { sendEmail } = require('./emailservice');
+const { escapeHtml } = require('./html');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const REMINDER_DAYS = [7, 3, 1];
@@ -14,10 +15,10 @@ const daysUntil = col => isMySQL
 function buildBody(template, { collaboratorName, projectName, deadlineDate, daysLeft }) {
   const label = daysLeft === 1 ? 'day remaining' : 'days remaining';
   return template
-    .replaceAll('{{BASE_URL}}',          process.env.APP_BASE_URL ?? '')
-    .replaceAll('{{COLLABORATOR_NAME}}', collaboratorName)
-    .replaceAll('{{PROJECT_NAME}}',      projectName)
-    .replaceAll('{{DEADLINE_DATE}}',     deadlineDate)
+    .replaceAll('{{BASE_URL}}',          escapeHtml(process.env.APP_BASE_URL ?? ''))
+    .replaceAll('{{COLLABORATOR_NAME}}', escapeHtml(collaboratorName))
+    .replaceAll('{{PROJECT_NAME}}',      escapeHtml(projectName))
+    .replaceAll('{{DEADLINE_DATE}}',     escapeHtml(deadlineDate))
     .replaceAll('{{DAYS_LEFT}}',         String(daysLeft))
     .replaceAll('{{DAYS_LEFT_LABEL}}',   label);
 }

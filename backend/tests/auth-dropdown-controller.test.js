@@ -477,7 +477,10 @@ describe('authcontroller dropdown/account APIs', () => {
       .mockResolvedValueOnce([[{ userid: '123' }]])
       .mockResolvedValueOnce([{ affectedRows: 1 }]);
     const res = mockResponse();
-    const buffer = Buffer.from('avatar-bytes');
+    const buffer = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from('avatar-bytes'),
+    ]);
 
     await authController.uploadAvatar({
       user: { email: 'user@example.com' },
@@ -503,7 +506,10 @@ describe('authcontroller dropdown/account APIs', () => {
   });
 
   it('serves avatar image bytes from the database', async () => {
-    const buffer = Buffer.from('avatar-bytes');
+    const buffer = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from('avatar-bytes'),
+    ]);
     pool.query.mockResolvedValueOnce([[{
       avatar_data: buffer.toString('base64'),
       avatar_mime_type: 'image/png',
