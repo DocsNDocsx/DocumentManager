@@ -197,6 +197,13 @@ export class DropDownProfileComponent implements OnInit, OnDestroy {
   onAvatarChange(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? '';
+    const allowedTypes = new Set(['image/jpeg', 'image/png']);
+    const allowedExtensions = new Set(['.jpg', '.jpeg', '.png']);
+    if (!allowedTypes.has(file.type.toLowerCase()) || !allowedExtensions.has(extension)) {
+      this.showToast('Please choose a JPG or PNG profile photo.', true);
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) {
       this.showToast('File too large. Maximum size is 2 MB.', true);
       return;

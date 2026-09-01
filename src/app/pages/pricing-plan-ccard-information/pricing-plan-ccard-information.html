@@ -163,6 +163,12 @@
         <span class="summary-item-label">Documents / project</span>
         <span class="summary-item-value">{{ documents() }}</span>
       </div>
+      @if (assignmentCount() !== null) {
+        <div class="summary-item">
+          <span class="summary-item-label">Billable document assignments</span>
+          <span class="summary-item-value">{{ assignmentCount() }}</span>
+        </div>
+      }
       <div class="summary-item">
         <span class="summary-item-label">Duration ({{ durationTimeZone() }})</span>
         <span class="summary-item-value">{{ days() }} day{{ days() === 1 ? '' : 's' }}</span>

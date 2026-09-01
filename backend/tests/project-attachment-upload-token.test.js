@@ -8,6 +8,8 @@ jest.mock('../controllers/projectcontroller', () => ({
   createProject: jest.fn(),
   getProjects: jest.fn(),
   getProject: jest.fn(),
+  downloadProjectAttachment: jest.fn(),
+  downloadDocumentTemplate: jest.fn(),
   validateActivation: jest.fn(),
   activateProject: jest.fn(),
   cancelProject: jest.fn(),

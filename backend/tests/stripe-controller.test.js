@@ -199,8 +199,12 @@ describe('stripecontroller', () => {
         .mockResolvedValueOnce([[{
           userid: 123,
           email: 'paid@example.com',
+          timezone: 'America/New_York',
           stripe_customer_id: 'cus_123',
         }]])
+        .mockResolvedValueOnce([[
+          { id: 'project-1', type: 'public', deadline: '2026-09-30', collaborators: '[]', documents: '[]', assignments: '{}' },
+        ]])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([[]])
@@ -275,8 +279,8 @@ describe('stripecontroller', () => {
         "UPDATE users SET issubscribed = 'true' WHERE userid = ?",
         [123],
       );
-      expect(pool.query.mock.calls[2][0]).toContain('ON DUPLICATE KEY UPDATE');
-      expect(pool.query.mock.calls[2][1]).toEqual(expect.arrayContaining(['project-1']));
+      expect(pool.query.mock.calls[3][0]).toContain('ON DUPLICATE KEY UPDATE');
+      expect(pool.query.mock.calls[3][1]).toEqual(expect.arrayContaining(['project-1']));
       expect(pool.query).toHaveBeenCalledWith(
         'SELECT id FROM payment_history WHERE invoice_no = ? AND userid = ?',
         ['INV-123', 123],
@@ -298,6 +302,90 @@ describe('stripecontroller', () => {
       );
       expect(emailService.sendEmail.mock.calls[0][2]).toContain('USD 9.72');
       expect(emailService.sendEmail.mock.calls[0][2]).toContain('https://invoice.stripe.test/in_123');
+    });
+
+    it('uses saved solo-private assignments instead of client-supplied collaborator and document counts', async () => {
+      const stripe = {
+        customers: { update: jest.fn(async () => ({})) },
+        subscriptions: {
+          create: jest.fn(async () => ({
+            id: 'sub_private',
+            status: 'active',
+            current_period_end: null,
+            latest_invoice: null,
+          })),
+        },
+      };
+      const { controller, pool, stripeUtils } = loadStripeController({ stripe, amountCents: 214 });
+      const deadline = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+      pool.query
+        .mockResolvedValueOnce([[
+          { userid: 123, email: 'paid@example.com', timezone: 'UTC', stripe_customer_id: 'cus_123' },
+        ]])
+        .mockResolvedValueOnce([[
+          {
+            id: 'private-1',
+            type: 'private',
+            deadline,
+            collaborators: JSON.stringify([{ status: 'active' }, { status: 'active' }, { status: 'inactive' }]),
+            documents: JSON.stringify([{ name: 'A' }, { name: 'B' }, { name: 'Old', status: 'inactive' }]),
+            assignments: JSON.stringify({ 0: [0, 0], 1: [1, 2], 2: [0] }),
+          },
+        ]])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([{ affectedRows: 1 }]);
+      const res = mockResponse();
+
+      await controller.createSubscription({
+        user: { email: 'paid@example.com' },
+        body: {
+          paymentMethodId: 'pm_private',
+          type: 'solo',
+          projectId: 'private-1',
+          collaborators: 99,
+          documents: 99,
+          assignmentCount: 99,
+          days: 99,
+        },
+      }, res);
+
+      expect(stripeUtils.computeMonthlyAmountCents).toHaveBeenCalledWith({
+        projects: 1,
+        collaborators: 2,
+        documents: 2,
+        assignmentCount: 2,
+        days: 3,
+        voucherCode: '',
+      });
+      expect(stripe.subscriptions.create.mock.calls[0][0].metadata).toEqual(expect.objectContaining({
+        collaborators: '2',
+        documents: '2',
+        assignmentCount: '2',
+        days: '3',
+      }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, subscriptionId: 'sub_private' }));
+    });
+
+    it('rejects solo-private billing when the project is not owned by the signed-in user', async () => {
+      const stripe = {
+        customers: { update: jest.fn(async () => ({})) },
+        subscriptions: { create: jest.fn() },
+      };
+      const { controller, pool } = loadStripeController({ stripe });
+      pool.query
+        .mockResolvedValueOnce([[
+          { userid: 123, email: 'paid@example.com', timezone: 'UTC', stripe_customer_id: 'cus_123' },
+        ]])
+        .mockResolvedValueOnce([[]]);
+      const res = mockResponse();
+
+      await controller.createSubscription({
+        user: { email: 'paid@example.com' },
+        body: { paymentMethodId: 'pm_private', type: 'solo', projectId: 'not-owned' },
+      }, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(stripe.subscriptions.create).not.toHaveBeenCalled();
     });
 
     it('rejects invalid voucher codes before charging the card', async () => {

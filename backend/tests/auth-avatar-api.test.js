@@ -151,13 +151,13 @@ describe('POST /api/auth/profile/avatar', () => {
 
   it('does not serve legacy avatar bytes that are mislabeled as PNG', async () => {
     const { app, pool } = loadApp();
-    pool.query.mockResolvedValueOnce([[[
+    pool.query.mockResolvedValueOnce([[
       {
         avatar_data: Buffer.from('<svg><script>alert(1)</script></svg>').toString('base64'),
         avatar_mime_type: 'image/png',
         avatar_filename: 'avatar.png',
       },
-    ]]]);
+    ]]);
 
     const res = await request(app).get('/api/auth/profile/avatar/123');
 

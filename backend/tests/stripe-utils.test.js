@@ -71,6 +71,19 @@ describe('Stripe pricing utilities', () => {
     expect(fiveDocuments).toBe(956);
   });
 
+  it('prices solo-private usage from assignments instead of the collaborator/document cross product', () => {
+    const cents = computeMonthlyAmountCents({
+      projects: 1,
+      collaborators: 2,
+      documents: 3,
+      assignmentCount: 2,
+      days: 10,
+    });
+    const usageCents = Math.round(2 * 10 * RATE * 100);
+
+    expect(cents).toBe(usageCents + computeStripeProcessingFeeCents(usageCents));
+  });
+
   it('uses the actual duration and does not cap pricing at 31 days', () => {
     const cents = computeMonthlyAmountCents({
       projects: 1,

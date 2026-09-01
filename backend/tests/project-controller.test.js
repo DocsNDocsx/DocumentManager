@@ -605,7 +605,9 @@ describe('projectcontroller', () => {
       .mockResolvedValueOnce([[{
         type: 'private',
         deadline: new Date(Date.now() + 86400000).toISOString(),
+        collaborators: JSON.stringify([{ email: 'private@example.com' }]),
         documents: JSON.stringify([{ name: 'Transcript' }]),
+        assignments: JSON.stringify({ 0: [0] }),
         ownerEmail: 'owner@example.com',
         ownerFirstName: 'Owner',
         ownerLastName: 'User',

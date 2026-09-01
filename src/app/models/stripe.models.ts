@@ -21,6 +21,8 @@ export interface CreateSubscriptionRequest {
   projects: number;
   collaborators: number;
   documents: number;
+  /** Solo-private billable collaborator/document assignment pairs. */
+  assignmentCount?: number;
   days: number;
   /** Calendar days added to an already-active project's paid duration. */
   extensionDays?: number;

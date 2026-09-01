@@ -123,6 +123,30 @@ describe('DropDownProfileComponent', () => {
     expect(component.toastMsg()).toBe('File too large. Maximum size is 2 MB.');
   });
 
+  it('blocks profile photo formats other than JPG and PNG', () => {
+    const file = new File(['avatar'], 'avatar.gif', { type: 'image/gif' });
+
+    component.onAvatarChange({
+      target: { files: [file] },
+    } as unknown as Event);
+
+    expect(authService.uploadAvatar).not.toHaveBeenCalled();
+    expect(component.toastVisible()).toBe(true);
+    expect(component.toastError()).toBe(true);
+    expect(component.toastMsg()).toBe('Please choose a JPG or PNG profile photo.');
+  });
+
+  it('blocks a profile photo whose extension does not match an allowed image format', () => {
+    const file = new File(['avatar'], 'avatar.svg', { type: 'image/png' });
+
+    component.onAvatarChange({
+      target: { files: [file] },
+    } as unknown as Event);
+
+    expect(authService.uploadAvatar).not.toHaveBeenCalled();
+    expect(component.toastMsg()).toBe('Please choose a JPG or PNG profile photo.');
+  });
+
   it('shows an error toast when profile photo upload fails', () => {
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
     authService.uploadAvatar.mockReturnValue(throwError(() => ({ error: { message: 'Upload failed' } })));

@@ -43,6 +43,8 @@ describe('BillingEstimateService', () => {
       type: 'private',
       deadline: '2026-09-15',
       documents: [{ name: 'Resume' }],
+      collaborators: [{ status: 'active' }, { status: 'active' }, { status: 'active' }],
+      assignments: { 0: [0], 1: [0], 2: [0] },
       expectedCollaborators: 3,
     } as any);
 
@@ -54,9 +56,30 @@ describe('BillingEstimateService', () => {
       projects: 1,
       collaborators: 3,
       documents: 1,
+      assignmentCount: 3,
       days: 47,
       monthly: '12.69',
     });
+  });
+
+  it('prices a solo private project from active assignments rather than all collaborator-document combinations', () => {
+    const query = service.buildSoloActivationQuery({
+      id: 'private-assignment-project',
+      type: 'private',
+      deadline: '2026-08-03',
+      collaborators: [{ status: 'active' }, { status: 'active' }, { status: 'inactive' }],
+      documents: [{ name: 'Resume' }, { name: 'Transcript' }, { name: 'Inactive', status: 'inactive' }],
+      assignments: { 0: [0, 0], 1: [1, 2], 2: [0] },
+      expectedCollaborators: 3,
+    } as any);
+
+    expect(query).toEqual(expect.objectContaining({
+      collaborators: 3,
+      documents: 3,
+      assignmentCount: 2,
+      days: 4,
+      monthly: '0.72',
+    }));
   });
 
   it('builds team activation query using explicit collaborator count over project estimate', () => {

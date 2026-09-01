@@ -135,14 +135,17 @@ function installSoloSqlMock(initialProject) {
       return [{ affectedRows: 1 }];
     }
 
-    if (text.startsWith('SELECT p.type, p.deadline, p.documents, u.email AS ownerEmail')) {
+    if (text.startsWith('SELECT p.type, p.deadline, p.collaborators, p.documents, p.assignments, u.email AS ownerEmail')) {
       return [[{
         type: project.type,
         deadline: project.deadline,
+        collaborators: project.collaborators,
         documents: project.documents,
+        assignments: project.assignments,
         ownerEmail: 'owner@example.com',
         ownerFirstName: 'Owner',
         ownerLastName: 'Person',
+        ownerTimezone: 'America/New_York',
       }]];
     }
 

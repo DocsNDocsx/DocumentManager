@@ -138,7 +138,14 @@ export class TopMenuSoloProjectsComponent implements OnInit {
     const queryParams = this.billingEstimate.buildSoloActivationQuery(project, project.type === 'public' ? Number(project.expectedCollaborators) : Math.max(activeCount, project.paidCollaboratorCapacity ?? 0), Math.max(activeDocuments, project.paidDocumentCapacity ?? 0));
     if (!queryParams) return;
     const baselineQuery = this.billingEstimate.buildSoloActivationQuery(
-      { ...project, deadline: baseline.deadline, documents: baseline.documents, expectedCollaborators: baseline.expectedCollaborators },
+      {
+        ...project,
+        deadline: baseline.deadline,
+        collaborators: baseline.collaborators,
+        documents: baseline.documents,
+        assignments: baseline.assignments,
+        expectedCollaborators: baseline.expectedCollaborators,
+      },
       project.type === 'public' ? Number(baseline.expectedCollaborators) : baseline.collaborators.filter(c => c.status !== 'inactive').length,
       baseline.documents.filter(d => d.status !== 'inactive').length,
     );

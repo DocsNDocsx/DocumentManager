@@ -1,6 +1,7 @@
 const pool = require('../utils/sql');
 const { stripe, computeMonthlyAmountCents, getProductId, getVoucher, normalizeVoucherCode } = require('../utils/stripe');
 const { sendPaymentReceiptEmail } = require('../utils/paymentreceipt');
+const { calendarDateInTimeZone, deadlineCalendarDate, resolveTimeZone } = require('../utils/timezone');
 
 const isMySQL = (process.env.DB_CLIENT ?? 'pg') === 'mysql';
 const STRIPE_CARD_PERCENT_FEE = 0.029;
@@ -97,7 +98,7 @@ async function getUserFromToken(req) {
   const email = req.user?.email;
   if (!email) return null;
   const [rows] = await pool.query(
-    'SELECT userid, email, firstname, lastname, stripe_customer_id FROM users WHERE email = ?',
+    'SELECT userid, email, firstname, lastname, timezone, stripe_customer_id FROM users WHERE email = ?',
     [email]
   );
   return rows[0] ?? null;
@@ -123,6 +124,62 @@ function parseJson(value, fallback) {
 const activeCollaboratorCount = collaborators => parseJson(collaborators, []).filter(c => c?.status !== 'inactive').length;
 const activeDocumentCount = documents => parseJson(documents, []).filter(d => d?.status !== 'inactive').length;
 
+function activeAssignmentCount(project) {
+  const collaborators = parseJson(project?.collaborators, []);
+  const documents = parseJson(project?.documents, []);
+  const assignments = parseJson(project?.assignments, {});
+  return Object.entries(assignments).reduce((total, [collaboratorIndex, documentIndexes]) => {
+    const collaborator = collaborators[Number(collaboratorIndex)];
+    if (!collaborator || collaborator.status === 'inactive' || !Array.isArray(documentIndexes)) return total;
+    const validDocuments = new Set(documentIndexes.filter(index =>
+      Number.isInteger(index) && index >= 0 && documents[index] && documents[index].status !== 'inactive'
+    ));
+    return total + validDocuments.size;
+  }, 0);
+}
+
+function activeBillingDays(deadline, timeZone, now = new Date()) {
+  const dueDate = deadlineCalendarDate(deadline);
+  if (!dueDate) return null;
+  const today = calendarDateInTimeZone(now, resolveTimeZone(timeZone));
+  const difference = Math.ceil((Date.parse(`${dueDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+  return Math.max(1, difference);
+}
+
+async function authoritativeSoloPrivateUsage(projectId, user) {
+  if (!projectId) return null;
+  const [projects] = await pool.query(
+    'SELECT id, type, deadline, collaborators, documents, assignments FROM projects WHERE id = ? AND user_id = ?',
+    [projectId, user.userid]
+  );
+  const project = projects[0];
+  if (!project) {
+    const error = new Error('The project was not found or does not belong to your account');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (project.type !== 'private') return null;
+  const assignmentCount = activeAssignmentCount(project);
+  if (assignmentCount < 1) {
+    const error = new Error('Assign at least one document to a collaborator before continuing to payment');
+    error.statusCode = 400;
+    throw error;
+  }
+  const days = activeBillingDays(project.deadline, user.timezone);
+  if (days === null) {
+    const error = new Error('A valid project deadline is required before continuing to payment');
+    error.statusCode = 400;
+    throw error;
+  }
+  return {
+    projects: 1,
+    collaborators: Math.max(1, activeCollaboratorCount(project.collaborators)),
+    documents: Math.max(1, activeDocumentCount(project.documents)),
+    assignmentCount,
+    days,
+  };
+}
+
 function dateIncreaseDays(previousDeadline, currentDeadline) {
   const previous = /^\d{4}-\d{2}-\d{2}/.exec(String(previousDeadline ?? ''))?.[0];
   const current = /^\d{4}-\d{2}-\d{2}/.exec(String(currentDeadline ?? ''))?.[0];
@@ -144,7 +201,7 @@ async function paidUpgradeUsage(projectId, record, requested) {
     const [counts] = await pool.query('SELECT COUNT(*) AS count FROM team_project_collaborators WHERE project_id = ?', [projectId]);
     current = { ...projects[0], collaboratorCount: Number(counts?.[0]?.count ?? 0) };
   } else {
-    const [projects] = await pool.query('SELECT type, deadline, expected_collaborators, collaborators, documents FROM projects WHERE id = ?', [projectId]);
+    const [projects] = await pool.query('SELECT type, deadline, expected_collaborators, collaborators, documents, assignments FROM projects WHERE id = ?', [projectId]);
     if (!projects?.[0]) return null;
     current = { ...projects[0], collaboratorCount: activeCollaboratorCount(projects[0].collaborators) };
   }
@@ -157,11 +214,15 @@ async function paidUpgradeUsage(projectId, record, requested) {
     : current.collaboratorCount;
   const baselineDocuments = Number((baseline.documents ?? []).filter(d => d?.status !== 'inactive').length || 1);
   const currentDocuments = Number(activeDocumentCount(current.documents) || 1);
+  const assignmentCount = current.type === 'private'
+    ? Math.max(activeAssignmentCount(baseline), activeAssignmentCount(current), 1)
+    : null;
 
   return {
     projects: Math.max(1, Number(record.projects) || Number(requested.projects) || 1),
     collaborators: Math.max(Number(record.collaborators) + Math.max(0, currentCollaborators - baselineCollaborators), Number(requested.collaborators) || 0),
     documents: Math.max(Number(record.documents) + Math.max(0, currentDocuments - baselineDocuments), Number(requested.documents) || 0),
+    ...(assignmentCount !== null ? { assignmentCount } : {}),
     days: Number(record.days) + Math.max(dateIncreaseDays(baseline.deadline, current.deadline), Math.max(0, Number(requested.extensionDays) || 0)),
   };
 }
@@ -348,11 +409,10 @@ exports.createSubscription = async (req, res) => {
     }
 
     const customerId = user.stripe_customer_id;
+    const privateUsage = type === 'solo' ? await authoritativeSoloPrivateUsage(projectId, user) : null;
+    const pricedUsage = privateUsage ?? { projects, collaborators, documents, days };
     const unitAmount = computeMonthlyAmountCents({
-      projects,
-      collaborators,
-      documents,
-      days,
+      ...pricedUsage,
       voucherCode: normalizedVoucherCode,
     });
 
@@ -393,10 +453,11 @@ exports.createSubscription = async (req, res) => {
         metadata: {
           userid: String(user.userid),
           type: String(type),
-          projects: String(projects),
-          collaborators: String(collaborators),
-          documents: String(documents),
-          days: String(days),
+          projects: String(pricedUsage.projects),
+          collaborators: String(pricedUsage.collaborators),
+          documents: String(pricedUsage.documents),
+          days: String(pricedUsage.days),
+          assignmentCount: privateUsage ? String(privateUsage.assignmentCount) : '',
           projectId: String(projectId || ''),
           voucherCode: normalizedVoucherCode,
         },
@@ -435,7 +496,7 @@ exports.createSubscription = async (req, res) => {
     await pool.query(
       upsertSubscriptionSql,
       [
-        user.userid, customerId, subscription.id, projectId || null, type, projects, collaborators, documents, days,
+        user.userid, customerId, subscription.id, projectId || null, type, pricedUsage.projects, pricedUsage.collaborators, pricedUsage.documents, pricedUsage.days,
         (unitAmount / 100).toFixed(2), 'usd', subscription.status, periodEnd,
       ]
     );
@@ -470,10 +531,13 @@ exports.createSubscription = async (req, res) => {
       statusCode: err.statusCode,
     });
 
-    const isStripeError = Boolean(err.type || err.rawType || err.statusCode);
-    res.status(isStripeError ? 400 : 500).json({
+    const isStripeError = Boolean(err.type || err.rawType);
+    const responseStatus = Number.isInteger(err.statusCode) && err.statusCode >= 400 && err.statusCode < 500
+      ? err.statusCode
+      : (isStripeError ? 400 : 500);
+    res.status(responseStatus).json({
       success: false,
-      message: isStripeError ? err.message : 'Could not create subscription',
+      message: responseStatus < 500 ? err.message : 'Could not create subscription',
       code: err.code || null,
     });
   }
@@ -571,7 +635,13 @@ exports.upgradeSubscription = async (req, res) => {
     const upgradedCollaborators = persistedUsage?.collaborators ?? Number(collaborators);
     const upgradedDocuments = persistedUsage?.documents ?? Number(documents);
     const upgradedDays = persistedUsage?.days ?? Math.max(Number(days), Number(record.days) + Math.max(0, Number(extensionDays) || 0));
-    const unitAmount = computeMonthlyAmountCents({ projects: upgradedProjects, collaborators: upgradedCollaborators, documents: upgradedDocuments, days: upgradedDays });
+    const unitAmount = computeMonthlyAmountCents({
+      projects: upgradedProjects,
+      collaborators: upgradedCollaborators,
+      documents: upgradedDocuments,
+      assignmentCount: persistedUsage?.assignmentCount,
+      days: upgradedDays,
+    });
     const previousAmountCents = Math.round(Number(record.amount) * 100);
     const upgradeChargeCents = unitAmount - previousAmountCents;
     if (upgradeChargeCents <= 0) return res.status(400).json({ success: false, message: 'Project usage has not increased' });
@@ -612,7 +682,14 @@ exports.upgradeSubscription = async (req, res) => {
       default_payment_method: paymentMethodId,
       items: [{ id: item.id, price_data: { currency: 'usd', product, unit_amount: unitAmount, recurring: { interval: 'month' } } }],
       proration_behavior: 'none',
-      metadata: { ...subscription.metadata, projects: String(upgradedProjects), collaborators: String(upgradedCollaborators), documents: String(upgradedDocuments), days: String(upgradedDays) },
+      metadata: {
+        ...subscription.metadata,
+        projects: String(upgradedProjects),
+        collaborators: String(upgradedCollaborators),
+        documents: String(upgradedDocuments),
+        days: String(upgradedDays),
+        assignmentCount: persistedUsage?.assignmentCount == null ? '' : String(persistedUsage.assignmentCount),
+      },
     }, { idempotencyKey: `upgrade_${user.userid}_${projectId}_${unitAmount}` });
     await pool.query(
       'UPDATE stripe_subscriptions SET projects = ?, collaborators = ?, documents = ?, days = ?, amount = ?, last_charge_amount = ?, last_invoice_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',

@@ -48,8 +48,8 @@
             <button class="avatar-upload-btn" (click)="triggerAvatarUpload()" type="button">
               <i class="fas fa-upload" aria-hidden="true"></i> Upload New Photo
             </button>
-            <input type="file" id="avatarInput" accept="image/*" style="display:none" (change)="onAvatarChange($event)" aria-label="Upload profile photo" />
-            <p class="form-hint" style="margin-top: 0.5rem">JPG, PNG or GIF · Max 2 MB</p>
+            <input type="file" id="avatarInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" style="display:none" (change)="onAvatarChange($event)" aria-label="Upload JPG or PNG profile photo" />
+            <p class="form-hint" style="margin-top: 0.5rem">JPG or PNG · Max 2 MB</p>
           </div>
         </div>
 

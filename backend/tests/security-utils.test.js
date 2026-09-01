@@ -19,7 +19,7 @@ describe('security utilities', () => {
   });
 
   it('sanitizes avatar filenames', () => {
-    expect(safeAvatarFileName('../../bad\r\nname.png', 'image/png')).toBe('bad_r_nname.png');
+    expect(safeAvatarFileName('../../bad\r\nname.png', 'image/png')).toBe('bad__name.png');
   });
 
   it('escapes HTML metacharacters in email values', () => {

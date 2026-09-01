@@ -49,13 +49,11 @@ function computeStripeProcessingFeeCents(amountCents) {
 }
 
 /** Recurring monthly charge in cents, computed from usage. */
-function computeMonthlyAmountCents({ projects, collaborators, documents, days, voucherCode }) {
-  const base =
-    toUsageNumber(projects) *
-    toUsageNumber(collaborators) *
-    toUsageNumber(documents) *
-    RATE *
-    toUsageNumber(days, 20);
+function computeMonthlyAmountCents({ projects, collaborators, documents, assignmentCount, days, voucherCode }) {
+  const usageUnits = assignmentCount == null
+    ? toUsageNumber(collaborators) * toUsageNumber(documents)
+    : toUsageNumber(assignmentCount);
+  const base = toUsageNumber(projects) * usageUnits * RATE * toUsageNumber(days, 20);
   const amountCents = Math.max(0, Math.round(base * 100));
   const discountedAmountCents = Math.max(0, amountCents - computeDiscountCents(amountCents, voucherCode));
   return discountedAmountCents + computeStripeProcessingFeeCents(discountedAmountCents);

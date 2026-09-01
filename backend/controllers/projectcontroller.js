@@ -38,6 +38,17 @@ function includesCollaboratorEmail(value, email) {
 const activeCollaborators = collaborators => (collaborators ?? []).filter(c => c?.status !== 'inactive');
 const activeDocuments = documents => (documents ?? []).filter(d => d?.status !== 'inactive');
 
+function activeAssignmentCount({ collaborators = [], documents = [], assignments = {} }) {
+  return Object.entries(assignments ?? {}).reduce((total, [collaboratorIndex, documentIndexes]) => {
+    const collaborator = collaborators[Number(collaboratorIndex)];
+    if (!collaborator || collaborator.status === 'inactive' || !Array.isArray(documentIndexes)) return total;
+    const validDocuments = new Set(documentIndexes.filter(index =>
+      Number.isInteger(index) && index >= 0 && documents[index] && documents[index].status !== 'inactive'
+    ));
+    return total + validDocuments.size;
+  }, 0);
+}
+
 function parseProject(row) {
   const jsonCols = ['collaborators', 'documents', 'assignments', 'attachments'];
   const parsed = { ...row };
@@ -264,7 +275,8 @@ exports.updateProject = async (req, res) => {
         (deadline !== undefined && deadlineCalendarDate(deadline) !== deadlineCalendarDate(currentSolo.deadline)) ||
         (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(currentSolo.expectedCollaborators)) ||
         (collaborators !== undefined && activeCollaborators(collaborators).length !== activeCollaborators(currentSolo.collaborators).length) ||
-        (documents !== undefined && activeDocuments(documents).length > activeDocuments(currentSolo.documents).length);
+        (documents !== undefined && activeDocuments(documents).length > activeDocuments(currentSolo.documents).length) ||
+        (assignments !== undefined && activeAssignmentCount({ ...currentSolo, assignments }) !== activeAssignmentCount(currentSolo));
       const changesHostOnlyState = status !== undefined && status !== currentSolo.status;
       const changesStaffAssignment = staff !== undefined
         && JSON.stringify(normalizeStaff(currentSolo.staff)) !== JSON.stringify(normalizedStaff);
@@ -331,6 +343,7 @@ exports.updateProject = async (req, res) => {
       (deadline !== undefined && deadlineCalendarDate(deadline) > deadlineCalendarDate(paidSolo.deadline)) ||
       (collaborators !== undefined && activeCollaborators(collaborators).length > paidCollaboratorCapacity) ||
       (documents !== undefined && activeDocuments(documents).length > paidDocumentCapacity) ||
+      (assignments !== undefined && activeAssignmentCount({ ...currentSolo, assignments }) > activeAssignmentCount(paidSolo)) ||
       (expectedCollaborators !== undefined && Number(expectedCollaborators) > Number(paidSolo.expectedCollaborators ?? 0))
     );
     if (soloBillingIncreased) {
@@ -428,7 +441,7 @@ exports.activateProject = async (req, res) => {
     }
 
     const [existing] = await pool.query(
-      `SELECT p.type, p.deadline, p.documents, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName,
+      `SELECT p.type, p.deadline, p.collaborators, p.documents, p.assignments, u.email AS ownerEmail, u.firstname AS ownerFirstName, u.lastname AS ownerLastName,
               u.timezone AS ownerTimezone
        FROM projects p
        JOIN users u ON u.userid = p.user_id
@@ -439,8 +452,12 @@ exports.activateProject = async (req, res) => {
     if (!isFutureDeadline(existing[0].deadline, existing[0].ownerTimezone)) {
       return res.status(400).json({ success: false, message: 'A future deadline is required before activation' });
     }
-    if (parseProject({ documents: existing[0].documents }).documents.length === 0) {
+    const activationProject = parseProject(existing[0]);
+    if (activeDocuments(activationProject.documents).length === 0) {
       return res.status(400).json({ success: false, message: 'At least one required document is needed before activation' });
+    }
+    if (existing[0].type === 'private' && activeAssignmentCount(activationProject) < 1) {
+      return res.status(400).json({ success: false, message: 'Assign at least one document to a collaborator before activation' });
     }
 
     const isPublic = existing[0].type === 'public';

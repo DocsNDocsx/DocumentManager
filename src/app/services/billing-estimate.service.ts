@@ -20,6 +20,8 @@ const LEGACY_TIME_ZONES: Record<string, string> = {
 type BillingProject = Pick<Project | TeamProjectDraft, 'id' | 'deadline' | 'documents' | 'expectedCollaborators'> & {
   projectCode?: string | null;
   type?: string | null;
+  collaborators?: Project['collaborators'];
+  assignments?: Project['assignments'];
 };
 
 @Injectable({ providedIn: 'root' })
@@ -56,7 +58,11 @@ export class BillingEstimateService {
     const days = this.activeDays(project.deadline);
     if (days === null) return null;
 
-    const monthly = projects * collaborators * documents * days * RATE;
+    const assignmentCount = type === 'solo' && project.type === 'private'
+      ? this.activeAssignmentCount(project)
+      : null;
+    if (assignmentCount !== null && assignmentCount < 1) return null;
+    const monthly = projects * (assignmentCount ?? (collaborators * documents)) * days * RATE;
 
     return {
       subscriptionRequired: '1',
@@ -67,9 +73,25 @@ export class BillingEstimateService {
       projects,
       collaborators,
       documents,
+      ...(assignmentCount !== null ? { assignmentCount } : {}),
       days,
       monthly: monthly.toFixed(2),
     };
+  }
+
+  private activeAssignmentCount(project: BillingProject): number {
+    const activeCollaborators = project.collaborators ?? [];
+    const activeDocuments = project.documents ?? [];
+    return Object.entries(project.assignments ?? {}).reduce((total, [collaboratorIndex, documentIndexes]) => {
+      const collaborator = activeCollaborators[Number(collaboratorIndex)];
+      if (!collaborator || collaborator.status === 'inactive' || !Array.isArray(documentIndexes)) return total;
+      const validDocuments = new Set(documentIndexes.filter(index => {
+        const document = activeDocuments[index];
+        if (!Number.isInteger(index) || index < 0 || !document) return false;
+        return !('status' in document) || document.status !== 'inactive';
+      }));
+      return total + validDocuments.size;
+    }, 0);
   }
 
   private usageCount(value: number | null | undefined, fallback: number): number {

@@ -50,6 +50,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   projects      = signal(1);
   collaborators = signal(1);
   documents     = signal(1);
+  assignmentCount = signal<number | null>(null);
   days          = signal(20);
   monthlyBase   = signal(0);
   activationProjectId = signal('');
@@ -140,6 +141,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.projects.set(+params['projects'] || 1);
         this.collaborators.set(+params['collaborators'] || 1);
         this.documents.set(+params['documents'] || 1);
+        this.assignmentCount.set(params['assignmentCount'] == null ? null : Math.max(1, +params['assignmentCount'] || 1));
         this.days.set(+params['days'] || 20);
         this.monthlyBase.set(parseFloat(params['monthly']) || 0);
         this.activationProjectId.set(String(params['projectId'] || ''));
@@ -470,6 +472,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         projects: this.projects(),
         collaborators: this.collaborators(),
         documents: this.documents(),
+        ...(this.assignmentCount() !== null ? { assignmentCount: this.assignmentCount()! } : {}),
         days: this.days(),
         extensionDays: this.extensionDays(),
         projectId: this.activationProjectId() || null,
@@ -560,6 +563,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       monthly: String(this.monthlyBase()),
       customerId: this.customerId,
     });
+    if (this.assignmentCount() !== null) params.set('assignmentCount', String(this.assignmentCount()));
     if (this.activationProjectId()) params.set('projectId', this.activationProjectId());
     if (this.projectVisibility()) params.set('visibility', this.projectVisibility());
     const projectCode = this.route.snapshot.queryParamMap.get('projectCode');
