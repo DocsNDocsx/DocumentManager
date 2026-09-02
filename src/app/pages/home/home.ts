@@ -1,6 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-home',
@@ -9,10 +8,4 @@ import { DOCUMENT } from '@angular/common';
   styleUrl: './home.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent {
-  private readonly document = inject(DOCUMENT);
-
-  scrollTo(sectionId: string): void {
-    this.document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
-  }
-}
+export class HomeComponent {}

@@ -19,14 +19,14 @@
       Perfect for admissions, hiring, grants, and research projects.
     </p>
     <div class="hero-buttons">
-      <a routerLink="/sign-in" class="btn-hero btn-hero-primary">
+      <a routerLink="/sign-up" class="btn-hero btn-hero-primary">
+        <i class="fas fa-user-plus"></i>
+        Create Account
+      </a>
+      <a routerLink="/sign-in" class="btn-hero btn-hero-signin">
         <i class="fas fa-sign-in-alt"></i>
         Sign In
       </a>
-      <button (click)="scrollTo('how-it-works')" class="btn-hero btn-hero-secondary">
-        <i class="fas fa-play-circle"></i>
-        See How It Works
-      </button>
     </div>
   </div>
 </section>
@@ -162,6 +162,13 @@
         </article>
       </div>
 
+      <div class="pricing-action">
+        <a routerLink="/sign-up" class="btn-pricing-action">
+          <i class="fas fa-user-plus" aria-hidden="true"></i>
+          Create Account
+        </a>
+      </div>
+
     </section>
 
   </div>
@@ -171,33 +178,41 @@
 <section class="cta">
   <div class="section-container">
     <h2 class="cta-title">Ready to Streamline Your Document Collection?</h2>
-    <p class="cta-subtitle">Join thousands of teams who trust DocNDocs to manage their documents</p>
-    <a routerLink="/sign-in" class="btn-cta">
-      <i class="fas fa-sign-in-alt"></i>
-      Sign In to DocsNDocs
+    <p class="cta-subtitle">Create an account to configure your first document collection project.</p>
+    <a routerLink="/sign-up" class="btn-cta">
+      <i class="fas fa-user-plus"></i>
+      Create Account
     </a>
+    <p class="cta-signin">Already have an account? <a routerLink="/sign-in">Sign In</a></p>
   </div>
 </section>
 
 <!-- Footer -->
 <footer class="footer">
   <div class="footer-container">
-    <div>
-      <div class="footer-brand">
-        <img src="docsndocslogo-light-v2.png" alt="DocsNDocs logo" class="footer-logo-image" />
-      </div>
-      <p class="footer-description">The easiest way to collect, review, and manage documents from collaborators.</p>
+    <div class="footer-brand-column">
+      <a routerLink="/" class="footer-brand" aria-label="DocsNDocs home">
+        <img src="docsndocslogo-light-v2.png" width="180" height="50" alt="DocsNDocs logo" class="footer-logo-image" />
+      </a>
+      <p class="footer-description">Structured document collection for projects, research, applications, and collaborative work.</p>
     </div>
-    <div>
-      <h4 class="footer-title">Product</h4>
+
+    <nav aria-label="Explore DocsNDocs">
+      <h4 class="footer-title">Explore</h4>
       <ul class="footer-links">
         <li><a href="#features">Features</a></li>
-        <li>
-          <a href="#how-it-works">How It Works</a>
-        </li>
+        <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#pricing">Pricing</a></li>
       </ul>
-    </div>
+    </nav>
+
+    <nav aria-label="DocsNDocs account">
+      <h4 class="footer-title">Account</h4>
+      <ul class="footer-links">
+        <li><a routerLink="/sign-in">Sign In</a></li>
+        <li><a routerLink="/sign-up">Create Account</a></li>
+      </ul>
+    </nav>
   </div>
   <div class="footer-bottom">
     <p>&copy; 2026 DocNDocs. All rights reserved.</p>
