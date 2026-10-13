@@ -1,8 +1,10 @@
 # Project activation coupons
 
-Run the schema migration before deploying the updated backend. PostgreSQL deployments use backend/scripts/migrate.js (the existing build migration); MySQL uses backend/migrations/022_create_coupons.sql. This change does not run a migration against a live database.
+Run the schema migration before deploying the updated backend. PostgreSQL deployments use backend/scripts/migrate.js (the existing build migration); MySQL uses backend/migrations/022_create_coupons.sql followed by backend/migrations/023_seed_freeproject_coupon.sql. If the coupon tables already exist, MySQL only needs migration 023 to seed FREEPROJECT. This change does not run a migration against a live database.
 
 Coupons are managed directly in the database in this first implementation. There is no admin screen yet. Codes must be stored uppercase. WELCOME10 and LAUNCH25 are seeded as percentage discounts, each limited to one redemption per user.
+
+Migration 023 seeds FREEPROJECT as a free activation coupon limited to one successful redemption total and one per user. PostgreSQL includes the same seed in postgres_schema.sql. Both seed statements preserve an existing coupon with that code, including its enabled status and redemption history; rerunning the migration never restores a consumed coupon. Coupon creation is now recorded in version-controlled migration source. Deployment build logs record execution of the PostgreSQL schema runner; no migration execution-history table is introduced here.
 
 Example: a single-use free project coupon (PostgreSQL; replace the ID and code with your chosen values):
 

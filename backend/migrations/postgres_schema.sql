@@ -417,3 +417,11 @@ INSERT INTO coupons (id,code,label,benefit_type,percent_off) VALUES
  ('legacy-launch25','LAUNCH25','Launch voucher','percent_off',25) ON CONFLICT (code) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_coupon_project ON coupon_redemptions (coupon_id,user_id,project_id,project_type,status);
+
+-- Migration 023: seed the single-use free-project coupon, preserving existing rules and usage.
+INSERT INTO coupons (
+  id, code, label, benefit_type, max_redemptions, max_per_user
+) VALUES (
+  '8e9fc541-0ad6-4be1-9c8b-71824d9ac803',
+  'FREEPROJECT', 'One free project', 'free_activation', 1, 1
+) ON CONFLICT (code) DO NOTHING;
