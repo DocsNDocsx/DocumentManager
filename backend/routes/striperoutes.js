@@ -3,6 +3,9 @@ const verifyJwt = require('../middleware/auth');
 const stripeController = require('../controllers/stripecontroller');
 const router = express.Router();
 router.use(verifyJwt);
+const couponController = require('../controllers/couponcontroller');
+router.post('/coupons/validate', couponController.validate);
+router.post('/coupons/activate', couponController.activate);
 
 router.post('/stripe/setup-intent', stripeController.createSetupIntent);
 router.get('/stripe/billing-profile', stripeController.getBillingProfile);

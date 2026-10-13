@@ -1,5 +1,6 @@
+const coupons = require('../utils/coupons');
 const pool = require('../utils/sql');
-const { stripe, computeMonthlyAmountCents, getProductId, getVoucher, normalizeVoucherCode } = require('../utils/stripe');
+const { stripe, computeMonthlyAmountCents, getProductId, normalizeVoucherCode } = require('../utils/stripe');
 const { sendPaymentReceiptEmail } = require('../utils/paymentreceipt');
 const { calendarDateInTimeZone, deadlineCalendarDate, resolveTimeZone } = require('../utils/timezone');
 
@@ -380,6 +381,7 @@ exports.estimateTax = async (req, res) => {
  * recurring subscription, pricing it server-side from the usage parameters.
  */
 exports.createSubscription = async (req, res) => {
+  let couponReservation;
   try {
     if (!stripe) return res.status(503).json({ success: false, message: 'Payments are not configured' });
 
@@ -404,16 +406,23 @@ exports.createSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'paymentMethodId is required' });
     }
     const normalizedVoucherCode = normalizeVoucherCode(voucherCode);
-    if (normalizedVoucherCode && !getVoucher(normalizedVoucherCode)) {
-      return res.status(400).json({ success: false, message: 'Invalid voucher code' });
+    if (normalizedVoucherCode) {
+      couponReservation = await coupons.reserve(normalizedVoucherCode,user,projectId,type);
+      if (couponReservation.coupon.benefit_type === 'free_activation') coupons.fail('Use free project activation for this coupon');
+      if (couponReservation.redemption.status === 'redeemed') {
+        const previous = await stripe.subscriptions.retrieve(couponReservation.redemption.subscription_id, { expand: ['latest_invoice.payment_intent'] });
+        return res.json({ success: true, subscriptionId: previous.id,
+          invoiceId: typeof previous.latest_invoice === 'object' ? previous.latest_invoice?.id : previous.latest_invoice,
+          status: previous.status, voucherCode: normalizedVoucherCode });
+      }
     }
 
     const customerId = user.stripe_customer_id;
     const privateUsage = type === 'solo' ? await authoritativeSoloPrivateUsage(projectId, user) : null;
-    const pricedUsage = privateUsage ?? { projects, collaborators, documents, days };
+    const pricedUsage = couponReservation?.usage ?? privateUsage ?? { projects, collaborators, documents, days };
     const unitAmount = computeMonthlyAmountCents({
       ...pricedUsage,
-      voucherCode: normalizedVoucherCode,
+      coupon: couponReservation?.coupon,
     });
 
     // Make the saved card the customer's default for invoices.
@@ -435,7 +444,9 @@ exports.createSubscription = async (req, res) => {
 
     const product = await getProductId();
 
-    const subscription = await stripe.subscriptions.create(
+    const subscription = couponReservation?.redemption.subscription_id
+      ? await stripe.subscriptions.retrieve(couponReservation.redemption.subscription_id, { expand: ['latest_invoice.payment_intent'] })
+      : await stripe.subscriptions.create(
       {
         customer: customerId,
         default_payment_method: paymentMethodId,
@@ -460,11 +471,12 @@ exports.createSubscription = async (req, res) => {
           assignmentCount: privateUsage ? String(privateUsage.assignmentCount) : '',
           projectId: String(projectId || ''),
           voucherCode: normalizedVoucherCode,
+          couponRedemptionId: couponReservation?.redemption.id || '',
         },
         expand: ['latest_invoice.payment_intent'],
       },
       // Guards against duplicate subscriptions if the client retries / returns from 3-D Secure.
-      { idempotencyKey: `sub_${user.userid}_${projectId || 'general'}_${paymentMethodId}` }
+      { idempotencyKey: couponReservation ? `coupon_${couponReservation.redemption.id}` : `sub_${user.userid}_${projectId || 'general'}_${paymentMethodId}` }
     );
 
     const periodEnd = subscription.current_period_end
@@ -503,6 +515,11 @@ exports.createSubscription = async (req, res) => {
 
     // Make the first successful checkout visible immediately. Stripe webhooks
     // remain the source for renewals and will skip this invoice as a duplicate.
+    if (couponReservation) {
+      await pool.query('UPDATE coupon_redemptions SET subscription_id = ? WHERE id = ?', [subscription.id,couponReservation.redemption.id]);
+      const invoice = subscription.latest_invoice;
+      if (typeof invoice === 'object' && (invoice.paid || invoice.status === 'paid')) await coupons.settle(subscription,true);
+    }
     await recordInitialPayment(user, type, subscription, unitAmount);
 
     await pool.query("UPDATE users SET issubscribed = 'true' WHERE userid = ?", [user.userid]);
@@ -524,6 +541,9 @@ exports.createSubscription = async (req, res) => {
       voucherCode: normalizedVoucherCode || null,
     });
   } catch (err) {
+    if (couponReservation && ['StripeCardError','StripeInvalidRequestError'].includes(err.type)) {
+      await pool.query("UPDATE coupon_redemptions SET status = 'released' WHERE id = ? AND status = 'reserved' AND subscription_id IS NULL", [couponReservation.redemption.id]);
+    }
     console.error('Create subscription error:', {
       message: err.message,
       type: err.type,

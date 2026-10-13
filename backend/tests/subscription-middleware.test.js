@@ -16,6 +16,7 @@ function mockResponse() {
 describe('requireActiveSubscription', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    pool.query.mockResolvedValue([[]]);
   });
 
   it('rejects requests without an authenticated email', async () => {

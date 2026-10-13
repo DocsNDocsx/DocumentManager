@@ -1,3 +1,4 @@
+const futureDeadline = () => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 jest.mock('../utils/sql', () => ({
   query: jest.fn(),
 }));
@@ -64,7 +65,7 @@ function soloProjectRow(overrides = {}) {
     user_id: '123',
     name: 'Solo Lifecycle',
     description: 'Collect solo lifecycle documents',
-    deadline: '2026-09-15',
+    deadline: futureDeadline(),
     status: 'draft',
     type: 'public',
     completed_step: 1,
@@ -87,7 +88,7 @@ function teamProjectRow(overrides = {}) {
     team_id: 'team-1',
     name: 'Team Lifecycle',
     description: 'Collect team lifecycle documents',
-    deadline: '2026-09-15',
+    deadline: futureDeadline(),
     status: 'draft',
     type: 'public',
     completed_step: 1,
@@ -405,7 +406,7 @@ describe('project lifecycle backend APIs', () => {
         userid: '123',
         name: 'Solo Lifecycle',
         description: 'Collect solo lifecycle documents',
-        deadline: '2026-09-15',
+        deadline: futureDeadline(),
         type,
         expectedCollaborators: 25,
         collaborators: collaborators(),
@@ -484,7 +485,7 @@ describe('project lifecycle backend APIs', () => {
         teamId: 'team-1',
         name: 'Team Lifecycle',
         description: 'Collect team lifecycle documents',
-        deadline: '2026-09-15',
+        deadline: futureDeadline(),
         type,
         expectedCollaborators: 25,
       },

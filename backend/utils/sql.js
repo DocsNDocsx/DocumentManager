@@ -17,6 +17,16 @@ if (client === 'mysql') {
     async query(sql, params)   { return pool.query(sql, params ?? []); },
     async execute(sql, params) { return pool.execute(sql, params ?? []); },
     async end()                { return pool.end(); },
+    async transaction(work) {
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        const result = await work({ query: (sql, params) => connection.query(sql, params ?? []) });
+        await connection.commit();
+        return result;
+      } catch (error) { await connection.rollback(); throw error; }
+      finally { connection.release(); }
+    },
   };
 } else {
   const { Pool } = require('pg');
@@ -40,6 +50,22 @@ if (client === 'mysql') {
     },
     async end() {
       return pool.end();
+    },
+    async transaction(work) {
+      const connection = await pool.connect();
+      const tx = { async query(sql, params) {
+        const result = await connection.query(toPostgres(sql), params ?? []);
+        return /^\s*(INSERT|UPDATE|DELETE)/i.test(sql)
+          ? [{ affectedRows: result.rowCount, insertId: result.rows[0]?.id ?? null }, result.fields]
+          : [result.rows, result.fields];
+      } };
+      try {
+        await connection.query('BEGIN');
+        const result = await work(tx);
+        await connection.query('COMMIT');
+        return result;
+      } catch (error) { await connection.query('ROLLBACK'); throw error; }
+      finally { connection.release(); }
     },
   };
 }

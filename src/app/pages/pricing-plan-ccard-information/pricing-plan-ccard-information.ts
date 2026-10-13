@@ -23,10 +23,6 @@ import { environment } from '../../../environments/environment';
 
 const STRIPE_CARD_PERCENT_FEE = 0.029;
 const STRIPE_CARD_FIXED_FEE = 0.30;
-const VOUCHERS: Record<string, { percentOff: number; label: string }> = {
-  WELCOME10: { percentOff: 10, label: 'Welcome voucher' },
-  LAUNCH25: { percentOff: 25, label: 'Launch voucher' },
-};
 
 @Component({
   selector: 'app-pricing-plan-ccard-information',
@@ -70,6 +66,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   updatedProjectCost = signal<number | null>(null);
   upgradePreviewLoading = signal(false);
   upgradePreviewError = signal('');
+  couponQuote = signal<{ label: string; percentOff: number; benefitType: string; discountCents: number; amountCents: number; baseAmountCents: number } | null>(null);
+  zeroAmountCoupon = computed(() => !this.isUpgrade() && !!this.appliedVoucherCode() && this.couponQuote()?.amountCents === 0);
+  private couponValidationVersion = 0;
   voucherCode = signal('');
   appliedVoucherCode = signal('');
   voucherError = signal('');
@@ -80,9 +79,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   subtotal  = computed(() => this.isUpgrade() ? (this.proratedUpgradeAmount() ?? 0) : this.monthlyBase());
   grossTotal = computed(() => this.subtotal());
   voucherDiscount = computed(() => {
-    const voucher = VOUCHERS[this.appliedVoucherCode()];
+    const voucher = this.couponQuote();
     if (!voucher) return 0;
-    return Math.round(this.grossTotal() * voucher.percentOff) / 100;
+    return voucher.discountCents / 100;
   });
   subtotalAfterDiscount = computed(() => Math.max(0, this.grossTotal() - this.voucherDiscount()));
   stripeProcessingFee = computed(() => {
@@ -93,7 +92,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   taxableAmount = computed(() => this.subtotalAfterDiscount() + this.stripeProcessingFee());
   total = computed(() => this.taxableAmount() + this.estimatedSalesTax());
   appliedVoucherLabel = computed(() => {
-    const voucher = VOUCHERS[this.appliedVoucherCode()];
+    const voucher = this.couponQuote();
     return voucher ? `${voucher.label} (${voucher.percentOff}% off)` : '';
   });
   durationTimeZone = computed(() => {
@@ -150,9 +149,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
         this.extensionDays.set(Math.max(0, Number(params['extensionDays']) || 0));
         if (this.isUpgrade() && this.activationProjectId()) this.loadUpgradePreview();
         const voucherCode = this.normalizeVoucherCode(params['voucherCode']);
-        if (voucherCode && VOUCHERS[voucherCode]) {
+        if (voucherCode) {
           this.voucherCode.set(voucherCode);
-          this.appliedVoucherCode.set(voucherCode);
+          this.applyVoucher();
         }
       });
 
@@ -216,7 +215,9 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
 
   /** Loads Stripe.js and requests a SetupIntent so the card can be collected and saved. */
   private async initStripe(): Promise<void> {
+    if (this.zeroAmountCoupon()) return;
     this.stripe = await this.stripeService.getStripe();
+    if (this.zeroAmountCoupon()) return;
     if (!this.stripe) {
       this.validationError.set('Unable to load the secure payment system. Please refresh and try again.');
       return;
@@ -231,11 +232,13 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: res => {
+          if (this.zeroAmountCoupon()) return;
           this.clientSecret = res.clientSecret;
           this.customerId = res.customerId;
           this.mountPaymentElement();
         },
         error: err => {
+          if (this.zeroAmountCoupon()) return;
           const message = err?.error?.message ?? 'Could not initialize payment. Please try again in a moment.';
           this.validationError.set(message);
         },
@@ -244,7 +247,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
 
   /** Mounts the card-only Stripe Element once both the view and the client secret are ready. */
   private mountPaymentElement(): void {
-    if (!this.stripe || !this.clientSecret || !this.viewReady || this.paymentElement) return;
+    if (this.zeroAmountCoupon() || !this.stripe || !this.clientSecret || !this.viewReady || this.paymentElement) return;
 
     this.elements = this.stripe.elements();
 
@@ -291,6 +294,16 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
 
   async submitPayment(): Promise<void> {
     this.validationError.set('');
+    if (this.zeroAmountCoupon()) {
+      this.processing.set(true);
+      this.http.post(environment.apiUrl + '/coupons/activate', {
+        code: this.appliedVoucherCode(), projectId: this.activationProjectId(), type: this.projectType(),
+      }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: () => { void this.router.navigate([this.projectType() === 'team' ? '/top-menu-team-projects' : '/top-menu-solo-projects']); },
+        error: err => { this.processing.set(false); this.validationError.set(err?.error?.message || 'Could not activate project'); },
+      });
+      return;
+    }
 
     if (!this.firstName() || !this.lastName() || !this.email() ||
         !this.address1() || !this.city() || !this.state() || !this.zip()) {
@@ -353,6 +366,8 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
   }
 
   applyVoucher(): void {
+    const wasFree = this.zeroAmountCoupon();
+    const version = ++this.couponValidationVersion;
     const code = this.normalizeVoucherCode(this.voucherCode());
     this.voucherCode.set(code);
     this.voucherError.set('');
@@ -362,20 +377,39 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       return;
     }
 
-    if (!VOUCHERS[code]) {
-      this.appliedVoucherCode.set('');
-      this.voucherError.set('Voucher code is not valid.');
-      return;
-    }
-
-    this.appliedVoucherCode.set(code);
-    this.queueTaxEstimate();
+    this.appliedVoucherCode.set('');
+    this.couponQuote.set(null);
+    if (this.isUpgrade()) { this.voucherError.set('Coupons apply to initial project activation.'); return; }
+    this.http.post<{ label: string; percentOff: number; benefitType: string; discountCents: number; amountCents: number; baseAmountCents: number }>(
+      environment.apiUrl + '/coupons/validate', { code, projectId: this.activationProjectId(), type: this.projectType() }
+    ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: quote => {
+        if (version !== this.couponValidationVersion || this.normalizeVoucherCode(this.voucherCode()) !== code) return;
+        this.monthlyBase.set(quote.baseAmountCents / 100);
+        if (quote.amountCents === 0) this.estimatedSalesTax.set(0);
+        this.couponQuote.set(quote);
+        this.appliedVoucherCode.set(code);
+        if (this.zeroAmountCoupon()) {
+          this.teardownPaymentElement();
+          this.validationError.set('');
+          this.taxEstimateError.set('');
+        } else if (wasFree) {
+          void this.initStripe();
+        }
+        this.queueTaxEstimate();
+      },
+      error: err => { if (version === this.couponValidationVersion) this.voucherError.set(err?.error?.message || 'Could not validate coupon'); },
+    });
   }
 
   clearVoucher(): void {
+    const wasFree = this.zeroAmountCoupon();
+    ++this.couponValidationVersion;
+    this.couponQuote.set(null);
     this.voucherCode.set('');
     this.appliedVoucherCode.set('');
     this.voucherError.set('');
+    if (wasFree) void this.initStripe();
     this.queueTaxEstimate();
   }
 
@@ -428,6 +462,7 @@ export class PricingPlanCcardInformationComponent implements OnInit, AfterViewIn
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: estimate => {
+          if (amountCents !== Math.round(this.taxableAmount() * 100)) return;
           this.estimatedSalesTax.set(Number(estimate.taxAmount) || 0);
           this.taxEstimateLoading.set(false);
         },

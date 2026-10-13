@@ -2,7 +2,6 @@ const {
   computeMonthlyAmountCents,
   computeDiscountCents,
   computeStripeProcessingFeeCents,
-  getVoucher,
   normalizeVoucherCode,
   RATE,
   STRIPE_CARD_PERCENT_FEE,
@@ -95,15 +94,7 @@ describe('Stripe pricing utilities', () => {
     expect(cents).toBe(4197);
   });
 
-  it('normalizes and resolves supported voucher codes', () => {
-    expect(normalizeVoucherCode(' welcome10 ')).toBe('WELCOME10');
-    expect(getVoucher('launch25')).toEqual({
-      code: 'LAUNCH25',
-      percentOff: 25,
-      label: 'Launch voucher',
-    });
-    expect(getVoucher('missing')).toBeNull();
-  });
+  it('normalizes coupon codes', () => { expect(normalizeVoucherCode(' welcome10 ')).toBe('WELCOME10'); });
 
   it('applies voucher discounts to server-side pricing', () => {
     const fullPrice = computeMonthlyAmountCents({
@@ -117,14 +108,14 @@ describe('Stripe pricing utilities', () => {
       collaborators: 1,
       documents: 5,
       days: 20,
-      voucherCode: 'WELCOME10',
+      coupon: { percent_off: 10 },
     });
 
     const fullPriceBeforeFee = 900;
-    const discountedBeforeFee = fullPriceBeforeFee - computeDiscountCents(fullPriceBeforeFee, 'WELCOME10');
+    const discountedBeforeFee = fullPriceBeforeFee - computeDiscountCents(fullPriceBeforeFee, { percent_off: 10 });
 
     expect(fullPrice).toBe(956);
-    expect(computeDiscountCents(fullPriceBeforeFee, 'WELCOME10')).toBe(90);
+    expect(computeDiscountCents(fullPriceBeforeFee, { percent_off: 10 })).toBe(90);
     expect(discounted).toBe(discountedBeforeFee + computeStripeProcessingFeeCents(discountedBeforeFee));
   });
 });

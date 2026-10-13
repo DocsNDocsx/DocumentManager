@@ -197,6 +197,7 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     component.voucherCode.set(' welcome10 ');
     component.applyVoucher();
+    http.expectOne(`${environment.apiUrl}/coupons/validate`).flush({ label: 'Welcome voucher', percentOff: 10, benefitType: 'percent_off', discountCents: 270, amountCents: 2530, baseAmountCents: 2700 });
 
     expect(component.voucherCode()).toBe('WELCOME10');
     expect(component.appliedVoucherCode()).toBe('WELCOME10');
@@ -219,9 +220,10 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     component.voucherCode.set('bad-code');
     component.applyVoucher();
+    http.expectOne(`${environment.apiUrl}/coupons/validate`).flush({ message: 'Invalid coupon code' }, { status: 400, statusText: 'Bad Request' });
 
     expect(component.appliedVoucherCode()).toBe('');
-    expect(component.voucherError()).toBe('Voucher code is not valid.');
+    expect(component.voucherError()).toBe('Invalid coupon code');
   });
 
   it('includes the Stripe processing fee in an active-project upgrade total', () => {
@@ -322,6 +324,7 @@ describe('PricingPlanCcardInformationComponent', () => {
     component.zip.set('10001');
     component.voucherCode.set('launch25');
     component.applyVoucher();
+    http.expectOne(`${environment.apiUrl}/coupons/validate`).flush({ label: 'Launch voucher', percentOff: 25, benefitType: 'percent_off', discountCents: 675, amountCents: 2114, baseAmountCents: 2700 });
     stripe.confirmCardSetup.mockResolvedValueOnce({
       setupIntent: { status: 'succeeded', payment_method: 'pm_123' },
     });
@@ -485,5 +488,24 @@ describe('PricingPlanCcardInformationComponent', () => {
 
     expect(component.validationError()).toBe('Your card was saved but we could not start your subscription. Please contact support.');
     expect(component.processing()).toBe(false);
+  });
+
+  it.each(['free_activation', 'percent_off'])('activates a zero-amount %s coupon without card confirmation or a subscription', async benefitType => {
+    component.voucherCode.set('FREEPROJECT');
+    component.applyVoucher();
+    http.expectOne(environment.apiUrl + '/coupons/validate').flush({ label: 'Free project', percentOff: 100, benefitType, discountCents: 2700, amountCents: 0, baseAmountCents: 2700 });
+    expect(component.zeroAmountCoupon()).toBe(true);
+    expect(component.validationError()).toBe('');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.stripe-element-host').closest('.form-section').hidden).toBe(true);
+    expect(fixture.nativeElement.querySelector('.btn-submit').textContent).toContain('Activate Project');
+    const navigation = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    await component.submitPayment();
+    const request = http.expectOne(environment.apiUrl + '/coupons/activate');
+    expect(request.request.body).toEqual({code:'FREEPROJECT',projectId:'team-project-1',type:'team'});
+    request.flush({success:true});
+    expect(stripe.confirmCardSetup).not.toHaveBeenCalled();
+    expect(stripeService.createSubscription).not.toHaveBeenCalled();
+    expect(navigation).toHaveBeenCalledWith(['/top-menu-team-projects']);
   });
 });

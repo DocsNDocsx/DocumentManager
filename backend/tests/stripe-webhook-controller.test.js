@@ -30,6 +30,7 @@ function loadWebhookController({ stripe = {}, webhookSecret = 'whsec_test' } = {
 
 function stripeWithEvent(event) {
   return {
+    subscriptions: { retrieve: jest.fn(async () => ({ metadata: {} })) },
     webhooks: {
       constructEvent: jest.fn(() => event),
     },
@@ -61,7 +62,8 @@ describe('stripewebhookcontroller.handleWebhook', () => {
   it('returns 400 when Stripe signature verification fails', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     const stripe = {
-      webhooks: {
+      subscriptions: { retrieve: jest.fn(async () => ({ metadata: {} })) },
+    webhooks: {
         constructEvent: jest.fn(() => {
           throw new Error('bad signature');
         }),

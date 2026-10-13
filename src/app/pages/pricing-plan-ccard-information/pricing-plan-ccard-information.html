@@ -10,7 +10,7 @@
     <!-- Left: forms -->
     <div>
       <!-- Billing information -->
-      <div class="form-section">
+      <div class="form-section" [hidden]="zeroAmountCoupon()">
         <h2 class="section-title">
           <i class="fas fa-user-circle" aria-hidden="true"></i>
           Billing Information
@@ -84,7 +84,7 @@
       </div>
 
       <!-- Payment details -->
-      <div class="form-section" style="margin-top: 1.5rem">
+      <div class="form-section" style="margin-top: 1.5rem" [hidden]="zeroAmountCoupon()">
         <h2 class="section-title">
           <i class="fas fa-credit-card" aria-hidden="true"></i>
           Payment Details
@@ -110,7 +110,7 @@
         <div class="activation-notice" role="note">
           <i class="fas fa-info-circle" aria-hidden="true"></i>
           <span>
-            Payment will activate this project and generate a shareable <strong>project code</strong>.
+            {{ zeroAmountCoupon() ? 'Your coupon will activate this project' : 'Payment will activate this project' }} and generate a shareable <strong>project code</strong>.
             Anyone with the code can join and submit documents@if (projectType() === 'team') { as part of your team project}.
           </span>
         </div>
@@ -126,7 +126,7 @@
           Processing…
         } @else {
           <i class="fas fa-lock" aria-hidden="true"></i>
-          Pay &amp; Activate Project
+          {{ zeroAmountCoupon() ? 'Activate Project' : 'Pay & Activate Project' }}
         }
       </button>
 

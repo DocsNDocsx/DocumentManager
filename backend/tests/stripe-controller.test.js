@@ -20,6 +20,13 @@ function loadStripeController({ stripe = {}, amountCents = 972, productId = 'pro
     normalizeVoucherCode: jest.fn(code => String(code || '').trim().toUpperCase()),
     getProductId: jest.fn(async () => productId),
   }));
+  jest.doMock('../utils/coupons', () => ({
+ reserve: jest.fn(async code => {
+  if (code !== 'WELCOME10') { const error = new Error('Invalid coupon code'); error.statusCode = 400; throw error; }
+  return { coupon: { percent_off: 10, benefit_type: 'percent_off' }, usage: { projects: 1, collaborators: 2, documents: 3, days: 20 }, redemption: { id: 'redemption-1', status: 'reserved' } };
+ }), settle: jest.fn(async () => {}),
+ fail: message => { const error = new Error(message); error.statusCode = 400; throw error; },
+ }));
   jest.doMock('../utils/emailservice', () => ({
     sendEmail: jest.fn(async () => undefined),
   }));
@@ -37,6 +44,7 @@ describe('stripecontroller', () => {
     jest.dontMock('../utils/sql');
     jest.dontMock('../utils/stripe');
     jest.dontMock('../utils/emailservice');
+    jest.dontMock('../utils/coupons');
   });
 
   describe('createSetupIntent', () => {
@@ -207,6 +215,7 @@ describe('stripecontroller', () => {
         ]])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([{ affectedRows: 1 }]);
@@ -238,7 +247,7 @@ describe('stripecontroller', () => {
         collaborators: 2,
         documents: 3,
         days: 20,
-        voucherCode: 'WELCOME10',
+        coupon: { percent_off: 10, benefit_type: 'percent_off' },
       });
       expect(stripe.customers.update).toHaveBeenCalledWith('cus_123', {
         invoice_settings: { default_payment_method: 'pm_123' },
@@ -269,7 +278,7 @@ describe('stripecontroller', () => {
             }),
           })],
         }),
-        { idempotencyKey: 'sub_123_project-1_pm_123' },
+        { idempotencyKey: 'coupon_redemption-1' },
       );
       expect(stripe.subscriptions.create.mock.calls[0][0].metadata).toEqual(expect.objectContaining({
         projectId: 'project-1',
@@ -355,7 +364,7 @@ describe('stripecontroller', () => {
         documents: 2,
         assignmentCount: 2,
         days: 3,
-        voucherCode: '',
+        coupon: undefined,
       });
       expect(stripe.subscriptions.create.mock.calls[0][0].metadata).toEqual(expect.objectContaining({
         collaborators: '2',
@@ -414,7 +423,7 @@ describe('stripecontroller', () => {
       }, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid voucher code' });
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid coupon code', code: null });
       expect(stripe.customers.update).not.toHaveBeenCalled();
       expect(stripe.subscriptions.create).not.toHaveBeenCalled();
     });
@@ -456,7 +465,7 @@ describe('stripecontroller', () => {
         collaborators: 1,
         documents: 1,
         days: 20,
-        voucherCode: '',
+        coupon: undefined,
       });
       expect(stripe.subscriptions.create).toHaveBeenCalledWith(
         expect.objectContaining({

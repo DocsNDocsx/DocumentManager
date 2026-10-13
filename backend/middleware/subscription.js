@@ -1,6 +1,6 @@
 const pool = require('../utils/sql');
 
-async function hasPaidActivationForProject(userid, projectId) {
+async function hasPaidActivationForProject(userid, projectId, type) {
   if (!projectId) return false;
   const [stripeRows] = await pool.query(
     `SELECT id
@@ -11,7 +11,12 @@ async function hasPaidActivationForProject(userid, projectId) {
       LIMIT 1`,
     [userid, projectId],
   );
-  return stripeRows.length > 0;
+  if (stripeRows.length > 0) return true;
+  const [couponRows] = await pool.query(
+    "SELECT id FROM coupon_redemptions WHERE user_id = ? AND project_id = ? AND project_type = ? AND status = 'redeemed' AND benefit_type = 'free_activation' LIMIT 1",
+    [userid,projectId,type]
+  );
+  return couponRows.length > 0;
 }
 
 module.exports = async function requireActiveSubscription(req, res, next) {
@@ -26,7 +31,7 @@ module.exports = async function requireActiveSubscription(req, res, next) {
     const user = users[0];
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    if (await hasPaidActivationForProject(user.userid, req.params?.id)) return next();
+    if (await hasPaidActivationForProject(user.userid, req.params?.id, req.path?.startsWith('/teams/') ? 'team' : 'solo')) return next();
 
     return res.status(402).json({
       success: false,

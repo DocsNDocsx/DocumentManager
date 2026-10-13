@@ -15,11 +15,6 @@ const stripe = secretKey ? new Stripe(secretKey) : null;
 const RATE = 0.09; // $ per project · collaborator · day
 const STRIPE_CARD_PERCENT_FEE = 0.029;
 const STRIPE_CARD_FIXED_FEE_CENTS = 30;
-const VOUCHERS = {
-  WELCOME10: { percentOff: 10, label: 'Welcome voucher' },
-  LAUNCH25: { percentOff: 25, label: 'Launch voucher' },
-};
-
 function toUsageNumber(value, fallback = 1) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 1) return fallback;
@@ -30,17 +25,10 @@ function normalizeVoucherCode(code) {
   return String(code || '').trim().toUpperCase();
 }
 
-function getVoucher(code) {
-  const normalized = normalizeVoucherCode(code);
-  if (!normalized) return null;
-  const voucher = VOUCHERS[normalized];
-  return voucher ? { code: normalized, ...voucher } : null;
-}
 
-function computeDiscountCents(amountCents, voucherCode) {
-  const voucher = getVoucher(voucherCode);
-  if (!voucher) return 0;
-  return Math.round(amountCents * (voucher.percentOff / 100));
+
+function computeDiscountCents(amountCents, coupon) {
+ return coupon ? Math.round(amountCents * Number(coupon.percent_off) / 100) : 0;
 }
 
 function computeStripeProcessingFeeCents(amountCents) {
@@ -49,13 +37,13 @@ function computeStripeProcessingFeeCents(amountCents) {
 }
 
 /** Recurring monthly charge in cents, computed from usage. */
-function computeMonthlyAmountCents({ projects, collaborators, documents, assignmentCount, days, voucherCode }) {
+function computeMonthlyAmountCents({ projects, collaborators, documents, assignmentCount, days, coupon }) {
   const usageUnits = assignmentCount == null
     ? toUsageNumber(collaborators) * toUsageNumber(documents)
     : toUsageNumber(assignmentCount);
   const base = toUsageNumber(projects) * usageUnits * RATE * toUsageNumber(days, 20);
   const amountCents = Math.max(0, Math.round(base * 100));
-  const discountedAmountCents = Math.max(0, amountCents - computeDiscountCents(amountCents, voucherCode));
+  const discountedAmountCents = Math.max(0, amountCents - computeDiscountCents(amountCents, coupon));
   return discountedAmountCents + computeStripeProcessingFeeCents(discountedAmountCents);
 }
 
@@ -75,7 +63,6 @@ module.exports = {
   computeMonthlyAmountCents,
   computeDiscountCents,
   computeStripeProcessingFeeCents,
-  getVoucher,
   normalizeVoucherCode,
   getProductId,
   RATE,

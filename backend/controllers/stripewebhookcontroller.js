@@ -1,3 +1,4 @@
+const coupons = require('../utils/coupons');
 const pool = require('../utils/sql');
 const { stripe } = require('../utils/stripe');
 const { sendPaymentReceiptEmail } = require('../utils/paymentreceipt');
@@ -31,6 +32,8 @@ exports.handleWebhook = async (req, res) => {
     switch (event.type) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
+        const subId = invoice.subscription || invoice.parent?.subscription_details?.subscription;
+        if (subId) await coupons.settle(await stripe.subscriptions.retrieve(typeof subId === 'object' ? subId.id : subId),true);
         const payment = await recordPayment(invoice, 'paid');
         await setSubStatus(invoice.subscription, 'active');
         if (payment?.inserted) {
@@ -55,6 +58,7 @@ exports.handleWebhook = async (req, res) => {
       case 'customer.subscription.deleted': {
         const sub = event.data.object;
         const status = event.type.endsWith('deleted') ? 'cancelled' : sub.status;
+        if (status === 'incomplete_expired') await coupons.settle(sub,false);
         const periodEnd = sub.current_period_end
           ? new Date(sub.current_period_end * 1000).toISOString()
           : null;
